@@ -1,0 +1,2 @@
+# Mindfulness
+Proyecto de estadia 
