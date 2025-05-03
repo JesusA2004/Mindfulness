@@ -1,15 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 // Layouts
-import PublicLayout    from '@/layouts/PublicLayout.vue'
-import LoginLayout from '@/layouts/LoginLayout.vue'
+import PublicLayout from '@/layouts/PublicLayout.vue'
+import LoginLayout  from '@/layouts/LoginLayout.vue'
 
 // Views
-import Index          from '@/views/Index.vue'
-import Login          from '@/views/Login.vue'
-import Home           from '@/views/Home.vue'
-import SobreNosotros  from '@/views/SobreNosotros.vue'
-import Contacto       from '@/views/Contacto.vue'
+import Index         from '@/views/Index.vue'
+import Login         from '@/views/Login.vue'
+import Home          from '@/views/Home.vue'
+import SobreNosotros from '@/views/SobreNosotros.vue'
+import Contacto      from '@/views/Contacto.vue'
 
 const routes = [
   {
@@ -26,7 +26,7 @@ const routes = [
     path: '/home',
     component: LoginLayout,
     children: [
-      { path: '', name: 'HomePage', component: Home }
+      { path: '', name: 'HomePage', component: Home },  // ← Aquí va la coma
       // rutas privadas adicionales aquí
     ]
   }
