@@ -47,10 +47,13 @@
     </div>
   </template>
   
-  <script setup>
-  import { ref, computed } from 'vue'
-  import axios from 'axios'
+<script setup>
+
   import { validarCamposLogin } from '@/assets/js/Login.js'
+  
+  import { ref, computed } from 'vue'
+  import { useRouter } from 'vue-router'
+  import axios from 'axios'
   
   const isPasswordVisible = ref(false)
   const inputType = computed(() => (isPasswordVisible.value ? 'text' : 'password'))
@@ -67,6 +70,8 @@
   
   const loginUrl = process.env.VUE_APP_API_URL + '/auth/login'
   
+  const router = useRouter()
+
   const login = async () => {
     isLoading.value = true
     errorMessage.value = ''
@@ -79,10 +84,20 @@
     }
   
     try {
-      const { data } = await axios.post(loginUrl, { email: email.value, password: password.value })
+      console.log('Login URL:', loginUrl)
+      console.log('Payload:', { email: email.value, password: password.value })
+
+      const { data } = await axios.post(loginUrl, {
+        email: email.value,
+        password: password.value
+      })
       localStorage.setItem('token', data.access_token)
       localStorage.setItem('token_type', data.token_type)
-      window.location.href = '/home'
+      localStorage.setItem('user', JSON.stringify(data.user))
+
+      // Redigirigir al usuario según su rol
+      router.push(`/app/${data.user.rol}`)
+
     } catch (err) {
       if (err.response) {
         errorMessage.value = err.response.data.error || 'Datos de acceso incorrectos.'
@@ -93,9 +108,11 @@
       isLoading.value = false
     }
   }
-  </script>
+
+</script>
   
-  <style scoped>
+<style scoped>
+
   .login-page {
     position: relative;
     width: 100vw;

@@ -4,12 +4,16 @@ import { createRouter, createWebHistory } from 'vue-router'
 import PublicLayout from '@/layouts/PublicLayout.vue'
 import LoginLayout  from '@/layouts/LoginLayout.vue'
 
-// Views
+// Public Views
 import Index         from '@/views/Index.vue'
 import Login         from '@/views/Login.vue'
-import Home          from '@/views/Home.vue'
 import SobreNosotros from '@/views/SobreNosotros.vue'
 import Contacto      from '@/views/Contacto.vue'
+
+// Role-based Homes
+import ProfesorHome      from '@/views/profesor/Home.vue'
+import EstudianteHome    from '@/views/estudiante/Home.vue'
+import AdministradorHome from '@/views/administrador/Home.vue'
 
 const routes = [
   {
@@ -23,16 +27,52 @@ const routes = [
     ]
   },
   {
-    path: '/home',
+    path: '/app',
     component: LoginLayout,
+
     children: [
-      { path: '', name: 'HomePage', component: Home },  // ← Aquí va la coma
-      // rutas privadas adicionales aquí
+      {
+        path: 'profesor',
+        name: 'ProfesorHome',
+        component: ProfesorHome,
+        meta: { requiresAuth: true, role: 'profesor' }
+      },
+      {
+        path: 'estudiante',
+        name: 'EstudianteHome',
+        component: EstudianteHome,
+        meta: { requiresAuth: true, role: 'estudiante' }
+      },
+      {
+        path: 'administrador',
+        name: 'AdministradorHome',
+        component: AdministradorHome,
+        meta: { requiresAuth: true, role: 'admin' }
+      }
     ]
   }
 ]
 
-export default createRouter({
+const router = createRouter({
   history: createWebHistory(),
   routes
 })
+
+// (Opcional) guardia global para verificar auth + rol
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('token')
+  const user  = JSON.parse(localStorage.getItem('user')||'null')
+
+  if (to.meta.requiresAuth) {
+    if (!token || !user) {
+      return next({ name: 'LoginPage' })
+    }
+    if (to.meta.role && to.meta.role !== user.rol) {
+      // redirige a su home si intenta entrar donde no debe
+      return next({ path: `/app/${user.rol}` })
+    }
+  }
+  next()
+})
+
+export default router

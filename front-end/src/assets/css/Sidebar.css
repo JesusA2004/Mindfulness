@@ -1,0 +1,304 @@
+/* Navbar fija y por encima de todo */
+.navbar {
+  z-index: 1060;
+}
+
+/* Sidebar en escritorio */
+@media (min-width: 992px) {
+  .offcanvas.offcanvas-start.offcanvas-lg {
+    position: fixed;
+    transform: none !important;
+    visibility: visible !important;
+    width: 250px;
+    height: calc(100vh - 56px);
+    top: 56px;
+    left: 0;
+    background-color: #f8f9fa;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  }
+
+  .content-container {
+    margin-left: 250px;
+    padding-top: 56px;
+  }
+}
+
+/* Enlaces de navegación con efectos modernos */
+.nav-link {
+  transition: all 0.3s ease;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  color: #343a40;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.nav-link:hover,
+.nav-link.router-link-active {
+  background-color: #404e5e !important;
+  color: #fff !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  transform: translateX(4px);
+}
+
+/* Animación entrada íconos */
+@keyframes icon-pop {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.nav-icon {
+  animation: icon-pop 0.5s ease;
+  transition: transform 0.3s ease;
+}
+
+.nav-link:hover .nav-icon {
+  transform: scale(1.1) rotate(5deg);
+}
+
+/* ============================= */
+/* MODAL PERSONALIZADO MEJORADO */
+/* ============================= */
+
+/* ============================= */
+/* MEJORA EXTREMA DEL MODAL */
+/* ============================= */
+
+.custom-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1080;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px) saturate(180%);
+  animation: overlay-fade 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes overlay-fade {
+  from { backdrop-filter: blur(0) saturate(100%); opacity: 0; }
+  to { backdrop-filter: blur(8px) saturate(180%); opacity: 1; }
+}
+
+.modal-dialog {
+  max-width: 450px;
+  width: 90%;
+  perspective: 1000px;
+}
+
+.modal-content {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  animation: modal-show 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  position: relative;
+  overflow: hidden;
+  transform-style: preserve-3d;
+}
+
+.modal-content::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, 
+    rgba(64,78,94,0.1) 0%,
+    rgba(255,255,255,0.2) 50%,
+    rgba(64,78,94,0.1) 100%
+  );
+  animation: modal-shine 4s infinite linear;
+  opacity: 0.3;
+}
+
+@keyframes modal-shine {
+  from { transform: translateY(-50%) rotate(45deg); }
+  to { transform: translateY(50%) rotate(45deg); }
+}
+
+/* Títulos con efecto gradiente */
+.modal-title {
+  font-weight: 700;
+  font-size: 1.75rem;
+  background: linear-gradient(45deg, #404e5e, #2a3439);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  position: relative;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.modal-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, #404e5e 0%, #c82333 100%);
+  border-radius: 2px;
+}
+
+/* Icono flotante decorativo */
+.modal-icon {
+  position: absolute;
+  opacity: 0.1;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(10deg); }
+}
+
+.modal-icon:nth-child(1) {
+  top: 20px;
+  right: 30px;
+  width: 50px;
+  animation-delay: 0.2s;
+}
+
+.modal-icon:nth-child(2) {
+  bottom: 20px;
+  left: 30px;
+  width: 40px;
+  animation-delay: 0.5s;
+}
+
+/* Cuerpo del modal con texto animado */
+.modal-body {
+  position: relative;
+  z-index: 1;
+  color: #4a5568;
+  line-height: 1.6;
+  font-size: 1.1rem;
+  transform: translateZ(30px);
+}
+
+.modal-body p {
+  animation: text-appear 0.8s ease-out;
+}
+
+@keyframes text-appear {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Botones mejorados */
+.modal-footer {
+  margin-top: 2rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.btn {
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-danger {
+  background: linear-gradient(45deg, #c82333, #a71d2a);
+  color: white;
+  box-shadow: 0 4px 15px rgba(200, 35, 51, 0.3);
+}
+
+.btn-danger:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 20px rgba(200, 35, 51, 0.4);
+}
+
+.btn-danger::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 25%,
+    rgba(255,255,255,0.2) 50%,
+    transparent 75%
+  );
+  animation: btn-shine 1.5s infinite;
+}
+
+@keyframes btn-shine {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+/* Botón de cerrar mejorado */
+.btn-close {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(64,78,94,0.1);
+  transition: all 0.3s ease;
+}
+
+.btn-close:hover {
+  background: #404e5e;
+  transform: rotate(90deg) scale(1.1);
+}
+
+.btn-close:hover::before,
+.btn-close:hover::after {
+  background: white;
+}
+
+.btn-close::before,
+.btn-close::after {
+  content: '';
+  position: absolute;
+  width: 50%;
+  height: 2px;
+  background: #404e5e;
+  transition: all 0.3s ease;
+}
+
+.btn-close::before { transform: rotate(45deg); }
+.btn-close::after { transform: rotate(-45deg); }
+
+/* Animación de entrada mejorada */
+@keyframes modal-show {
+  0% {
+    transform: scale(0.8) rotateX(-15deg) rotateY(10deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.05) rotateX(0) rotateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotateX(0) rotateY(0);
+  }
+}
