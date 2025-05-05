@@ -1,5 +1,5 @@
 <template>
     <div>
-        Hola desde home admin
+        Evaluaciones
     </div>
 </template>

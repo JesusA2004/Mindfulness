@@ -1,0 +1,63 @@
+.index-page {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .intro-section {
+    background-image: url('~@/assets/images/backgroundMind.png');
+    background-size: cover;
+    background-position: center;
+    transition: background 0.5s ease;
+  }
+  .intro-section:hover {
+    background-position: top;
+  }
+  
+  .hover-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: default;
+  }
+  .hover-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  }
+  
+  .video-section h2,
+  .contact-section h2 {
+    font-weight: 600;
+    transition: color 0.3s ease;
+  }
+  .video-section h2:hover,
+  .contact-section h2:hover {
+    color: #28a745;
+  }
+  
+  .video-preview {
+    border-radius: 0.5rem;
+    overflow: hidden;
+    transition: transform 0.3s ease;
+  }
+  .video-preview:hover {
+    transform: scale(1.02);
+  }
+  
+  .contact-section form {
+    transition: box-shadow 0.3s ease;
+  }
+  .contact-section form:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+  }
+  
+  .hover-btn {
+    transition: background-color 0.3s ease;
+  }
+  .hover-btn:hover {
+    background-color: #218838;
+  }
+  
+  .footer a {
+    transition: transform 0.3s ease;
+  }
+  .footer a:hover {
+    transform: scale(1.2);
+  }

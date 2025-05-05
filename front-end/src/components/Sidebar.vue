@@ -26,6 +26,7 @@
           data-bs-toggle="dropdown"
           aria-expanded="false"
         >
+          <span class="me-2 fw-medium">{{ user.name }}</span>
           <img
             src="https://img.icons8.com/ios-glyphs/30/000000/user-male-circle.png"
             alt="perfil"
@@ -51,10 +52,11 @@
 
   <!-- Sidebar -->
   <div
-    class="offcanvas offcanvas-start offcanvas-lg bg-beige"
+    class="offcanvas offcanvas-start offcanvas-lg bg-dark"
     tabindex="-1"
     id="sidebar"
     aria-labelledby="sidebarLabel"
+    style="width: 180px;"
   >
     <div class="offcanvas-header d-lg-none">
       <h5 class="offcanvas-title" id="sidebarLabel">Menú</h5>
@@ -65,7 +67,7 @@
         aria-label="Close"
       ></button>
     </div>
-    <div class="offcanvas-body p-3">
+    <div class="offcanvas-body p-3 px-2">
       <ul class="nav flex-column">
         <li
           class="nav-item mb-1"
@@ -74,9 +76,9 @@
         >
           <router-link
             :to="item.to"
-            class="nav-link d-flex align-items-center"
+            class="nav-link d-flex align-items-center text-white"
           >
-            <img :src="item.icon" alt class="me-2 nav-icon" />
+            <i :class="['bi', item.icon, 'me-2', 'text-white']"></i>
             <span>{{ item.text }}</span>
           </router-link>
         </li>
@@ -108,20 +110,48 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal para renovar sesión -->
+  <div
+    v-show="showSessionModal"
+    class="custom-modal-overlay"
+  >
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Sesión a punto de expirar</h5>
+        </div>
+        <div class="modal-body">
+          <p>Tu sesión está a punto de expirar. ¿Deseas continuar?</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="handleSessionExpire(false)">
+            Cerrar sesión
+          </button>
+          <button class="btn btn-primary" @click="handleSessionExpire(true)">
+            Continuar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
 
-  import { ref, computed, onMounted} from 'vue';
+  import { ref, computed, onMounted, onUnmounted } from 'vue';
   import axios from 'axios';
   import { useRouter } from 'vue-router';
 
   defineOptions({ name: 'LoginLayout' });
   const router = useRouter();
 
-  // UI State
+  // Estado de la UI
   const showLogoutModal = ref(false);
   const isLoggingOut = ref(false);
+  const showSessionModal = ref(false);
+  let activityTimer = null;
+  let expirationCheckInterval = null;
 
   // Usuario con su rol
   const user = ref({});
@@ -130,26 +160,125 @@
     if (storedUser) {
       user.value = JSON.parse(storedUser);
     }
+    startTokenChecks();
+    setupActivityListeners();
   });
+
+  onUnmounted(() => {
+    clearTimers();
+    // Limpiar event listeners
+    ['mousemove', 'keydown', 'click'].forEach(event => {
+      window.removeEventListener(event, resetActivityTimer);
+    });
+  });
+
+  // Función para verificar expiración del token
+  const isTokenExpired = (token, thresholdMinutes = 0) => {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const exp = payload.exp * 1000;
+      return Date.now() + (thresholdMinutes * 60 * 1000) > exp;
+    } catch {
+      return true;
+    }
+  };
+
+  // Lógica de renovación de token
+  const refreshToken = async () => {
+    try {
+      const response = await axios.post('/auth/refresh', {}, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      localStorage.setItem('token', response.data.token);
+      return true;
+    } catch (error) {
+      console.error('Error renovando token:', error);
+      return false;
+    }
+  };
+
+  let resetActivityTimer = null;
+
+  // Manejo de actividad del usuario
+  const setupActivityListeners = () => {
+    const resetActivityTimer = () => {
+      clearTimeout(activityTimer);
+      activityTimer = setTimeout(checkTokenExpiration, 60000); // 1 minuto
+    };
+
+    ['mousemove', 'keydown', 'click'].forEach(event => {
+      window.addEventListener(event, resetActivityTimer);
+    });
+
+    resetActivityTimer();
+  };
+
+  // Lógica de verificación de expiración
+  const startTokenChecks = () => {
+    expirationCheckInterval = setInterval(() => {
+      checkTokenExpiration();
+    }, 30000); // Verificar cada 30 segundos
+  };
+
+  const checkTokenExpiration = async () => {
+  const token = localStorage.getItem('token');
+  if (!token) return;
+
+  // Si expira en menos de 2 minutos pero más de 1 minuto
+  if (isTokenExpired(token, 2)) {
+    // Si está en el último minuto y ha habido actividad
+    if (isTokenExpired(token, 1)) {
+      const success = await refreshToken();
+      if (!success) handleSessionExpire(false);
+    } else {
+      showSessionModal.value = true;
+    }
+  }
+};
+
+  // Manejo de la respuesta del modal
+  const handleSessionExpire = async (continueSession) => {
+    showSessionModal.value = false;
+    
+    if (continueSession) {
+      const success = await refreshToken();
+      if (!success) {
+        localStorage.clear();
+        router.push('/login');
+      }
+    } else {
+      localStorage.clear();
+      router.push('/login');
+    }
+  };
+
+  // Limpiar timers
+  const clearTimers = () => {
+    clearInterval(expirationCheckInterval);
+    clearTimeout(activityTimer);
+  };
 
   // Definición de menús por rol
   const menusPorRol = {
     estudiante: [
-      { to: '/home', text: 'Inicio', icon: 'https://img.icons8.com/ios-filled/24/000000/home.png' },
-      { to: '/home/tareas', text: 'Tareas', icon: 'https://img.icons8.com/ios-filled/24/000000/task.png' },
-      { to: '/home/progreso', text: 'Progreso', icon: 'https://img.icons8.com/ios-filled/24/000000/combo-chart--v1.png' }
+      { to: '/app/estudiante', text: 'Inicio', icon: 'bi-house' },
+      { to: '/app/tareas', text: 'Tareas', icon: 'bi-list-check' },
+      { to: '/app/progreso', text: 'Progreso', icon: 'bi-bar-chart-line' }
     ],
     profesor: [
-      { to: '/home', text: 'Inicio', icon: 'https://img.icons8.com/ios-filled/24/000000/home.png' },
-      { to: '/home/asignaciones', text: 'Asignaciones', icon: 'https://img.icons8.com/ios-filled/24/000000/task.png' },
-      { to: '/home/evaluaciones', text: 'Evaluaciones', icon: 'https://img.icons8.com/ios-filled/24/000000/test.png' }
+      { to: '/app/profesor/dashboard', text: 'Inicio', icon: 'bi-house' },
+      { to: '/app/profesor/asignaciones', text: 'Asignaciones', icon: 'bi-list-task' },
+      { to: '/app/profesor/evaluaciones', text: 'Evaluaciones', icon: 'bi-clipboard-check' }
     ],
     admin: [
-      { to: '/home', text: 'Inicio', icon: 'https://img.icons8.com/ios-filled/24/000000/home.png' },
-      { to: '/home/empleados', text: 'Empleados', icon: 'https://img.icons8.com/ios-filled/24/000000/user-group-man-man.png' },
-      { to: '/home/salarios', text: 'Salarios', icon: 'https://img.icons8.com/ios-filled/24/000000/money-with-wings.png' },
-      { to: '/home/reportes', text: 'Reportes', icon: 'https://img.icons8.com/ios-filled/24/000000/combo-chart--v1.png' },
-      { to: '/home/ajustes', text: 'Ajustes', icon: 'https://img.icons8.com/ios-filled/24/000000/settings.png' }
+      { to: '/app/admin', text: 'Inicio', icon: 'bi-house' },
+      { to: '/app/empleados', text: 'Empleados', icon: 'bi-people' },
+      { to: '/app/salarios', text: 'Salarios', icon: 'bi-currency-dollar' },
+      { to: '/app/reportes', text: 'Reportes', icon: 'bi-bar-chart-line' },
+      { to: '/app/ajustes', text: 'Ajustes', icon: 'bi-gear' }
     ]
   };
 

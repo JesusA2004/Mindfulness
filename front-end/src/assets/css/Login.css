@@ -1,0 +1,55 @@
+.login-page {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    background-image: url('@/assets/images/backgroundMind.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+  
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+  }
+  
+  .login-card {
+    position: relative;
+    max-width: 360px;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 0.5rem;
+    z-index: 1;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .login-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.3);
+  }
+  
+  .password-toggle {
+    cursor: pointer;
+    color: #6c757d;
+    transition: color 0.3s ease;
+  }
+  .password-toggle:hover {
+    color: #495057;
+  }
+  
+  .btn-login {
+    transition: background-color 0.3s ease, transform 0.3s ease;
+  }
+  .btn-login:hover:not(:disabled) {
+    background-color: #28a745;
+    transform: translateY(-2px);
+  }
+  
+  .wave {
+    display: inline-block;
+    animation: wave-animation 1.5s infinite;
+  }
+  @keyframes wave-animation {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(10deg); }
+  }

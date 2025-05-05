@@ -27,7 +27,7 @@
 
   @media (min-width: 992px) {
     main {
-      margin-left: 250px; 
+      margin-left: 180px; 
     }
   }
 </style>

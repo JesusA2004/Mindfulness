@@ -1,5 +1,5 @@
 <template>
     <div>
-        Hola
+        Hola desde home estudiante
     </div>
 </template>

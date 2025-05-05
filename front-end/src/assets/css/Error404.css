@@ -1,0 +1,105 @@
+.error-container {
+  position: relative;
+  min-height: 100vh;
+  background: linear-gradient(135deg, rgb(242, 222, 222), rgba(35, 34, 34, 0.867));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  overflow: hidden;
+}
+
+.error-content {
+  max-width: 560px;
+  width: 100%;
+  background: rgba(20,20,20,0.8);
+  backdrop-filter: blur(6px);
+  animation: fadeInUp 0.8s ease both;
+}
+
+.zen-icon {
+  animation: float 4s ease-in-out infinite;
+  color: rgb(241,196,15);
+}
+
+.icon-svg {
+  width: 12vw;
+  max-width: 110px;
+  height: auto;
+  transition: transform 0.5s ease;
+}
+.icon-svg:hover {
+  transform: rotate(360deg) scale(1.1);
+}
+
+@media (max-width: 768px) {
+  .icon-svg {
+    width: 28vw;
+    max-width: 100px;
+  }
+}
+
+.error-code {
+  font-family: 'Arial Rounded MT Bold', sans-serif;
+  letter-spacing: -0.03em;
+  color: rgb(235, 87, 87);
+  opacity: 0.95;
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.7);
+  animation: pulseCode 2s ease-in-out infinite;
+}
+
+.text-error {
+  color: rgb(230, 126, 34);
+  text-shadow: 0 0 12px rgba(230,126,34,0.6);
+  animation: pulse 3s ease infinite;
+}
+
+.message-highlight {
+  background: rgb(255,255,255,0.05);
+  border-left: 6px solid rgb(231,76,60);
+  transition: background 0.3s ease;
+}
+.message-highlight:hover {
+  background: rgb(255,255,255,0.1);
+}
+
+.lead {
+  line-height: 1.8;
+  color: rgb(236,240,241);
+}
+
+.btn-exit {
+  background: linear-gradient(45deg, rgb(231,76,60), rgb(192,57,43));
+  color: #fff;
+  border: none;
+  transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.btn-exit:hover {
+  background: linear-gradient(45deg, rgb(192,57,43), rgb(231,76,60));
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+}
+
+.shadow-btn {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+
+@keyframes float {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes fadeInUp {
+  0% { opacity: 0; transform: translateY(40px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes pulseCode {
+  0%,100% { color: rgb(235,87,87); }
+  50% { color: rgb(192,57,43); }
+}
