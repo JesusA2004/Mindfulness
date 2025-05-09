@@ -102,7 +102,7 @@
       if (err.response) {
         errorMessage.value = err.response.data.error || 'Datos de acceso incorrectos.'
       } else {
-        errorMessage.value = 'Error de red. Intenta más tarde.'
+        errorMessage.value = 'El servicio no está disponible en este momento. Por favor, intenta más tarde.'
       }
     } finally {
       isLoading.value = false

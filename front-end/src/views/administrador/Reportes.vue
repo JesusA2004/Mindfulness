@@ -1,5 +1,5 @@
 <template>
     <div>
-        Evaluaciones
+        Reportes
     </div>
 </template>

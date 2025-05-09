@@ -35,7 +35,7 @@
         </a>
         <ul class="dropdown-menu dropdown-menu-end">
           <li>
-            <router-link class="dropdown-item" to="/perfil">
+            <router-link class="dropdown-item" to="/app/perfil">
               Perfil
             </router-link>
           </li>
@@ -264,21 +264,34 @@
   // Definición de menús por rol
   const menusPorRol = {
     estudiante: [
-      { to: '/app/estudiante', text: 'Inicio', icon: 'bi-house' },
-      { to: '/app/tareas', text: 'Tareas', icon: 'bi-list-check' },
-      { to: '/app/progreso', text: 'Progreso', icon: 'bi-bar-chart-line' }
+      { to: '/app/estudiante/dashboard',   text: 'Inicio',       icon: 'bi-house'             },
+      { to: '/app/estudiante/actividades', text: 'Actividades',  icon: 'bi-list-task'         },
+      { to: '/app/estudiante/bitacoras',   text: 'Bitácoras',    icon: 'bi-journal-text'      },
+      { to: '/app/estudiante/citas',       text: 'Citas',        icon: 'bi-calendar-event'    },
+      { to: '/app/estudiante/encuestas',   text: 'Encuestas',    icon: 'bi-clipboard-data'    },
+      { to: '/app/estudiante/recompensas', text: 'Recompensas',  icon: 'bi-trophy'            },
+      { to: '/app/estudiante/tecnicas',    text: 'Técnicas',     icon: 'bi-book'              },
+      { to: '/app/estudiante/tests',       text: 'Tests',        icon: 'bi-file-earmark-text' }
     ],
     profesor: [
-      { to: '/app/profesor/dashboard', text: 'Inicio', icon: 'bi-house' },
-      { to: '/app/profesor/asignaciones', text: 'Asignaciones', icon: 'bi-list-task' },
-      { to: '/app/profesor/evaluaciones', text: 'Evaluaciones', icon: 'bi-clipboard-check' }
+      { to: '/app/profesor/dashboard',   text: 'Inicio',       icon: 'bi-house'             },
+      { to: '/app/profesor/actividades', text: 'Actividades',  icon: 'bi-list-task'         },
+      { to: '/app/profesor/citas',       text: 'Citas',        icon: 'bi-calendar-event'    },
+      { to: '/app/profesor/encuestas',   text: 'Encuestas',    icon: 'bi-clipboard-data'    },
+      { to: '/app/profesor/recompensas', text: 'Recompensas',  icon: 'bi-trophy'            },
+      { to: '/app/profesor/tecnicas',    text: 'Técnicas',     icon: 'bi-book'              },
+      { to: '/app/profesor/tests',       text: 'Tests',        icon: 'bi-file-earmark-text' }
     ],
     admin: [
-      { to: '/app/admin', text: 'Inicio', icon: 'bi-house' },
-      { to: '/app/empleados', text: 'Empleados', icon: 'bi-people' },
-      { to: '/app/salarios', text: 'Salarios', icon: 'bi-currency-dollar' },
-      { to: '/app/reportes', text: 'Reportes', icon: 'bi-bar-chart-line' },
-      { to: '/app/ajustes', text: 'Ajustes', icon: 'bi-gear' }
+      { to: '/app/admin/dashboard',   text: 'Inicio',       icon: 'bi-house'             },
+      { to: '/app/admin/actividades', text: 'Actividades',  icon: 'bi-list-task'         },
+      { to: '/app/admin/citas',       text: 'Citas',        icon: 'bi-calendar-event'    },
+      { to: '/app/admin/encuestas',   text: 'Encuestas',    icon: 'bi-clipboard-data'    },
+      { to: '/app/admin/recompensas', text: 'Recompensas',  icon: 'bi-trophy'            },
+      { to: '/app/admin/tecnicas',    text: 'Técnicas',     icon: 'bi-book'              },
+      { to: '/app/admin/tests',       text: 'Tests',        icon: 'bi-file-earmark-text' },
+      { to: '/app/admin/respaldo',    text: 'Respaldo',     icon: 'bi-file-earmark-text' },
+      { to: '/app/admin/reportes',    text: 'Reportes',     icon: 'bi-file-earmark-text' }
     ]
   };
 
