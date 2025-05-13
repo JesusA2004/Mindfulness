@@ -10,7 +10,8 @@ use Jenssegers\Mongodb\Schema\Blueprint;
  */
 class CreateUsersCollection extends Migration {
     public function up() {
-        Schema::connection('mongodb')->create('users', function (Blueprint $collection) {
+        Schema::create('users', function (Blueprint $table) {
+            $table->id();
             $table->string('name');
             $table->string('matricula')->unique();
             $table->string('password');
@@ -25,7 +26,7 @@ class CreateUsersCollection extends Migration {
     }
 
     public function down() {
-        Schema::connection('mongodb')->drop('users');
+         Schema::dropIfExists('users');
     }
 }
 
@@ -36,7 +37,7 @@ class CreateUsersCollection extends Migration {
  */
 class CreatePersonasCollection extends Migration {
     public function up() {
-        Schema::connection('mongodb')->create('personas', function (Blueprint $collection) {
+       Schema::create('personas', function (Blueprint $collection) {
             $collection->string('nombre');
             $collection->string('apellidoPaterno');
             $collection->string('apellidoMaterno');
@@ -49,13 +50,12 @@ class CreatePersonasCollection extends Migration {
             $collection->raw('grupo')->nullable(); //lista de grupos que imparte el profesor. En el caso del alumno, grupo al que pertenece
      
             $collection->timestamps();
-            $collection->index('matricula'); //Parámetro de búsqueda
             $collection->index('apellidoPaterno'); //Parámetro de búsqueda
         });
     }
 
     public function down() {
-        Schema::connection('mongodb')->drop('personas');
+         Schema::dropIfExists('personas');
     }
 }
 
@@ -65,7 +65,7 @@ class CreatePersonasCollection extends Migration {
  */
 class CreateTecnicasCollection extends Migration {
     public function up() {
-        Schema::connection('mongodb')->create('tecnicas', function (Blueprint $collection) {
+       Schema::create('tecnicas', function (Blueprint $collection) {
             $collection->string('nombre')->unique();
             $collection->text('descripcion');
             $collection->string('dificultad'); // Bajo, Medio, Alto
@@ -87,14 +87,12 @@ class CreateTecnicasCollection extends Migration {
             ]); 
 
             $collection->timestamps();
-            $collection->index('categoria');
-            $collection->index('nombre');
-            
+            $collection->index('categoria');            
         });
     }
 
     public function down() {
-        Schema::connection('mongodb')->drop('tecnicas');
+         Schema::dropIfExists('tecnicas');
     }
 }
 
@@ -104,19 +102,18 @@ class CreateTecnicasCollection extends Migration {
  */
 class CreateTestEmocionalCollection extends Migration {
     public function up() {
-        Schema::connection('mongodb')->create('tests', function (Blueprint $collection) {
+       Schema::create('tests', function (Blueprint $collection) {
             $collection->string('nombre')->unique();
             $collection->text('descripcion')->nullable();
             $collection->integer('duracion_estimada');
             $collection->date('fechaAplicacion')->nullable();
             $collection->raw('cuestionario'); // [{ pregunta, respuestas, idUsuario }]
             $collection->timestamps();
-            $collection->index('nombre'); // Parámetro de búsqueda
         });
     }
 
     public function down() {
-        Schema::connection('mongodb')->drop('tests_emocionales');
+         Schema::dropIfExists('tests_emocionales');
     }
 }
 
@@ -125,7 +122,7 @@ class CreateTestEmocionalCollection extends Migration {
  */
 class CreateRecompensasCollection extends Migration {
     public function up() {
-        Schema::connection('mongodb')->create('recompensas', function (Blueprint $collection) {
+       Schema::create('recompensas', function (Blueprint $collection) {
             $collection->string('nombre');
             $collection->text('descripcion')->nullable();
             $collection->integer('puntos_necesarios');
@@ -135,12 +132,11 @@ class CreateRecompensasCollection extends Migration {
                 'fechaCanjeo' => 'date'
             ]); 
             $collection->timestamps();
-            $collection->index('nombre'); // Parámetro de búsqueda
         });
     }
 
     public function down() {
-        Schema::connection('mongodb')->drop('recompensas');
+         Schema::dropIfExists('recompensas');
     }
 }
 
@@ -150,7 +146,7 @@ class CreateRecompensasCollection extends Migration {
  */
 class CreateEncuestasCollection extends Migration {
     public function up() {
-        Schema::connection('mongodb')->create('encuestas', function (Blueprint $collection) {
+       Schema::create('encuestas', function (Blueprint $collection) {
             $collection->string('titulo')->unique();
             $collection->text('descripcion')->nullable();
             $collection->date('fechaAsignacion'); //automática de acuerdo a la fecha en la que se cree la encuesta
@@ -158,12 +154,11 @@ class CreateEncuestasCollection extends Migration {
             $collection->integer('duracion_estimada');
             $collection->raw('cuestionario'); // [{ preguntas, respuestas, id_usuario }]
             $collection->timestamps();
-            $collection->index('titulo'); // Parámetro de búsqueda
         });
     }
 
     public function down() {
-        Schema::connection('mongodb')->drop('encuestas');
+         Schema::dropIfExists('encuestas');
     }
 }
 
@@ -172,7 +167,7 @@ class CreateEncuestasCollection extends Migration {
  */
 class CreateActividadesCollection extends Migration {
     public function up() {
-        Schema::connection('mongodb')->create('actividads', function (Blueprint $collection) {
+       Schema::create('actividads', function (Blueprint $collection) {
             $collection->date('fechaAsignacion'); //automática de acuerdo a la fecha en la que se cree la actividad
             $collection->date('fechaFinalizacion');
             $collection->date('fechaMaxima');
@@ -188,7 +183,7 @@ class CreateActividadesCollection extends Migration {
     }
 
     public function down() {
-        Schema::connection('mongodb')->drop('actividades');
+         Schema::dropIfExists('actividades');
     }
 }
 
@@ -197,7 +192,7 @@ class CreateActividadesCollection extends Migration {
  */
 class CreateCitasCollection extends Migration {
     public function up() {
-        Schema::connection('mongodb')->create('citas', function (Blueprint $collection) {
+       Schema::create('citas', function (Blueprint $collection) {
             $collection->objectId('alumno_id'); //realmente es un user_id tipo alumno
             $collection->objectId('docente_id'); //realmente es un user_id tipo docente
             $collection->dateTime('fecha_cita');
@@ -211,7 +206,7 @@ class CreateCitasCollection extends Migration {
     }
 
     public function down() {
-        Schema::connection('mongodb')->drop('citas');
+         Schema::dropIfExists('citas');
     }
 }
 
@@ -221,7 +216,7 @@ class CreateCitasCollection extends Migration {
  */
 class CreateBitacorasCollection extends Migration {
     public function up() {
-        Schema::connection('mongodb')->create('bitacoras', function (Blueprint $collection) {
+       Schema::create('bitacoras', function (Blueprint $collection) {
             $collection->string('titulo');
             $collection->text('descripcion')->nullable();
             $collection->date('fecha');
@@ -233,6 +228,6 @@ class CreateBitacorasCollection extends Migration {
     }
 
     public function down() {
-        Schema::connection('mongodb')->drop('bitacoras');
+         Schema::dropIfExists('bitacoras');
     }
 }

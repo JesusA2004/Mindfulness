@@ -2,26 +2,19 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use MongoDB\Laravel\Eloquent\Model;
 
-/**
- * Class Test
- *
- *
- * @package App
- * @mixin \Illuminate\Database\Eloquent\Builder
- */
 class Test extends Model
 {
     
     protected $perPage = 20;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
-    protected $fillable = [];
-
+    protected $fillable = [
+        'nombre',
+        'descripcion',
+        'duracion_estimada',
+        'fechaAplicacion',
+        // 'cuestionario' lo manejas como push()/set
+    ];
 
 }

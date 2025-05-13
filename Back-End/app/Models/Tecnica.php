@@ -2,26 +2,20 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use MongoDB\Laravel\Eloquent\Model;
 
-/**
- * Class Tecnica
- *
- *
- * @package App
- * @mixin \Illuminate\Database\Eloquent\Builder
- */
 class Tecnica extends Model
 {
     
     protected $perPage = 20;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
-    protected $fillable = [];
-
+    protected $fillable = [
+        'nombre',
+        'descripcion',
+        'dificultad',
+        'duracion',
+        'categoria',
+        // para push() de subdocumentos no hace falta incluir 'calificaciones' ni 'recursos'
+    ];
 
 }

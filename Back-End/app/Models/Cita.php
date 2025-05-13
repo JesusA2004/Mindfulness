@@ -2,26 +2,20 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use MongoDB\Laravel\Eloquent\Model;
 
-/**
- * Class Cita
- *
- *
- * @package App
- * @mixin \Illuminate\Database\Eloquent\Builder
- */
 class Cita extends Model
 {
     
     protected $perPage = 20;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
-    protected $fillable = [];
-
+    protected $fillable = [
+        'alumno_id',
+        'docente_id',
+        'fecha_cita',
+        'modalidad',
+        'motivo',
+        'estado',
+    ];
 
 }
