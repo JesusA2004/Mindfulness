@@ -17,7 +17,6 @@ return new class extends Migration
             $collection->integer('duracion_estimada');
             $collection->raw('cuestionario'); // [{ preguntas, respuestas, id_usuario }]
             $collection->timestamps();
-            $collection->index('titulo'); // Parámetro de búsqueda
         });
     }
 

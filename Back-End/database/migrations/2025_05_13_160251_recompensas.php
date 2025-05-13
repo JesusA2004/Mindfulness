@@ -19,7 +19,6 @@ return new class extends Migration
                 'fechaCanjeo' => 'date'
             ]); 
             $collection->timestamps();
-            $collection->index('nombre'); // Parámetro de búsqueda
         });
     }
 

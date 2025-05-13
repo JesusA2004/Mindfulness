@@ -22,7 +22,6 @@ return new class extends Migration
             $collection->raw('grupo')->nullable(); //lista de grupos que imparte el profesor. En el caso del alumno, grupo al que pertenece
      
             $collection->timestamps();
-            $collection->index('matricula'); //Parámetro de búsqueda
             $collection->index('apellidoPaterno'); //Parámetro de búsqueda
         });
     }

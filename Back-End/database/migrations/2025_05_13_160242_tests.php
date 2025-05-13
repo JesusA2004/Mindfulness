@@ -16,7 +16,6 @@ return new class extends Migration
             $collection->date('fechaAplicacion')->nullable();
             $collection->raw('cuestionario'); // [{ pregunta, respuestas, idUsuario }]
             $collection->timestamps();
-            $collection->index('nombre'); // Parámetro de búsqueda
         });
     }
 

@@ -9,7 +9,7 @@ return new class extends Migration
 
     public function up(): void
     {
-        Schema::create('users', function (Blueprint $collection) {
+        Schema::create('actividads', function (Blueprint $collection) {
             $collection->date('fechaAsignacion'); //automática de acuerdo a la fecha en la que se cree la actividad
             $collection->date('fechaFinalizacion');
             $collection->date('fechaMaxima');

@@ -32,7 +32,6 @@ return new class extends Migration
 
             $collection->timestamps();
             $collection->index('categoria');
-            $collection->index('nombre');
         });
     }
 
