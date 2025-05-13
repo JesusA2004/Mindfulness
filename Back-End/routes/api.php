@@ -21,6 +21,6 @@
 
     // Rutas CRUD protegidas por JWT
     Route::middleware('auth:api')->group(function () {
-        Route::apiResource('users',                UserController::class);
+        Route::apiResource('users', UserController::class);
 
     });
