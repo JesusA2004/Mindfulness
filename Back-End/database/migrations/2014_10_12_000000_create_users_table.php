@@ -12,12 +12,15 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
+            $table->string('matricula')->unique();
             $table->string('password');
-            $table->string('rol')->default('admin');
+            $table->string('email')->unique();
+            $table->string('rol'); // 'Estudiante', 'Profesor', 'Administrador'
+            $table->string('urlFotoPerfil'); // Foto de perfil para cada usuario
+            $table->objectId('persona_id'); // Referencia a la colección de personas (profesores, alumnos y administradores)
             $table->rememberToken();
             $table->timestamps();
+            $table->index('rol'); //Parámetro de búsqueda
         });
     }
 
