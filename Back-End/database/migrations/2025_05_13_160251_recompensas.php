@@ -10,7 +10,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('recompensas', function (Blueprint $collection) {
-            $collection->string('nombre');
+            $collection->string('nombre')->unique();
             $collection->text('descripcion')->nullable();
             $collection->integer('puntos_necesarios');
             $collection->integer('stock')->nullable(); // cantidad de recompensas disponibles

@@ -15,19 +15,25 @@ class PersonaRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nombre'            => 'required|string|max:100',
-            'apellidoPaterno'   => 'required|string|max:100',
-            'apellidoMaterno'   => 'required|string|max:100',
-            'fechaNacimiento'   => 'required|date',
-            'telefono'          => 'nullable|string|max:20',
-            'sexo'              => 'nullable|string|in:Masculino,Femenino,Otro',
-            'carrera'           => 'nullable|array',
-            'carrera.*'         => 'string|max:100',
-            'matricula'         => 'required|string|max:50|unique:personas,matricula',
-            'cuatrimestre'      => 'nullable|array',
-            'cuatrimestre.*'    => 'string|max:20',
-            'grupo'             => 'nullable|array',
-            'grupo.*'           => 'string|max:20',
+            'nombre'           => 'required|string|max:100',
+            'apellidoPaterno'  => 'required|string|max:100',
+            'apellidoMaterno'  => 'required|string|max:100',
+            'fechaNacimiento'  => 'required|date_format:Y-m-d',
+            'telefono'         => 'nullable|string|max:20',
+            'sexo'             => 'nullable|string|in:Masculino,Femenino,Otro',
+            'matricula'        => "required|string|max:50|unique:personas,matricula,{$this->route('persona')}",
+            
+            // Carrera: sólo si viene, y siempre como array de strings
+            'carrera'          => 'sometimes|array|min:1',
+            'carrera.*'        => 'string|max:100',
+            
+            // Cuatrimestre: Sólo si viene, array de strings
+            'cuatrimestre'     => 'sometimes|array|min:1',
+            'cuatrimestre.*'   => 'string|max:20',
+            
+            // Grupo: Sólo si viene, array de strings
+            'grupo'            => 'sometimes|array|min:1',
+            'grupo.*'          => 'string|max:20',
         ];
     }
 }
