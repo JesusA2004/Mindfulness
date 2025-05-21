@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Models\Recompensa;
 use Illuminate\Http\Request;
 use App\Http\Requests\RecompensaRequest;
-use Illuminate\Http\Response;
 use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RecompensaResource;
@@ -13,50 +12,63 @@ use App\Http\Resources\RecompensaResource;
 class RecompensaController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Mostrar todas las recompensas disponibles (sin paginación).
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
-        $recompensas = Recompensa::paginate();
+        // Obtenemos todas las recompensas porque su número será reducido
+        $recompensas = Recompensa::all();
 
-        return RecompensaResource::collection($recompensas);
+        return response()->json([
+            'registros' => RecompensaResource::collection($recompensas),
+        ], 200);
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Almacenar una nueva recompensa en el sistema.
      */
     public function store(RecompensaRequest $request): JsonResponse
     {
         $recompensa = Recompensa::create($request->validated());
 
-        return response()->json(new RecompensaResource($recompensa));
+        return response()->json([
+            'mensaje'    => 'Recompensa creada correctamente.',
+            'recompensa' => new RecompensaResource($recompensa),
+        ], 201);
     }
 
     /**
-     * Display the specified resource.
+     * Mostrar la recompensa especificada.
      */
     public function show(Recompensa $recompensa): JsonResponse
     {
-        return response()->json(new RecompensaResource($recompensa));
+        return response()->json([
+            'recompensa' => new RecompensaResource($recompensa),
+        ], 200);
     }
 
     /**
-     * Update the specified resource in storage.
+     * Actualizar la recompensa especificada en el sistema.
      */
     public function update(RecompensaRequest $request, Recompensa $recompensa): JsonResponse
     {
         $recompensa->update($request->validated());
 
-        return response()->json(new RecompensaResource($recompensa));
+        return response()->json([
+            'mensaje'    => 'Recompensa actualizada correctamente.',
+            'recompensa' => new RecompensaResource($recompensa),
+        ], 200);
     }
 
     /**
-     * Delete the specified resource.
+     * Eliminar la recompensa especificada del sistema.
      */
-    public function destroy(Recompensa $recompensa): Response
+    public function destroy(Recompensa $recompensa): JsonResponse
     {
         $recompensa->delete();
 
-        return response()->noContent();
+        return response()->json([
+            'mensaje' => 'Recompensa eliminada correctamente.',
+        ], 200);
     }
 }

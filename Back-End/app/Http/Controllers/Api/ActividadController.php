@@ -13,50 +13,69 @@ use App\Http\Resources\ActividadResource;
 class ActividadController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Muestra una lista de actividades.
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
-        $actividads = Actividad::paginate();
+        // Paginamos de 6 en 6
+        $actividades = Actividad::paginate(6);
 
-        return ActividadResource::collection($actividads);
+        return response()->json([
+            'registros' => ActividadResource::collection($actividades)->resolve(),
+            'enlaces'   => [
+                'primero'   => $actividades->url(1),
+                'ultimo'    => $actividades->url($actividades->lastPage()),
+                'anterior'  => $actividades->previousPageUrl(),
+                'siguiente' => $actividades->nextPageUrl(),
+            ],
+        ], 200);
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Guarda una nueva actividad en la base de datos.
      */
     public function store(ActividadRequest $request): JsonResponse
     {
         $actividad = Actividad::create($request->validated());
 
-        return response()->json(new ActividadResource($actividad));
+        return response()->json([
+            'mensaje'   => 'Actividad creada correctamente.',
+            'actividad' => new ActividadResource($actividad),
+        ], 201);
     }
 
     /**
-     * Display the specified resource.
+     * Muestra una actividad específica.
      */
     public function show(Actividad $actividad): JsonResponse
     {
-        return response()->json(new ActividadResource($actividad));
+        return response()->json([
+            'actividad' => new ActividadResource($actividad),
+        ], 200);
     }
 
     /**
-     * Update the specified resource in storage.
+     * Actualiza una actividad existente en la base de datos.
      */
     public function update(ActividadRequest $request, Actividad $actividad): JsonResponse
     {
         $actividad->update($request->validated());
 
-        return response()->json(new ActividadResource($actividad));
+        return response()->json([
+            'mensaje'   => 'Actividad actualizada correctamente.',
+            'actividad' => new ActividadResource($actividad),
+        ], 200);
     }
 
     /**
-     * Delete the specified resource.
+     * Elimina la actividad especificada de la base de datos.
      */
-    public function destroy(Actividad $actividad): Response
+    public function destroy(Actividad $actividad): JsonResponse
     {
         $actividad->delete();
 
-        return response()->noContent();
+        return response()->json([
+            'mensaje' => 'Actividad eliminada correctamente.',
+        ], 200);
     }
 }

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Models\Cita;
 use Illuminate\Http\Request;
 use App\Http\Requests\CitaRequest;
-use Illuminate\Http\Response;
 use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CitaResource;
@@ -13,50 +12,68 @@ use App\Http\Resources\CitaResource;
 class CitaController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Mostrar un listado paginado de citas (6 por página).
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
-        $citas = Cita::paginate();
+        $citas = Cita::paginate(6);
 
-        return CitaResource::collection($citas);
+        return response()->json([
+            'registros' => CitaResource::collection($citas)->resolve(),
+            'enlaces'   => [
+                'primero'   => $citas->url(1),
+                'ultimo'    => $citas->url($citas->lastPage()),
+                'anterior'  => $citas->previousPageUrl(),
+                'siguiente' => $citas->nextPageUrl(),
+            ],
+        ], 200);
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Almacenar una nueva cita en el sistema.
      */
     public function store(CitaRequest $request): JsonResponse
     {
         $cita = Cita::create($request->validated());
 
-        return response()->json(new CitaResource($cita));
+        return response()->json([
+            'mensaje' => 'Cita creada correctamente.',
+            'cita'    => new CitaResource($cita),
+        ], 201);
     }
 
     /**
-     * Display the specified resource.
+     * Mostrar la cita especificada.
      */
     public function show(Cita $cita): JsonResponse
     {
-        return response()->json(new CitaResource($cita));
+        return response()->json([
+            'cita' => new CitaResource($cita),
+        ], 200);
     }
 
     /**
-     * Update the specified resource in storage.
+     * Actualizar la cita especificada en el sistema.
      */
     public function update(CitaRequest $request, Cita $cita): JsonResponse
     {
         $cita->update($request->validated());
 
-        return response()->json(new CitaResource($cita));
+        return response()->json([
+            'mensaje' => 'Cita actualizada correctamente.',
+            'cita'    => new CitaResource($cita),
+        ], 200);
     }
 
     /**
-     * Delete the specified resource.
+     * Eliminar la cita especificada del sistema.
      */
-    public function destroy(Cita $cita): Response
+    public function destroy(Cita $cita): JsonResponse
     {
         $cita->delete();
 
-        return response()->noContent();
+        return response()->json([
+            'mensaje' => 'Cita eliminada correctamente.',
+        ], 200);
     }
 }

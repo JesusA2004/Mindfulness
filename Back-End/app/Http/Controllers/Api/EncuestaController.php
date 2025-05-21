@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Models\Encuesta;
 use Illuminate\Http\Request;
 use App\Http\Requests\EncuestaRequest;
-use Illuminate\Http\Response;
 use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\EncuestaResource;
@@ -13,50 +12,68 @@ use App\Http\Resources\EncuestaResource;
 class EncuestaController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Mostrar un listado paginado de encuestas (6 por página).
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
-        $encuestas = Encuesta::paginate();
+        $encuestas = Encuesta::paginate(6);
 
-        return EncuestaResource::collection($encuestas);
+        return response()->json([
+            'registros' => EncuestaResource::collection($encuestas)->resolve(),
+            'enlaces'   => [
+                'primero'   => $encuestas->url(1),
+                'ultimo'    => $encuestas->url($encuestas->lastPage()),
+                'anterior'  => $encuestas->previousPageUrl(),
+                'siguiente' => $encuestas->nextPageUrl(),
+            ],
+        ], 200);
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Almacenar una nueva encuesta en el sistema.
      */
     public function store(EncuestaRequest $request): JsonResponse
     {
         $encuesta = Encuesta::create($request->validated());
 
-        return response()->json(new EncuestaResource($encuesta));
+        return response()->json([
+            'mensaje'  => 'Encuesta creada correctamente.',
+            'encuesta' => new EncuestaResource($encuesta),
+        ], 201);
     }
 
     /**
-     * Display the specified resource.
+     * Mostrar la encuesta especificada.
      */
     public function show(Encuesta $encuesta): JsonResponse
     {
-        return response()->json(new EncuestaResource($encuesta));
+        return response()->json([
+            'encuesta' => new EncuestaResource($encuesta),
+        ], 200);
     }
 
     /**
-     * Update the specified resource in storage.
+     * Actualizar la encuesta especificada en el sistema.
      */
     public function update(EncuestaRequest $request, Encuesta $encuesta): JsonResponse
     {
         $encuesta->update($request->validated());
 
-        return response()->json(new EncuestaResource($encuesta));
+        return response()->json([
+            'mensaje'  => 'Encuesta actualizada correctamente.',
+            'encuesta' => new EncuestaResource($encuesta),
+        ], 200);
     }
 
     /**
-     * Delete the specified resource.
+     * Eliminar la encuesta especificada del sistema.
      */
-    public function destroy(Encuesta $encuesta): Response
+    public function destroy(Encuesta $encuesta): JsonResponse
     {
         $encuesta->delete();
 
-        return response()->noContent();
+        return response()->json([
+            'mensaje' => 'Encuesta eliminada correctamente.',
+        ], 200);
     }
 }

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Models\Tecnica;
 use Illuminate\Http\Request;
 use App\Http\Requests\TecnicaRequest;
-use Illuminate\Http\Response;
 use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TecnicaResource;
@@ -13,50 +12,69 @@ use App\Http\Resources\TecnicaResource;
 class TecnicaController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Mostrar un listado paginado de técnicas (6 por página),
+     * ideal para presentar en formato de tarjetas (cards).
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
-        $tecnicas = Tecnica::paginate();
+        $tecnicas = Tecnica::paginate(6);
 
-        return TecnicaResource::collection($tecnicas);
+        return response()->json([
+            'registros' => TecnicaResource::collection($tecnicas)->resolve(),
+            'enlaces'   => [
+                'primero'   => $tecnicas->url(1),
+                'ultimo'    => $tecnicas->url($tecnicas->lastPage()),
+                'anterior'  => $tecnicas->previousPageUrl(),
+                'siguiente' => $tecnicas->nextPageUrl(),
+            ],
+        ], 200);
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Almacenar una nueva técnica mindfulness en el sistema.
      */
     public function store(TecnicaRequest $request): JsonResponse
     {
         $tecnica = Tecnica::create($request->validated());
 
-        return response()->json(new TecnicaResource($tecnica));
+        return response()->json([
+            'mensaje'  => 'Técnica creada correctamente.',
+            'tecnica'  => new TecnicaResource($tecnica),
+        ], 201);
     }
 
     /**
-     * Display the specified resource.
+     * Mostrar la técnica especificada.
      */
     public function show(Tecnica $tecnica): JsonResponse
     {
-        return response()->json(new TecnicaResource($tecnica));
+        return response()->json([
+            'tecnica' => new TecnicaResource($tecnica),
+        ], 200);
     }
 
     /**
-     * Update the specified resource in storage.
+     * Actualizar la técnica especificada en el sistema.
      */
     public function update(TecnicaRequest $request, Tecnica $tecnica): JsonResponse
     {
         $tecnica->update($request->validated());
 
-        return response()->json(new TecnicaResource($tecnica));
+        return response()->json([
+            'mensaje'  => 'Técnica actualizada correctamente.',
+            'tecnica'  => new TecnicaResource($tecnica),
+        ], 200);
     }
 
     /**
-     * Delete the specified resource.
+     * Eliminar la técnica especificada del sistema.
      */
-    public function destroy(Tecnica $tecnica): Response
+    public function destroy(Tecnica $tecnica): JsonResponse
     {
         $tecnica->delete();
 
-        return response()->noContent();
+        return response()->json([
+            'mensaje' => 'Técnica eliminada correctamente.',
+        ], 200);
     }
 }

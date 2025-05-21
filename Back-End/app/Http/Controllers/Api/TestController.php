@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Models\Test;
 use Illuminate\Http\Request;
 use App\Http\Requests\TestRequest;
-use Illuminate\Http\Response;
 use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TestResource;
@@ -13,50 +12,68 @@ use App\Http\Resources\TestResource;
 class TestController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Mostrar un listado paginado de tests emocionales (6 por página).
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
-        $tests = Test::paginate();
+        $tests = Test::paginate(6);
 
-        return TestResource::collection($tests);
+        return response()->json([
+            'registros' => TestResource::collection($tests)->resolve(),
+            'enlaces'   => [
+                'primero'   => $tests->url(1),
+                'ultimo'    => $tests->url($tests->lastPage()),
+                'anterior'  => $tests->previousPageUrl(),
+                'siguiente' => $tests->nextPageUrl(),
+            ],
+        ], 200);
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Almacenar un nuevo test emocional en el sistema.
      */
     public function store(TestRequest $request): JsonResponse
     {
         $test = Test::create($request->validated());
 
-        return response()->json(new TestResource($test));
+        return response()->json([
+            'mensaje' => 'Test emocional creado correctamente.',
+            'test'    => new TestResource($test),
+        ], 201);
     }
 
     /**
-     * Display the specified resource.
+     * Mostrar el test emocional especificado.
      */
     public function show(Test $test): JsonResponse
     {
-        return response()->json(new TestResource($test));
+        return response()->json([
+            'test' => new TestResource($test),
+        ], 200);
     }
 
     /**
-     * Update the specified resource in storage.
+     * Actualizar el test emocional especificado en el sistema.
      */
     public function update(TestRequest $request, Test $test): JsonResponse
     {
         $test->update($request->validated());
 
-        return response()->json(new TestResource($test));
+        return response()->json([
+            'mensaje' => 'Test emocional actualizado correctamente.',
+            'test'    => new TestResource($test),
+        ], 200);
     }
 
     /**
-     * Delete the specified resource.
+     * Eliminar el test emocional especificado del sistema.
      */
-    public function destroy(Test $test): Response
+    public function destroy(Test $test): JsonResponse
     {
         $test->delete();
 
-        return response()->noContent();
+        return response()->json([
+            'mensaje' => 'Test emocional eliminado correctamente.',
+        ], 200);
     }
 }

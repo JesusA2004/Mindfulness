@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Models\Persona;
 use Illuminate\Http\Request;
 use App\Http\Requests\PersonaRequest;
-use Illuminate\Http\Response;
 use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PersonaResource;
@@ -13,50 +12,62 @@ use App\Http\Resources\PersonaResource;
 class PersonaController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Mostrar un listado paginado de personas (6 por página).
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
-        $personas = Persona::paginate();
+        $personas = Persona::all();
 
-        return PersonaResource::collection($personas);
+        return response()->json([
+            'registros' => PersonaResource::collection($personas),
+        ], 200);
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Almacenar una nueva persona en el sistema.
      */
     public function store(PersonaRequest $request): JsonResponse
     {
         $persona = Persona::create($request->validated());
 
-        return response()->json(new PersonaResource($persona));
+        return response()->json([
+            'mensaje' => 'Persona creada correctamente.',
+            'persona' => new PersonaResource($persona),
+        ], 201);
     }
 
     /**
-     * Display the specified resource.
+     * Mostrar la persona especificada.
      */
     public function show(Persona $persona): JsonResponse
     {
-        return response()->json(new PersonaResource($persona));
+        return response()->json([
+            'persona' => new PersonaResource($persona),
+        ], 200);
     }
 
     /**
-     * Update the specified resource in storage.
+     * Actualizar la persona especificada en el sistema.
      */
     public function update(PersonaRequest $request, Persona $persona): JsonResponse
     {
         $persona->update($request->validated());
 
-        return response()->json(new PersonaResource($persona));
+        return response()->json([
+            'mensaje' => 'Persona actualizada correctamente.',
+            'persona' => new PersonaResource($persona),
+        ], 200);
     }
 
     /**
-     * Delete the specified resource.
+     * Eliminar la persona especificada del sistema.
      */
-    public function destroy(Persona $persona): Response
+    public function destroy(Persona $persona): JsonResponse
     {
         $persona->delete();
 
-        return response()->noContent();
+        return response()->json([
+            'mensaje' => 'Persona eliminada correctamente.',
+        ], 200);
     }
 }
