@@ -22,6 +22,7 @@ class UserRequest extends FormRequest
                                 ? 'required|string|min:6|confirmed'
                                 : 'nullable|string|min:6|confirmed',
             'rol'          => 'required|string|in:Estudiante,Profesor,Administrador',
+            'estatus'        => 'nullable|string|in:activo,bajaSistema,bajaTemporal',
             'urlFotoPerfil'=> 'nullable|url',
             'persona_id'   => 'required|string|size:24', // Validación básica para un ObjectId
         ];

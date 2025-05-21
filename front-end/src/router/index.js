@@ -239,23 +239,4 @@ function esTokenExpirado(token) {
   }
 }
 
-// Guardia global para verificar auth + rol
-router.beforeEach((to, from, next) => {
-
-  const token = localStorage.getItem('token')
-  const user  = JSON.parse(localStorage.getItem('user')||'null')
-
-  if (to.meta.requiresAuth) {
-    if (!token || !user || (token && esTokenExpirado(token))) {
-      localStorage.clear() // Limpia el almacenamiento local
-      return next({ name: 'LoginPage' })
-    }
-    if (to.meta.role && to.meta.role !== user.rol) {
-      // redirige a su home si intenta entrar donde no debe
-      return next({ path: `/app/${user.rol}` })
-    }
-  }
-  next()
-})
-
 export default router

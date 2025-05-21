@@ -16,10 +16,14 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:6',
-            'rol'      => 'required|string', // Agregado para el rol
+            'name'           => 'required|string|max:255',
+            'matricula'      => 'required|string|max:50|unique:users',
+            'email'          => 'required|string|email|max:255|unique:users',
+            'password'       => 'required|string|min:6|confirmed',
+            'rol'            => 'required|string|in:Estudiante,Profesor,Administrador',
+            'urlFotoPerfil'  => 'nullable|url',
+            'persona_id'     => 'required|string|size:24',
+            'estatus'        => 'nullable|string|in:activo,bajaSistema,bajaTemporal',
         ]);
 
         if ($validator->fails()) {
@@ -27,10 +31,14 @@ class AuthController extends Controller
         }
 
         $user = User::create([
-            'name'     => $request->name,
-            'email'    => $request->email,
-            'password' => bcrypt($request->password),
-            'rol'      => $request->rol,
+            'name'           => $request->name,
+            'matricula'      => $request->matricula,
+            'email'          => $request->email,
+            'password'       => bcrypt($request->password),
+            'rol'            => $request->rol,
+            'urlFotoPerfil'  => $request->urlFotoPerfil,
+            'persona_id'     => $request->persona_id,
+            'estatus'        => $request->estatus ?? 'activo',
         ]);
 
         return response()->json([
@@ -67,7 +75,6 @@ class AuthController extends Controller
     public function logout()
     {
         auth('api')->logout();
-
         return response()->json(['message' => 'Cierre de sesión exitoso']);
     }
 
@@ -88,7 +95,7 @@ class AuthController extends Controller
             'access_token' => $token,
             'token_type'   => 'bearer',
             'expires_in'   => auth('api')->factory()->getTTL() * 60,
-            'user'         => auth('api')->setToken($token)->user(), // 👈 Aquí se re-carga el usuario
+            'user'         => auth('api')->setToken($token)->user(),
         ]);
     }
     

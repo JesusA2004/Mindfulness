@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->string('rol'); // 'Estudiante', 'Profesor', 'Administrador'
             $table->string('urlFotoPerfil'); // Foto de perfil para cada usuario
+            $table->string('estatus')->default('activo'); // 'activo', 'bajaSistema', 'bajaTemporal'
             $table->objectId('persona_id'); // Referencia a la colección de personas (profesores, alumnos y administradores)
             $table->rememberToken();
             $table->timestamps();
