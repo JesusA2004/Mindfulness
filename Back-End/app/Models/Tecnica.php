@@ -18,4 +18,15 @@ class Tecnica extends Model
         // para push() de subdocumentos no hace falta incluir 'calificaciones' ni 'recursos'
     ];
 
+    // En App\Models\Tecnica.php
+    public function calificaciones()
+    {
+        return $this->hasMany(Calificacion::class);
+    }
+
+    public function recursos()
+    {
+        return $this->hasMany(Recurso::class);
+    }
+
 }

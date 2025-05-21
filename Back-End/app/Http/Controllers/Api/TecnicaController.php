@@ -35,11 +35,28 @@ class TecnicaController extends Controller
      */
     public function store(TecnicaRequest $request): JsonResponse
     {
-        $tecnica = Tecnica::create($request->validated());
+        $datos = $request->validated();
+
+        // Crear técnica base
+        $tecnica = Tecnica::create(collect($datos)->except(['calificaciones', 'recursos'])->toArray());
+
+        // Guardar calificaciones si vienen
+        if (isset($datos['calificaciones'])) {
+            foreach ($datos['calificaciones'] as $calificacion) {
+                $tecnica->calificaciones()->create($calificacion);
+            }
+        }
+
+        // Guardar recursos si vienen
+        if (isset($datos['recursos'])) {
+            foreach ($datos['recursos'] as $recurso) {
+                $tecnica->recursos()->create($recurso);
+            }
+        }
 
         return response()->json([
-            'mensaje'  => 'Técnica creada correctamente.',
-            'tecnica'  => new TecnicaResource($tecnica),
+            'mensaje' => 'Técnica creada correctamente.',
+            'tecnica' => new TecnicaResource($tecnica->fresh()), // para incluir relaciones actualizadas
         ], 201);
     }
 

@@ -21,7 +21,7 @@ class PersonaRequest extends FormRequest
             'fechaNacimiento'  => 'required|date_format:Y-m-d',
             'telefono'         => 'nullable|string|max:20',
             'sexo'             => 'nullable|string|in:Masculino,Femenino,Otro',
-            'matricula'        => "required|string|max:50|unique:personas,matricula,{$this->route('persona')}",
+            'matricula' => 'required|string|max:50|unique:personas,matricula,' . optional($this->route('persona'))->_id,
             
             // Carrera: sólo si viene, y siempre como array de strings
             'carrera'          => 'sometimes|array|min:1',
