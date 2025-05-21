@@ -20,7 +20,7 @@ class AuthController extends Controller
             'matricula'      => 'required|string|max:50|unique:users',
             'email'          => 'required|string|email|max:255|unique:users',
             'password'       => 'required|string|min:6|confirmed',
-            'rol'            => 'required|string|in:Estudiante,Profesor,Administrador',
+            'rol'            => 'required|string|in:estudiante,profesor,admin',
             'urlFotoPerfil'  => 'nullable|url',
             'persona_id'     => 'required|string|size:24',
             'estatus'        => 'nullable|string|in:activo,bajaSistema,bajaTemporal',

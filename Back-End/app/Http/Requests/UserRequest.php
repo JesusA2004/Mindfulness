@@ -21,7 +21,7 @@ class UserRequest extends FormRequest
             'password'     => $this->isMethod('POST')
                                 ? 'required|string|min:6|confirmed'
                                 : 'nullable|string|min:6|confirmed',
-            'rol'          => 'required|string|in:Estudiante,Profesor,Administrador',
+            'rol'          => 'required|string|in:estudiante,profesor,admin',
             'estatus'        => 'nullable|string|in:activo,bajaSistema,bajaTemporal',
             'urlFotoPerfil'=> 'nullable|url',
             'persona_id'   => 'required|string|size:24', // Validación básica para un ObjectId
