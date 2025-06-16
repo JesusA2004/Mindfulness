@@ -6,7 +6,3 @@
 <script setup>
 defineOptions({ name: 'AppRoot' })
 </script>
-
-<style>
-/* global styles si hiciera falta */
-</style>
