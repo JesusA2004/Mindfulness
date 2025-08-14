@@ -1,348 +1,103 @@
-/* ----------------------------
-   INDEX.CSS (usando Bootstrap como base)
------------------------------ */
+/* 1. RESET Y SCROLL SUAVE */
+html { scroll-behavior: smooth; }
 
-/* ----------------------------------------------------------
-   1. SCROLL SUAVE PARA TODO EL SITIO
-   -------------------------------------------------------- */
-html {
-  scroll-behavior: smooth;
+/* 2. NAVBAR REALISTA + 3D */
+.navbar {
+  background: rgba(255,255,255,0.8);
+  backdrop-filter: blur(8px);
+}
+.logo-3d {
+  width: 50px;
+  filter: drop-shadow(0 8px 15px rgba(0,0,0,0.2));
+  transform: translateZ(50px) rotateX(10deg);
 }
 
-/* ----------------------------------------------------------
-   2. HERO SECTION (PANTALLA COMPLETA)
-   -------------------------------------------------------- */
+/* 3. HERO SECTION */
 .hero-section {
   position: relative;
   height: 100vh;
-  background-image: url('../images/backgroundMind.png');
-  background-size: cover;
-  background-position: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: url('../images/backgroundMind.png') center/cover no-repeat;
+  display: flex; align-items: center; justify-content: center;
   overflow: hidden;
 }
-
-/* Capa oscura semitransparente sobre la imagen de fondo */
 .overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  animation: fadeInOverlay 1.2s ease forwards;
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.5);
 }
-
-/* Contenedor del texto principal */
 .hero-content {
-  position: relative;
-  color: #fff;
-  text-align: center;
-  max-width: 800px;
-  padding: 0 1rem;
-  animation: slideInText 1s ease-out;
-  z-index: 1;
+  position: relative; z-index: 1;
+  max-width: 700px;
 }
-
-/* Título principal */
 .hero-title {
-  font-size: 3rem;
-  line-height: 1.2;
-  margin-bottom: 0.5rem;
-  animation: fadeInTitle 1s ease-out;
+  font-size: 3rem; font-weight: 700;
+  text-shadow: 0 4px 10px rgba(0,0,0,0.4);
 }
-
-/* Subtítulo secundario */
 .hero-subtitle {
-  font-size: 1.25rem;
-  margin-bottom: 2rem;
-  opacity: 0;
-  animation: fadeInSubtitle 1s 0.8s ease-out forwards;
+  font-size: 1.25rem; margin-bottom: 1.5rem;
+}
+.hero-3d-model {
+  position: absolute; right: 10%;
+  bottom: 0; height: 70%;
+  transform: translateZ(100px) rotateY(-15deg);
+  filter: drop-shadow(0 15px 20px rgba(0,0,0,0.3));
 }
 
-/* Botón scroll-down con borde redondeado */
-.scroll-down {
-  display: inline-block;
-  color: #fff;
-  font-size: 0.9rem;
-  border: 2px solid #fff;
-  padding: 0.6rem 1.2rem;
-  border-radius: 50px;
-  transition: background 0.3s ease, transform 0.3s ease;
-  opacity: 0;
-  animation: fadeInScroll 1s 1.4s ease-out forwards;
-}
-
-.scroll-down:hover {
-  background: #28a745;
-  border-color: #28a745;
-  transform: translateY(-4px);
-}
-
-/* ----------------------------------------------------------
-   Keyframes para animaciones del Hero
-   -------------------------------------------------------- */
-@keyframes fadeInOverlay {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideInText {
-  from {
-    transform: translateY(40px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes fadeInTitle {
-  from {
-    opacity: 0;
-    letter-spacing: 5px;
-  }
-  to {
-    opacity: 1;
-    letter-spacing: 1px;
-  }
-}
-
-@keyframes fadeInSubtitle {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fadeInScroll {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ----------------------------------------------------------
-   3. CARDS SECTION (SOBRE BOOTSTRAP GRID)
-   -------------------------------------------------------- */
-/* El HTML ya usa .container para centrar contenido. 
-   Para el layout, se recomienda envolver los cards en 
-   <div class="row"> y <div class="col-md-4 mb-4"> desde el template. */
-
-/* Ajustes generales del contenedor de cards */
-.cards-section {
-  background: #f8f9fa;
-  padding: 4rem 1rem;
-}
-
-/* Si utilizas .card-grid, mantenemos un display flex por defecto */
-.card-grid {
-  display: flex;
-  flex-wrap: wrap;
-  margin-left: -0.75rem;
-  margin-right: -0.75rem;
-}
-
-/* Cada card: usa Bootstrap .card, pero añadimos sombras y animación */
-.card-grid .card {
+/* 4. SECCIONES 3D CARDS */
+.benefit-card,
+.program-card {
   background: #fff;
   border-radius: 1rem;
-  padding: 2rem;
-  margin: 0.75rem;
-  flex: 1 1 calc(33.333% - 1.5rem);
-  max-width: calc(33.333% - 1.5rem);
-  text-align: center;
-  box-shadow: 0 0.5rem 1.2rem rgba(0, 0, 0, 0.1);
-  transform: translateY(20px);
-  opacity: 0;
-  animation: cardFadeIn 0.8s forwards;
-}
-
-/* Para pantallas medianas y menores, ajustamos columnas */
-@media (max-width: 992px) {
-  .card-grid .card {
-    flex: 1 1 calc(50% - 1.5rem);
-    max-width: calc(50% - 1.5rem);
-  }
-}
-
-@media (max-width: 576px) {
-  .card-grid .card {
-    flex: 1 1 100%;
-    max-width: 100%;
-  }
-}
-
-/* Ícono dentro de la card: color e interacción */
-.card-icon {
-  color: #28a745;
-  margin-bottom: 1rem;
-  transition: transform 0.4s ease, color 0.4s ease;
-}
-
-.card:hover .card-icon {
-  transform: rotate(20deg) scale(1.1);
-  color: #1e7e34;
-}
-
-/* Título y texto de card */
-.card-title {
-  font-size: 1.25rem;
-  margin-bottom: 0.5rem;
-}
-
-.card-text {
-  font-size: 1rem;
-  color: #6c757d;
-  line-height: 1.5;
-}
-
-/* Keyframe para que cada card aparezca desde abajo */
-@keyframes cardFadeIn {
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-/* ----------------------------------------------------------
-   4. VIDEO SECTION
-   -------------------------------------------------------- */
-.video-section {
-  background: #ffffff;
-  padding: 4rem 1rem;
-}
-
-.section-title {
-  font-size: 2rem;
-  text-align: center;
-  margin-bottom: 2rem;
-  position: relative;
-  display: inline-block;
-  color: #343a40;
-  transition: color 0.3s ease;
-}
-
-.section-title:hover {
-  color: #28a745;
-}
-
-/* Wrapper responsivo para iframe de YouTube */
-.video-wrapper {
-  position: relative;
-  width: 100%;
-  padding-bottom: 56.25%; /* 16:9 */
-  border-radius: 1rem;
-  overflow: hidden;
-  box-shadow: 0 0.5rem 1.2rem rgba(0, 0, 0, 0.1);
+  transform: translateZ(30px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
   transition: transform 0.3s ease;
-  max-width: 800px;
-  margin: 0 auto;
+}
+.benefit-card:hover,
+.program-card:hover {
+  transform: translateZ(60px) scale(1.03);
+}
+.icon-3d,
+.program-3d {
+  width: 80px; height: 80px;
+  filter: drop-shadow(0 8px 12px rgba(0,0,0,0.2));
 }
 
-.video-wrapper:hover {
-  transform: scale(1.03);
+/* 5. RECURSOS + TESTIMONIOS */
+.resources-testimonials .resource-card,
+.resources-testimonials .testimonial {
+  background: #fff;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  transform: translateZ(20px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease;
+}
+.resources-testimonials .resource-card:hover,
+.resources-testimonials .testimonial:hover {
+  transform: translateZ(40px);
 }
 
-.video-wrapper iframe {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-/* ----------------------------------------------------------
-   5. OTROS ESTILOS ÚTILES
-   -------------------------------------------------------- */
-/* Ajuste de enlaces dentro de sección (ej. botones lisos) */
-a {
-  text-decoration: none;
-  transition: color 0.3s ease;
-}
-
-a:hover {
-  color: #28a745;
-}
-
-/* Botones personalizados si se usan (Bootstrap .btn-*) */
-.btn-custom {
-  background-color: #28a745;
-  border-color: #28a745;
-  color: #fff;
-  transition: background-color 0.3s ease, transform 0.3s ease;
-}
-
-.btn-custom:hover {
-  background-color: #218838;
-  transform: translateY(-2px);
-}
-
-/* ----------------------------------------------------------
-   6. RESPONSIVE ADICIONAL (por si se requiere más ajustes)
-   -------------------------------------------------------- */
-/* Reducir tamaño de hero-title en pantallas muy pequeñas */
-@media (max-width: 576px) {
-  .hero-title {
-    font-size: 2rem;
-  }
-  .hero-subtitle {
-    font-size: 1rem;
-  }
-  .scroll-down {
-    font-size: 0.8rem;
-    padding: 0.5rem 1rem;
-  }
-}
-
-/* Sobrescribe temporal: hacer que .hover-card comience opaca */
-.hover-card {
-  opacity: 0;
-  transform: translateY(20px);
-  transition: all 0.6s ease;
-}
-.hover-card.show-card {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Ajuste de título de sección para mantenerse consistente */
-.section-title {
-  font-weight: 600;
-  transition: color 0.3s ease;
-}
-.section-title:hover {
-  color: #28a745;
-}
-
-/* Ajustes de video-wrapper para responsivo */
-.video-wrapper {
+/* 6. CONTACT + FOOTER */
+.contact-section {
   position: relative;
-  width: 100%;
-  padding-bottom: 56.25%; /* 16:9 */
-  border-radius: 0.5rem;
-  overflow: hidden;
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+  background: #28a745;
 }
-.video-wrapper iframe {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+.contact-section::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: url('../images/backgroundMind.png') center/cover no-repeat;
+  opacity: 0.2;
+}
+.contact-section .form-control {
+  border-radius: 50px;
+  padding: 1rem 1.5rem;
+}
+.contact-section .btn {
+  border-radius: 50px;
+  padding: 0.75rem 2rem;
+}
+
+/* 7. RESPONSIVE */
+@media (max-width: 768px) {
+  .hero-title { font-size: 2.25rem; }
+  .hero-3d-model { display: none; }
 }

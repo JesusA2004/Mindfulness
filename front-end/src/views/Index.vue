@@ -1,302 +1,162 @@
 <template>
   <div class="index-page">
-    <!-- Hero Section -->
-    <section class="hero-section d-flex align-items-center justify-content-center">
-      <div class="overlay"></div>
-      <div class="hero-content text-center text-white px-3">
-        <h1 class="hero-title mb-3">Bienvenido a Mindfulness</h1>
-        <p class="hero-subtitle mb-4">
-          Herramientas para el destress en el aula y bienestar emocional.
-        </p>
-        <div>
-          <button class="btn btn-outline-light btn-lg me-2" @click="scrollToSection('cards')">
-            Descubre Más
-          </button>
-          <button class="btn btn-success btn-lg" @click="scrollToSection('benefits')">
-            Ver Beneficios
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Cards Section (Resumen Breve) -->
-    <section id="cards" class="cards-section py-5">
+    <!-- Navbar 3D + Realista -->
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top py-3">
       <div class="container">
-        <h2 class="text-center mb-5 section-title">¿Por qué Mindfulness?</h2>
-        <div class="row">
-          <div
-            class="col-md-4 mb-4"
-            v-for="(card, index) in cards"
-            :key="card.title"
-            :style="{ animationDelay: (index * 0.2) + 's' }"
-          >
-            <div class="card h-100 shadow-sm hover-card">
-              <div class="card-body text-center">
-                <div class="card-icon mb-3">
-                  <i :class="[card.icon, 'fa-2x']"></i>
-                </div>
-                <h5 class="card-title">{{ card.title }}</h5>
-                <p class="card-text">{{ card.text }}</p>
-                <button
-                  class="btn btn-sm btn-success mt-3"
-                  @click="scrollToSection('benefits')"
-                >
-                  Conoce Más
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Benefits Section with Collapse (Efecto Deslizo) -->
-    <section id="benefits" class="benefits-section bg-light py-5">
-      <div class="container">
-        <h2 class="text-center mb-5 section-title">Beneficios en el Aula</h2>
-        <div class="row">
-          <div
-            class="col-md-4 mb-4"
-            v-for="(benefit, idx) in benefits"
-            :key="benefit.title"
-          >
-            <div class="card h-100 shadow-sm">
-              <div class="card-body text-center">
-                <div class="benefit-icon mb-3 text-success">
-                  <i :class="[benefit.icon, 'fa-2x']"></i>
-                </div>
-                <h5 class="card-title">{{ benefit.title }}</h5>
-                <p class="card-text">{{ benefit.shortText }}</p>
-                <button
-                  class="btn btn-sm btn-outline-success"
-                  type="button"
-                  :data-bs-toggle="'collapse'"
-                  :data-bs-target="'#collapse' + idx"
-                  aria-expanded="false"
-                  :aria-controls="'collapse' + idx"
-                >
-                  Ver Detalles
-                </button>
-                <div :id="'collapse' + idx" class="collapse mt-3 text-start">
-                  <p>{{ benefit.longText }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Carousel de Imágenes -->
-    <section class="gallery-section py-5">
-      <div class="container">
-        <h2 class="text-center mb-4 section-title">Momentos de Mindfulness</h2>
-        <div
-          id="mindfulnessCarousel"
-          class="carousel slide"
-          data-bs-ride="carousel"
+        <a class="navbar-brand" href="#">
+        <img src="@/assets/logo.png" alt="Mindfulness Logo" class="logo-3d" /> 
+        </a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
         >
-          <div class="carousel-inner">
-            <div
-              v-for="(img, i) in carouselImages"
-              :key="img"
-              :class="['carousel-item', { active: i === 0 }]"
-            >
-              <img
-                :src="require(`@/assets/images/${img}`)"
-                class="d-block w-100 rounded"
-                alt="Mindfulness Image"
-              />
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item"><a class="nav-link" href="#hero">Inicio</a></li>
+            <li class="nav-item"><a class="nav-link" href="#benefits">Beneficios</a></li>
+            <li class="nav-item"><a class="nav-link" href="#programs">Programas</a></li>
+            <li class="nav-item"><a class="nav-link" href="#resources">Recursos</a></li>
+            <li class="nav-item"><a class="nav-link" href="#testimonials">Testimonios</a></li>
+            <li class="nav-item"><a class="nav-link btn btn-success ms-3" href="#contact">Cotización</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="hero" class="hero-section d-flex align-items-center">
+      <div class="overlay"></div>
+      <div class="hero-content text-center text-white px-4">
+        <h1 class="hero-title mb-3">Mindfulness para el control del estrés</h1>
+        <p class="hero-subtitle mb-4">
+          Empodera a tus estudiantes y colaboradores con prácticas de atención plena.
+        </p>
+        <button class="btn btn-light btn-lg me-3" @click="scrollTo('benefits')">Ver Beneficios</button>
+        <button class="btn btn-success btn-lg" @click="scrollTo('contact')">Solicitar Cotización</button>
+      </div>
+      <!--
+      <img src="@/assets/3d-meditation.png" alt="3D Meditación" class="hero-3d-model" />
+      -->
+    </section>
+
+    <!-- Beneficios -->
+    <section id="benefits" class="benefits-section py-5">
+      <div class="container">
+        <h2 class="section-title text-center mb-5">Beneficios de Mindfulness</h2>
+        <div class="row g-4">
+          <div
+            class="col-md-4"
+            v-for="(b, i) in benefits"
+            :key="i"
+          >
+            <div class="benefit-card h-100 p-4 text-center shadow-sm">
+              <!--
+              <img :src="require(`@/assets/icons/${b.icon}`)" class="icon-3d mb-3" />
+              <h5>{{ b.title }}</h5>
+              <p class="mb-0">{{ b.text }}</p>
+              -->
             </div>
           </div>
-          <button
-            class="carousel-control-prev"
-            type="button"
-            data-bs-target="#mindfulnessCarousel"
-            data-bs-slide="prev"
-          >
-            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Anterior</span>
-          </button>
-          <button
-            class="carousel-control-next"
-            type="button"
-            data-bs-target="#mindfulnessCarousel"
-            data-bs-slide="next"
-          >
-            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Siguiente</span>
-          </button>
         </div>
       </div>
     </section>
 
-    <!-- Video Section -->
-    <section class="video-section py-5">
-      <div class="container text-center">
-        <h2 class="section-title mb-4">¿Qué es Mindfulness?</h2>
-        <div class="video-wrapper mx-auto mb-4">
-          <iframe
-            src="https://www.youtube.com/embed/6p_yaNFSYao"
-            title="Introducción a Mindfulness"
-            frameborder="0"
-            allowfullscreen
-          ></iframe>
+    <!-- Programas -->
+    <section id="programs" class="programs-section py-5 bg-light">
+      <div class="container">
+        <h2 class="section-title text-center mb-5">Nuestros Programas</h2>
+        <div class="row g-4">
+          <div
+            class="col-md-4"
+            v-for="(p, i) in programs"
+            :key="i"
+          >
+            <div class="program-card shadow-sm p-4 text-center">
+              <!--
+              <img :src="require(`@/assets/models/${p.img}`)" class="program-3d mb-3" />
+              -->
+              <h5>{{ p.title }}</h5>
+              <p>{{ p.desc }}</p>
+            </div>
+          </div>
         </div>
-        <button class="btn btn-success" @click="openModal">
-          Ver Testimonios
-        </button>
       </div>
     </section>
 
-    <!-- Modal de Testimonios -->
-    <div
-      class="modal fade"
-      id="testimonyModal"
-      tabindex="-1"
-      aria-labelledby="testimonyModalLabel"
-      aria-hidden="true"
-      ref="testimonyModal"
-    >
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="testimonyModalLabel">
-              Testimonios de Aulas
-            </h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Cerrar"
-            ></button>
+    <!-- Recursos + Testimonios -->
+    <section id="resources" class="resources-testimonials py-5">
+      <div class="container">
+        <div class="row g-4">
+          <div class="col-md-6">
+            <div class="resource-card p-4 shadow-sm">
+              <h4>Recursos Descargables</h4>
+              <p>Guías, audios y PDFs para implementar mindfulness.</p>
+              <button class="btn btn-outline-success">Descargar</button>
+            </div>
           </div>
-          <div class="modal-body">
-            <ul class="list-unstyled">
-              <li v-for="(tes, i) in testimonies" :key="i" class="mb-3">
-                <blockquote class="blockquote">
-                  <p class="mb-1">“{{ tes.text }}”</p>
-                  <footer class="blockquote-footer">{{ tes.author }}</footer>
-                </blockquote>
-              </li>
-            </ul>
-          </div>
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              data-bs-dismiss="modal"
-            >
-              Cerrar
-            </button>
+          <div class="col-md-6">
+            <h4 class="mb-3">Testimonios</h4>
+            <div v-for="(t, i) in testimonials" :key="i" class="testimonial mb-4 p-3 shadow-sm">
+              <blockquote class="mb-2">“{{ t.text }}”</blockquote>
+              <footer class="text-end">— {{ t.author }}</footer>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- Footer -->
+    <!-- Contacto / Footer -->
+    <section id="contact" class="contact-section py-5 bg-success text-white">
+      <div class="container">
+        <h2 class="section-title text-center mb-4">Solicita tu Cotización</h2>
+        <form class="row g-3 justify-content-center">
+          <div class="col-md-4">
+            <input type="text" class="form-control" placeholder="Nombre / Empresa" />
+          </div>
+          <div class="col-md-4">
+            <input type="email" class="form-control" placeholder="Correo electrónico" />
+          </div>
+          <div class="col-md-4">
+            <button type="submit" class="btn btn-light w-100">Enviar</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
     <Footer />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import Footer from '@/components/Footer.vue';
-
-const cards = [
-  {
-    icon: 'fas fa-bullseye',
-    title: 'Misión',
-    text: 'Brindar herramientas para el bienestar emocional en el aula.',
-  },
-  {
-    icon: 'fas fa-eye',
-    title: 'Visión',
-    text: 'Crear espacios de calma y concentración para estudiantes.',
-  },
-  {
-    icon: 'fas fa-book-open',
-    title: '¿Qué hacemos?',
-    text: 'Guiamos prácticas de respiración y meditación breve.',
-  },
-];
+import { ref } from 'vue'
+import Footer from '@/components/Footer.vue'
 
 const benefits = [
-  {
-    icon: 'fas fa-brain',
-    title: 'Mejora de Atención',
-    shortText: 'Incrementa la capacidad de concentración.',
-    longText:
-      'Las prácticas regulares de mindfulness entrenan la mente para mantener la atención en el momento presente, reduciendo distracciones en clase.',
-  },
-  {
-    icon: 'fas fa-heart',
-    title: 'Reducción de Estrés',
-    shortText: 'Disminuye la ansiedad y tensión.',
-    longText:
-      'Técnicas sencillas de respiración ayudan a liberar emociones negativas y equilibrar el estado anímico, promoviendo un ambiente de aprendizaje más relajado.',
-  },
-  {
-    icon: 'fas fa-user-friends',
-    title: 'Mejor Clima Escolar',
-    shortText: 'Fomenta la empatía y convivencia.',
-    longText:
-      'Al practicar mindfulness en grupo, se impulsa la colaboración y la comprensión mutua entre estudiantes, reduciendo conflictos y mejorando la dinámica de aula.',
-  },
-];
+  { icon: 'brain-3d.png', title: 'Mejora Concentración', text: 'Incrementa la atención y foco.' },
+  { icon: 'heart-3d.png', title: 'Reduce Estrés', text: 'Alivia la ansiedad y tensión.' },
+  { icon: 'chart-3d.png', title: 'Aumenta Rendimiento', text: 'Incrementa productividad y compromiso.' },
+]
 
-const carouselImages = [
-  'backgroundMind.png',
-  'backgroundMind.png',
-  'backgroundMind.png',
-];
+const programs = [
+  { img: 'session-3d.png', title: 'Sesiones Guiadas', desc: 'Prácticas estructuradas en aula.' },
+  { img: 'workshop-3d.png', title: 'Talleres', desc: 'Workshops personalizados.' },
+  { img: 'app-3d.png', title: 'App Móvil', desc: 'Soporte diario desde tu teléfono.' },
+]
 
-const testimonies = [
-  {
-    text: '“Desde que implementamos sesiones cortas de respiración, la clase se siente más tranquila y los estudiantes participan mejor.”',
-    author: 'Profr. Martínez, Secundaria ABC',
-  },
-  {
-    text: '“Los niños muestran menos ansiedad antes de los exámenes y se enfocan más tiempo.”',
-    author: 'Profa. López, Primaria XYZ',
-  },
-  {
-    text: '“Incluir un minuto de silencio al inicio de cada clase cambió el ambiente completamente.”',
-    author: 'Profr. Herrera, Preparatoria 123',
-  },
-];
+const testimonials = [
+  { text: 'Los estudiantes participan mejor y con más calma.', author: 'Profa. López' },
+  { text: 'Ambiente de clase tranquilo tras 1 semana.', author: 'Prof. Martínez' },
+  { text: 'La concentración mejoró notablemente.', author: 'Escuela ABC' },
+]
 
-const scrollToSection = (id) => {
-  const el = document.getElementById(id);
-  if (el) {
-    el.scrollIntoView({ behavior: 'smooth' });
-  }
-};
-
-const openModal = () => {
-  const modalEl = ref(null);
-  const bootstrap = window.bootstrap;
-  const modalInstance = new bootstrap.Modal(
-    document.getElementById('testimonyModal')
-  );
-  modalInstance.show();
-};
-
-onMounted(() => {
-  // Opcional: animar elementos al hacer scroll (IntersectionObserver)
-  const observerOptions = { threshold: 0.2 };
-  const animateOnScroll = (entries) => {
-    entries.forEach((entry) => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('show-card');
-      }
-    });
-  };
-  const observer = new IntersectionObserver(animateOnScroll, observerOptions);
-  document.querySelectorAll('.hover-card').forEach((el) => {
-    observer.observe(el);
-  });
-});
+const scrollTo = id => {
+  const el = document.getElementById(id)
+  if (el) el.scrollIntoView({ behavior: 'smooth' })
+}
 </script>
 
 <style src="@/assets/css/Index.css" scoped></style>
