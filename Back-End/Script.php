@@ -19,8 +19,10 @@ class CreateUsersCollection extends Migration {
             $table->string('rol'); // 'Estudiante', 'Profesor', 'Administrador'
             $table->string('urlFotoPerfil'); // Foto de perfil para cada usuario
             $table->objectId('persona_id'); // Referencia a la colección de personas (profesores, alumnos y administradores)
+            $table->objectId('institucion_id');
             $table->rememberToken();
-            $table->timestamps();
+            $table->timestamps(); 
+            $table->index('institucion_id');
             $table->index('rol'); //Parámetro de búsqueda
         });
     }
@@ -198,6 +200,7 @@ class CreateCitasCollection extends Migration {
             $collection->dateTime('fecha_cita');
             $collection->string('modalidad');
             $collection->text('motivo')->nullable();
+            $collection->text('observaciones');
             $collection->string('estado')->default('Pendiente');
             $collection->timestamps();
             $collection->index('fecha_cita'); // Parámetro de búsqueda
@@ -224,6 +227,29 @@ class CreateBitacorasCollection extends Migration {
             $collection->timestamps();
             $collection->index('fecha'); // Parámetro de búsqueda
             $collection->index('titulo'); // Parámetro de búsqueda
+        });
+    }
+
+    public function down() {
+         Schema::dropIfExists('bitacoras');
+    }
+}
+
+
+/**
+ * 9. Coleccion de instituciones
+ */
+class CreateBitacorasCollection extends Migration {
+    public function up() {
+       Schema::create('instituciones', function (Blueprint $collection) {
+            $collection->id();                
+            $collection->string('nombre')->unique();
+            $collection->text('descripcion')->nullable();
+            $collection->string('direccion')->nullable();
+            $collection->string('telefono')->nullable();
+            $collection->string('email')->nullable();
+            $collection->timestamps();
+            $collection->index('nombre');
         });
     }
 

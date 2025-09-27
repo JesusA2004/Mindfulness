@@ -15,6 +15,7 @@ return new class extends Migration
             $collection->dateTime('fecha_cita');
             $collection->string('modalidad');
             $collection->text('motivo')->nullable();
+            $collection->text('observaciones');
             $collection->string('estado')->default('Pendiente');
             $collection->timestamps();
             $collection->index('fecha_cita'); // Parámetro de búsqueda
