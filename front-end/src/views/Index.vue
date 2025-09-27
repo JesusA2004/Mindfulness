@@ -1,32 +1,5 @@
 <template>
   <div class="index-page">
-    <!-- Navbar 3D + Realista -->
-    <nav class="navbar navbar-expand-lg navbar-light sticky-top py-3">
-      <div class="container">
-        <a class="navbar-brand" href="#">
-        <img src="@/assets/logo.png" alt="Mindfulness Logo" class="logo-3d" /> 
-        </a>
-        <button
-          class="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-        >
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-          <ul class="navbar-nav ms-auto">
-            <li class="nav-item"><a class="nav-link" href="#hero">Inicio</a></li>
-            <li class="nav-item"><a class="nav-link" href="#benefits">Beneficios</a></li>
-            <li class="nav-item"><a class="nav-link" href="#programs">Programas</a></li>
-            <li class="nav-item"><a class="nav-link" href="#resources">Recursos</a></li>
-            <li class="nav-item"><a class="nav-link" href="#testimonials">Testimonios</a></li>
-            <li class="nav-item"><a class="nav-link btn btn-success ms-3" href="#contact">Cotización</a></li>
-          </ul>
-        </div>
-      </div>
-    </nav>
-
     <!-- Hero Section -->
     <section id="hero" class="hero-section d-flex align-items-center">
       <div class="overlay"></div>
