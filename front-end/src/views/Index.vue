@@ -8,9 +8,9 @@
           <!-- Texto -->
           <div class="col-12 col-lg-6 order-2 order-lg-1 mt-4 mt-lg-0">
             <h1 class="hero-title mb-3" data-animate="fade-up">
-              Mindfulness<br />
-              para el Estrés<br />
-              Estudiantil
+              Mindora:<br />
+              Tu espacio de<br />
+              calma interior
             </h1>
             <p class="hero-subtitle mb-4" data-animate="fade-up" data-delay="120">
               Empodera a tus estudiantes para gestionar el estrés y mejorar el bienestar.
