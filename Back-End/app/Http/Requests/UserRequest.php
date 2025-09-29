@@ -3,6 +3,8 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use App\Models\Institucion;
 
 class UserRequest extends FormRequest
 {
@@ -13,17 +15,47 @@ class UserRequest extends FormRequest
 
     public function rules(): array
     {
+        // Soporta tanto route-model binding como id string
+        $routeUser = $this->route('user');
+        $userId = is_object($routeUser) && method_exists($routeUser, 'getKey')
+            ? $routeUser->getKey()
+            : $routeUser;
+
         return [
-            'name'          => 'required|string|max:255',
-            'matricula'     => 'required|string|max:50|unique:users,matricula,' . $this->route('user'),
-            'email'         => 'required|email|unique:users,email,' . $this->route('user'),
-            'password'      => $this->isMethod('POST')
-                                    ? 'required|string|min:6|confirmed'
-                                    : 'nullable|string|min:6|confirmed',
-            'rol'           => 'required|string|in:estudiante,profesor,admin',
-            'estatus'       => 'nullable|string|in:activo,bajaSistema,bajaTemporal',
-            'urlFotoPerfil' => 'nullable|url',
-            'persona_id'    => 'required|string|size:24',
+            'name'            => ['required', 'string', 'max:255'],
+
+            'matricula'       => [
+                'required', 'string', 'max:50',
+                Rule::unique('users', 'matricula')->ignore($userId, '_id'),
+            ],
+
+            'email'           => [
+                'required', 'email',
+                Rule::unique('users', 'email')->ignore($userId, '_id'),
+            ],
+
+            'password'        => $this->isMethod('POST')
+                ? ['required', 'string', 'min:6', 'confirmed']
+                : ['nullable', 'string', 'min:6', 'confirmed'],
+
+            // Usa los valores en minúsculas que definiste
+            'rol'             => ['required', 'string', Rule::in(['estudiante','profesor','admin'])],
+
+            'estatus'         => ['nullable', 'string', Rule::in(['activo','bajaSistema','bajaTemporal'])],
+
+            'urlFotoPerfil'   => ['nullable', 'url'],
+
+            'persona_id'      => ['required', 'string', 'size:24'],
+
+            // NUEVO: obligatorio y debe existir en instituciones
+            'institucion_id'  => [
+                'required', 'string', 'size:24',
+                function ($attribute, $value, $fail) {
+                    if (!Institucion::where('_id', $value)->exists()) {
+                        $fail('La institución especificada no existe.');
+                    }
+                },
+            ],
         ];
     }
 
@@ -60,6 +92,11 @@ class UserRequest extends FormRequest
             'persona_id.required'     => 'El ID de la persona es obligatorio.',
             'persona_id.string'       => 'El ID de la persona debe ser una cadena.',
             'persona_id.size'         => 'El ID de la persona debe tener exactamente 24 caracteres.',
+
+            'institucion_id.required' => 'El ID de la institución es obligatorio.',
+            'institucion_id.string'   => 'El ID de la institución debe ser una cadena.',
+            'institucion_id.size'     => 'El ID de la institución debe tener exactamente 24 caracteres.',
+            // El mensaje “no existe” se maneja en la closure del rule.
         ];
     }
 }
