@@ -2,21 +2,21 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\Recompensa;
-use Illuminate\Http\Request;
-use App\Http\Requests\RecompensaRequest;
-use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\RecompensaRequest;
 use App\Http\Resources\RecompensaResource;
+use App\Models\Recompensa;
+use Illuminate\Http\JsonResponse;
+use MongoDB\BSON\ObjectId;
+use Throwable;
 
 class RecompensaController extends Controller
 {
     /**
-     * Mostrar todas las recompensas disponibles (sin paginación).
+     * Listar todas las recompensas (sin paginación).
      */
-    public function index(Request $request): JsonResponse
+    public function index(): JsonResponse
     {
-        // Obtenemos todas las recompensas porque su número será reducido
         $recompensas = Recompensa::all();
 
         return response()->json([
@@ -25,10 +25,11 @@ class RecompensaController extends Controller
     }
 
     /**
-     * Almacenar una nueva recompensa en el sistema.
+     * Crear una recompensa.
      */
     public function store(RecompensaRequest $request): JsonResponse
     {
+        // NOTA: asegúrate de que el modelo Recompensa tenga 'canjeo' en $fillable y 'array' en $casts
         $recompensa = Recompensa::create($request->validated());
 
         return response()->json([
@@ -38,20 +39,41 @@ class RecompensaController extends Controller
     }
 
     /**
-     * Mostrar la recompensa especificada.
+     * Mostrar una recompensa por id (ObjectId de Mongo).
      */
-    public function show(Recompensa $recompensa): JsonResponse
+    public function show(string $id): JsonResponse
     {
+        $oid = $this->toObjectId($id);
+        if (!$oid) {
+            return response()->json(['mensaje' => 'ID inválido. Debe ser un ObjectId de 24 caracteres.'], 400);
+        }
+
+        $recompensa = Recompensa::where('_id', $oid)->first();
+        if (!$recompensa) {
+            return response()->json(['mensaje' => 'Recompensa no encontrada.'], 404);
+        }
+
         return response()->json([
             'recompensa' => new RecompensaResource($recompensa),
         ], 200);
     }
 
     /**
-     * Actualizar la recompensa especificada en el sistema.
+     * Actualizar una recompensa por id.
+     * PUT: envía todos los obligatorios. (Tu RecompensaRequest ya lo exige)
      */
-    public function update(RecompensaRequest $request, Recompensa $recompensa): JsonResponse
+    public function update(RecompensaRequest $request, string $id): JsonResponse
     {
+        $oid = $this->toObjectId($id);
+        if (!$oid) {
+            return response()->json(['mensaje' => 'ID inválido. Debe ser un ObjectId de 24 caracteres.'], 400);
+        }
+
+        $recompensa = Recompensa::where('_id', $oid)->first();
+        if (!$recompensa) {
+            return response()->json(['mensaje' => 'Recompensa no encontrada.'], 404);
+        }
+
         $recompensa->update($request->validated());
 
         return response()->json([
@@ -61,14 +83,42 @@ class RecompensaController extends Controller
     }
 
     /**
-     * Eliminar la recompensa especificada del sistema.
+     * Eliminar una recompensa por id.
      */
-    public function destroy(Recompensa $recompensa): JsonResponse
+    public function destroy(string $id): JsonResponse
     {
-        $recompensa->delete();
+        $oid = $this->toObjectId($id);
+        if (!$oid) {
+            return response()->json(['mensaje' => 'ID inválido. Debe ser un ObjectId de 24 caracteres.'], 400);
+        }
 
-        return response()->json([
-            'mensaje' => 'Recompensa eliminada correctamente.',
-        ], 200);
+        try {
+            $deleted = Recompensa::where('_id', $oid)->delete(); // retorna # de docs borrados
+            if ($deleted === 0) {
+                return response()->json(['mensaje' => 'Recompensa no encontrada.'], 404);
+            }
+
+            return response()->json(['mensaje' => 'Recompensa eliminada correctamente.'], 200);
+        } catch (Throwable $e) {
+            return response()->json([
+                'mensaje' => 'No se pudo eliminar la recompensa.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Convierte string de 24 hex a ObjectId.
+     */
+    private function toObjectId(?string $id): ?ObjectId
+    {
+        if (!is_string($id) || !preg_match('/^[a-f0-9]{24}$/i', $id)) {
+            return null;
+        }
+        try {
+            return new ObjectId($id);
+        } catch (Throwable $e) {
+            return null;
+        }
     }
 }
