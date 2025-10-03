@@ -1,0 +1,9 @@
+:root {
+  --bs-font-sans-serif: "Inter", "Helvetica Neue", Arial, sans-serif;
+}
+
+html, body, button, input, select, textarea {
+  font-family: var(--bs-font-sans-serif) !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

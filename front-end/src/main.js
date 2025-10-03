@@ -1,18 +1,17 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
-import store from './store' // Asegúrate de que este path sea correcto
+import store from './store'
 
-// Estilos
+// === Estilos (orden importa) ===
 import '@fortawesome/fontawesome-free/css/all.min.css'
-import 'bootstrap/dist/css/bootstrap.css'
+import 'bootstrap/dist/css/bootstrap.min.css'   // 1) Bootstrap primero
+import './assets/css/_global.css'               // 2) Tu CSS global después (impone la fuente)
+// Si tienes otros: import './assets/css/Index.css'; etc.
 
-// Crear app
+import 'bootstrap/dist/js/bootstrap.bundle.min.js' // JS de Bootstrap (bundle con Popper)
+
 const app = createApp(App)
-
-app.use(store)      // usar store
-app.use(router)     // usar router
-app.mount('#app')   // montar app
-
-// JS de Bootstrap (después del mount o al final del archivo)
-import 'bootstrap/dist/js/bootstrap'
+app.use(store)
+app.use(router)
+app.mount('#app')

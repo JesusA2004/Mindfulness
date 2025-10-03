@@ -1,4 +1,4 @@
-<template>
+<template> 
   <nav class="navbar navbar-expand-lg navbar-dark custom-navbar fixed-top">
     <div class="container-fluid">
       <a class="navbar-brand" href="#">
@@ -53,36 +53,33 @@ function setNavHeight () {
   document.documentElement.style.setProperty('--nav-h', h + 'px')
 }
 
-/* ====== Efecto compacto al hacer scroll (opcional pero bonito) ====== */
-function bindScrollCompact () {
+/* ====== Fondo translúcido + blur al hacer scroll ====== */
+function bindScrollEffect () {
   const nav = document.querySelector('.custom-navbar')
   if (!nav) return () => {}
   const onScroll = () => {
-    if (window.scrollY > 10) nav.classList.add('scrolled')
+    if (window.scrollY > 8) nav.classList.add('scrolled')
     else nav.classList.remove('scrolled')
-    setNavHeight() // por si cambia la altura en modo compacto
   }
   window.addEventListener('scroll', onScroll, { passive: true })
+  onScroll() // estado inicial correcto
   return () => window.removeEventListener('scroll', onScroll)
 }
 
 let offScroll = null
-function onResize () { setNavHeight() }
+const onResize = () => setNavHeight()
 
 onMounted(() => {
   setNavHeight()
-
-  // Recalcula al redimensionar y al abrir/cerrar el menú colapsable
   window.addEventListener('resize', onResize)
+
   const collapse = document.getElementById('navbarNavDropdown')
   if (collapse) {
     collapse.addEventListener('shown.bs.collapse', setNavHeight)
     collapse.addEventListener('hidden.bs.collapse', setNavHeight)
   }
 
-  offScroll = bindScrollCompact()
-
-  // Un pequeño tick para asegurar layout final
+  offScroll = bindScrollEffect()
   requestAnimationFrame(setNavHeight)
 
   onBeforeUnmount(() => {
@@ -96,68 +93,55 @@ onMounted(() => {
 })
 </script>
 
-<!-- Quita 'scoped' para que afecte a <body> y secciones; si necesitas scoped, usa :global(...) -->
 <style>
-/* ================== Tokens y reserva global ================== */
+/* ================== Fuente ================== */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
 :root{ --nav-h: 72px; }
 
-/* Reserva espacio para que el contenido no quede debajo del navbar */
-body{ padding-top: var(--nav-h); }
-
-/* Cuando navegas a #anclas, que no queden ocultas por el navbar */
-section[id]{ scroll-margin-top: calc(var(--nav-h) + 12px); }
-
-/* ================== NAVBAR personalizado ================== */
-.custom-navbar{
-  z-index: 1040;
-  padding: 0.75rem 1.5rem;
-  /* Degradado morado → azul → verde con transparencia */
-  background: linear-gradient(
-    90deg,
-    rgba(3, 3, 3, 0.895) 0%,
-    rgba(16, 16, 16, 0.993) 100%
-  );
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  box-shadow: 0 4px 12px rgba(0,0,0,.2);
-  transition: background .3s ease, padding .3s ease, backdrop-filter .3s ease;
+/* Reserva global (el hero lo anula con margen negativo) */
+body{ 
+  font-family: 'Poppins', sans-serif;
+  padding-top: var(--nav-h);
 }
 
-/* Modo compacto al hacer scroll */
-.custom-navbar.scrolled{
-  padding: .5rem 1rem;
-  background: linear-gradient(
-    90deg,
-    rgba(128, 0, 128, 0.92) 0%,
-    rgba(111, 0, 95, 0.92) 100%
-  );
+section[id]{ scroll-margin-top: calc(var(--nav-h) + 12px); }
+
+/* ================== NAVBAR ================== */
+.custom-navbar{
+  z-index: 1100;
+  padding: 0.75rem 1.5rem;
+  background: transparent !important;  /* totalmente transparente al inicio */
+  box-shadow: none !important;
+  border: none !important;
+  transition: padding .25s ease, background-color .25s ease, backdrop-filter .25s ease;
 }
 
 .navbar-brand{
-  font-weight: 700;
-  font-size: 1.75rem;
-  letter-spacing: 1px;
+  font-weight: 600;
+  font-size: 1.5rem;
   color: #fff !important;
+  text-shadow: 0 1px 8px rgba(0,0,0,.35);
 }
 
 .navbar-nav .nav-item{ margin-left: 1.25rem; }
-
 .navbar-nav .nav-link{
   position: relative;
   color: #fff;
   font-weight: 500;
+  font-size: 1rem;
   padding-bottom: .5rem;
-  transition: color .3s ease;
+  transition: color .25s ease, opacity .25s ease;
+  text-shadow: 0 1px 8px rgba(0,0,0,.35);
+  opacity: .95;
 }
-
 .navbar-nav .nav-link .nav-icon{
   margin-right: .5rem;
   width: 1.25rem; height: 1.25rem; vertical-align: middle;
+  filter: drop-shadow(0 1px 6px rgba(0,0,0,.35));
 }
-
 .navbar-nav .nav-link:hover,
-.navbar-nav .nav-link.active{ color: #fff !important; }
-
+.navbar-nav .nav-link.active{ color: #fff !important; opacity: 1; }
 .navbar-nav .nav-link:hover::after,
 .navbar-nav .nav-link.active::after{
   content:"";
@@ -165,16 +149,29 @@ section[id]{ scroll-margin-top: calc(var(--nav-h) + 12px); }
   width:100%; height:2px; background:#fff; border-radius:1px;
 }
 
-/* ================== Responsive ================== */
+/* Al hacer scroll: translúcido + blur (sigues viendo el fondo) */
+.custom-navbar.scrolled{
+  padding: .55rem 1rem;
+  background-color: rgba(0,0,0,.28) !important;
+  backdrop-filter: saturate(120%) blur(10px);
+  -webkit-backdrop-filter: saturate(120%) blur(10px);
+  box-shadow: 0 2px 10px rgba(0,0,0,.18);
+}
+
+/* Menú móvil abierto: translúcido + blur */
+.navbar-collapse.show{
+  background-color: rgba(0,0,0,.28);
+  backdrop-filter: saturate(120%) blur(10px);
+  -webkit-backdrop-filter: saturate(120%) blur(10px);
+  border-radius: .75rem;
+  padding: .5rem;
+}
+
+/* Responsive */
 @media (max-width: 991.98px){
   .navbar-nav .nav-item{
     margin-left: 0;
     margin-top: .5rem;
   }
 }
-
-/* ========== Si prefieres mantener <style scoped>, descomenta: ==========
-:global(body){ padding-top: var(--nav-h); }
-:global(section[id]){ scroll-margin-top: calc(var(--nav-h) + 12px); }
-========================================================================= */
 </style>
