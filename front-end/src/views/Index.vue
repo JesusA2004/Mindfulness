@@ -45,67 +45,80 @@
       </div>
     </section>
 
-    <!-- =================== ABOUT (Horizontal Card) =================== -->
+    <!-- =================== ABOUT (Responsive Card) =================== -->
     <section id="about" class="py-5 bg-white">
       <div class="container">
-        <div class="card shadow-sm border-0 mb-3 overflow-hidden">
-          <div class="row g-0 align-items-stretch">
-            <!-- Imagen -->
-            <div class="col-md-5">
-              <img
-                :src="aboutImg"
-                alt="Práctica de mindfulness"
-                class="img-fluid h-100 w-100 object-fit-cover"
-              />
+        <div class="card border-0 shadow-sm overflow-hidden rounded-4">
+          <div class="row g-0 align-items-center">
+            <!-- Imagen (columna izquierda en desktop, arriba en móvil) -->
+            <div class="col-12 col-md-5">
+              <div class="p-3 p-md-4">
+                <img
+                  :src="aboutImg"
+                  alt="Práctica de mindfulness"
+                  class="img-fluid w-100 rounded-6 object-fit-cover"
+                  style="max-height: 360px;"
+                />
+              </div>
             </div>
-            <!-- Texto -->
-            <div class="col-md-7">
-              <div class="card-body p-4 p-lg-5">
+
+            <!-- Texto + Botones -->
+            <div class="col-12 col-md-7">
+              <div class="card-body p-3 p-md-4 p-lg-5 text-center text-md-start">
                 <h3 class="card-title fw-bold mb-3">¿Qué es el Mindfulness?</h3>
+
                 <p class="card-text lead mb-3">
-                  El <strong>mindfulness</strong> es la capacidad de prestar atención
-                  al momento presente con una actitud abierta, curiosa y sin juicio.
-                  En contextos educativos ayuda a estudiantes y docentes a desarrollar
-                  autorregulación emocional, foco atencional y resiliencia ante el estrés.
+                  “El <strong>mindfulness</strong> es la conciencia que emerge al prestar atención, de manera intencional, en el momento presente y sin juzgar, a la experiencia que se desarrolla momento a momento”.
                 </p>
-                <p class="card-text">
-                  Nuestra plataforma incluye ejercicios guiados, respiración consciente,
-                  prácticas breves para el aula, seguimiento de emociones y tableros de
-                  progreso para medir impacto en bienestar y rendimiento.
+                <p class="card-text mb-0">
+                  Jon Kabat-Zinn, creador del programa MBSR y autor de <em>Mindfulness para principiantes</em>.
                 </p>
-                <p class="card-text">
-                  <small class="text-muted">Basado en prácticas MBSR/MBCT adaptadas al entorno escolar.</small>
-                </p>
-                <div class="mt-3">
-                  <button class="btn btn-success me-2" @click="scrollTo('programs')">
+
+                <!-- Botones 100% ancho en móvil, en línea desde sm -->
+                <div class="mt-4 d-grid gap-2 d-sm-flex">
+                  <button class="btn btn-success btn-lg px-4 fw-semibold rounded-pill" @click="scrollTo('programs')">
                     Explorar programas
                   </button>
-                  <button class="btn btn-outline-secondary" @click="playInfo">
-                    Ver demo
-                  </button>
+
+                  <!-- Redirige a otra página con Vue Router -->
+                  <router-link to="/contacto" class="btn btn-outline-secondary btn-lg px-4 fw-semibold rounded-pill">
+                    Conocer más
+                  </router-link>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>  
+        </div>  
+      </div>
     </section>
 
     <!-- ====================== BENEFICIOS ====================== -->
     <section id="benefits" class="benefits-section py-5">
       <div class="container">
-        <h2 class="section-heading text-center" data-animate="fade-up">Beneficios del Mindfulness</h2>
+        <h2 class="section-heading text-center fw-bold mb-4">
+          Beneficios del Mindfulness
+        </h2>
 
-        <div class="row g-4 mt-4">
-          <div class="col-12 col-md-6 col-lg-4" v-for="(b, i) in benefits" :key="i">
-            <div class="benefit-card h-100 text-center" data-animate="fade-up" :data-delay="i*100">
-              <img :src="b.icon" class="benefit-icon" :alt="b.title" />
-              <h5 class="benefit-title">{{ b.title }}</h5>
-              <p class="benefit-text">{{ b.text }}</p>
+        <p class="text-center text-muted mx-auto mb-4" style="max-width: 720px;">
+          Prácticas breves que fortalecen la atención, la calma y el bienestar emocional en el aula.
+        </p>
+
+        <div class="row g-4 mt-2">
+          <div class="col-12 col-sm-6 col-lg-4" v-for="(b, i) in benefits" :key="i">
+            <div class="card benefit-card h-100 text-center shadow-sm border-0">
+              
+              <!-- Imagen superior -->
+              <img :src="b.icon" :alt="b.title" class="card-img-top benefit-img">
+
+              <!-- Contenido -->
+              <div class="card-body">
+                <h5 class="card-title fw-bold text-dark mb-2">{{ b.title }}</h5>
+                <p class="card-text text-muted mb-0">{{ b.text }}</p>
+              </div>
+
             </div>
           </div>
         </div>
-
       </div>
     </section>
 
@@ -156,7 +169,7 @@ import Swal from 'sweetalert2'
 
 /* Recursos */
 const heroVideo  = new URL('@/assets/media/videoIndex.mp4', import.meta.url).href
-const aboutImg   = new URL('@/assets/images/meditationIndex.png', import.meta.url).href
+const aboutImg   = new URL('@/assets/images/conceptoMindfulness.jpg', import.meta.url).href
 
 /* Datos UI (mock) */
 const benefits = [
