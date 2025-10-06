@@ -1,0 +1,64 @@
+JSON POST TEST:
+{
+  "nombre": "Test de bienestar emocional",
+  "descripcion": "Cuestionario breve para valorar estado emocional y hábitos.",
+  "fechaAplicacion": "2025-10-06",
+  "duracion_estimada": 8,
+  "cuestionario": [
+    {
+      "_id": "t1",
+      "pregunta": "¿Con qué frecuencia te sientes tranquilo durante el día?",
+      "tipo": "opcion_multiple",
+      "opciones": ["Nunca", "A veces", "Frecuentemente", "Siempre"]
+    },
+    {
+      "_id": "t2",
+      "pregunta": "Selecciona emociones que has sentido esta semana",
+      "tipo": "seleccion_multiple",
+      "opciones": ["Alegría", "Ansiedad", "Estrés", "Tranquilidad", "Motivación"]
+    },
+    {
+      "_id": "t3",
+      "pregunta": "Describe una actividad que te ayude a mejorar tu ánimo",
+      "tipo": "respuesta_abierta"
+    }
+  ]
+}
+
+JSON PUT TEST:
+{
+  "nombre": "Test de bienestar emocional (versión 2)",
+  "descripcion": "Actualización: medimos emociones y hábitos de relajación.",
+  "duracion_estimada": 10,
+  "cuestionario": [
+    {
+      "_id": "t1",
+      "pregunta": "¿Con qué frecuencia te sientes tranquilo durante tu jornada?",
+      "tipo": "opcion_multiple",
+      "opciones": ["Nunca", "A veces", "Frecuentemente", "Siempre"]
+    },
+    {
+      "_id": "t2",
+      "pregunta": "Selecciona emociones predominantes esta semana",
+      "tipo": "seleccion_multiple",
+      "opciones": ["Alegría", "Ansiedad", "Estrés", "Tranquilidad", "Motivación", "Cansancio"]
+    },
+    {
+      "_id": "t3",
+      "pregunta": "Menciona una actividad que ayude a tu bienestar emocional",
+      "tipo": "respuesta_abierta"
+    }
+  ]
+}
+
+JSON PUT RESPUESTAS (api/tests/idTest/responder):
+{
+  "usuario_id": "68dafc4ffe40ef27600dba32",
+  "respuestas": [
+    { "pregunta_id": "t1", "respuesta": "Frecuentemente" },
+    { "pregunta_id": "t2", "respuesta": ["Tranquilidad", "Motivación"] },
+    { "pregunta_id": "t3", "respuesta": "Respiro profundo y salgo a caminar 10 minutos" }
+  ]
+}
+
+

@@ -1,0 +1,16 @@
+JSON POST RECOMPENSAS:
+
+
+JSON PUT RECOMPENSAS:
+{
+  "nombre": "Tarjeta de Regalo Amazon",
+  "descripcion": "Vale electrónico de $300 MXN canjeable en Amazon.",
+  "puntos_necesarios": 600,
+  "stock": 15,
+  "canjeo": [
+    {
+      "usuario_id": "68dafc4ffe40ef27600dba32",
+      "fechaCanjeo": "2025-10-05"
+    }
+  ]
+}

@@ -3,47 +3,45 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class TestRequest extends FormRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
+    public function authorize(): bool { return true; }
 
     public function rules(): array
     {
-        // Para update, excluir el propio registro:
-        $testId = $this->route('test'); // asumiendo ruta /tests/{test}
+        $routeParam = $this->route('test');
+        $id = $routeParam instanceof \App\Models\Test ? $routeParam->getKey() : $routeParam;
 
         return [
-            // Datos principales
-            'nombre'             => "required|string|max:150|unique:tests,nombre,{$testId}",
-            'descripcion'        => 'nullable|string',
-            'duracion_estimada'  => 'required|integer|min:1',
-            'fechaAplicacion'    => 'nullable|date_format:Y-m-d',
+            'nombre'            => ['required','string','max:150', Rule::unique('tests','nombre')->ignore($id, '_id')],
+            'descripcion'       => 'nullable|string',
+            'duracion_estimada' => 'required|integer|min:1',
+            'fechaAplicacion'   => 'nullable|date_format:Y-m-d',
 
-            // Cuestionario (opcional)
+            // cuestionario opcional, con estructura estandarizada
             'cuestionario'                 => 'sometimes|array|min:1',
+            'cuestionario.*._id'           => 'required_with:cuestionario|string|max:50',
             'cuestionario.*.pregunta'      => 'required_with:cuestionario|string|max:255',
-            'cuestionario.*.respuestas'    => 'required_with:cuestionario|array|min:1',
-            'cuestionario.*.respuestas.*'  => 'string|max:200',            // cada respuesta
-            'cuestionario.*.idUsuario'     => 'required_with:cuestionario|exists:users,_id',
+            'cuestionario.*.tipo'          => 'required_with:cuestionario|string|in:opcion_multiple,seleccion_multiple,respuesta_abierta',
+            'cuestionario.*.opciones'      => 'nullable|array',
+            'cuestionario.*.opciones.*'    => 'string|max:200',
+
+            // al crear/editar, NO exigimos respuestas; solo si vienen, validamos forma
+            'cuestionario.*.respuestas_por_usuario'                        => 'nullable|array',
+            'cuestionario.*.respuestas_por_usuario.*.usuario_id'           => 'required_with:cuestionario.*.respuestas_por_usuario|string',
+            'cuestionario.*.respuestas_por_usuario.*.respuesta'            => 'required_with:cuestionario.*.respuestas_por_usuario',
+            'cuestionario.*.respuestas_por_usuario.*.fecha'                => 'nullable|date_format:Y-m-d',
         ];
     }
 
     public function messages(): array
     {
         return [
-            'nombre.unique'                 => 'Ya existe un test con este nombre.',
-            'fechaAplicacion.date_format'   => 'La fecha de aplicación debe tener el formato YYYY-MM-DD.',
-            'cuestionario.array'            => 'El cuestionario debe ser un arreglo de preguntas.',
-            'cuestionario.min'              => 'Debe incluir al menos una pregunta.',
-            'cuestionario.*.pregunta.max'   => 'Cada pregunta no debe exceder 255 caracteres.',
-            'cuestionario.*.respuestas.array'=> 'Las respuestas deben enviarse como un arreglo.',
-            'cuestionario.*.respuestas.min'  => 'Cada pregunta debe tener al menos una respuesta.',
-            'cuestionario.*.respuestas.*.string' => 'Cada respuesta debe ser texto de hasta 200 caracteres.',
-            'cuestionario.*.idUsuario.exists'    => 'El usuario que responde no existe.',
+            'nombre.unique'               => 'Ya existe un test con este nombre.',
+            'duracion_estimada.min'       => 'La duración estimada debe ser al menos 1 minuto.',
+            'fechaAplicacion.date_format' => 'La fecha de aplicación debe tener el formato YYYY-MM-DD.',
         ];
     }
 }

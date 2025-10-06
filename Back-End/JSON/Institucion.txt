@@ -1,0 +1,10 @@
+JSON POST INSTITUCIONES:
+
+
+JSON PUT INSTITUCIONES:
+{
+  "nombre": "Instituto Tecnológico de Cuernavaca",
+  "direccion": "Boulevard Universidad 2000, Cuernavaca, Morelos, México",
+  "telefono": "+52 777 987 6543",
+  "email": "contacto@itcuernavaca.edu.mx"
+}

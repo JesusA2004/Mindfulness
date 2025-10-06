@@ -6,8 +6,7 @@ use MongoDB\Laravel\Eloquent\Model;
 
 class Tecnica extends Model
 {
-    
-    protected $perPage = 20;
+    protected $collection = 'tecnicas';
 
     protected $fillable = [
         'nombre',
@@ -15,18 +14,14 @@ class Tecnica extends Model
         'dificultad',
         'duracion',
         'categoria',
-        // para push() de subdocumentos no hace falta incluir 'calificaciones' ni 'recursos'
+        'calificaciones',
+        'recursos',
     ];
 
-    // En App\Models\Tecnica.php
-    public function calificaciones()
-    {
-        return $this->hasMany(Calificacion::class);
-    }
-
-    public function recursos()
-    {
-        return $this->hasMany(Recurso::class);
-    }
-
+    protected $casts = [
+        'duracion'       => 'integer',
+        'calificaciones' => 'array',
+        'recursos'       => 'array',
+    ];
+    
 }

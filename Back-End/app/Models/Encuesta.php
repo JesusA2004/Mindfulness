@@ -6,8 +6,7 @@ use MongoDB\Laravel\Eloquent\Model;
 
 class Encuesta extends Model
 {
-    
-    protected $perPage = 20;
+    protected $collection = 'encuestas';
 
     protected $fillable = [
         'titulo',
@@ -15,6 +14,14 @@ class Encuesta extends Model
         'fechaAsignacion',
         'fechaFinalizacion',
         'duracion_estimada',
+        'cuestionario',
     ];
 
+    protected $casts = [
+        'fechaAsignacion'   => 'date:Y-m-d',
+        'fechaFinalizacion' => 'date:Y-m-d',
+        'cuestionario'      => 'array',
+    ];
+
+    protected $perPage = 20;
 }

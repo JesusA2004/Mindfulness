@@ -8,12 +8,13 @@ use App\Http\Requests\TecnicaRequest;
 use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TecnicaResource;
+use Illuminate\Support\Arr;
+use MongoDB\BSON\ObjectId;
 
 class TecnicaController extends Controller
 {
     /**
-     * Mostrar un listado paginado de técnicas (6 por página),
-     * ideal para presentar en formato de tarjetas (cards).
+     * Listado paginado (6 por página).
      */
     public function index(Request $request): JsonResponse
     {
@@ -31,37 +32,51 @@ class TecnicaController extends Controller
     }
 
     /**
-     * Almacenar una nueva técnica mindfulness en el sistema.
+     * Crear técnica con subdocumentos embebidos.
      */
     public function store(TecnicaRequest $request): JsonResponse
     {
         $datos = $request->validated();
 
-        // Crear técnica base
-        $tecnica = Tecnica::create(collect($datos)->except(['calificaciones', 'recursos'])->toArray());
+        // Crear solo campos base (sin arrays embebidos)
+        $base = Arr::except($datos, ['calificaciones', 'recursos']);
+        $tecnica = Tecnica::create($base);
 
-        // Guardar calificaciones si vienen
-        if (isset($datos['calificaciones'])) {
-            foreach ($datos['calificaciones'] as $calificacion) {
-                $tecnica->calificaciones()->create($calificacion);
-            }
+        // Si vienen calificaciones, las colocamos como array embebido
+        if (!empty($datos['calificaciones']) && is_array($datos['calificaciones'])) {
+            $califs = array_map(function ($c) {
+                // Útil para futuras ediciones/borrados por _id interno del subdoc
+                if (!isset($c['_id'])) {
+                    $c['_id'] = (string) new ObjectId();
+                }
+                return $c;
+            }, $datos['calificaciones']);
+
+            $tecnica->calificaciones = $califs;
         }
 
-        // Guardar recursos si vienen
-        if (isset($datos['recursos'])) {
-            foreach ($datos['recursos'] as $recurso) {
-                $tecnica->recursos()->create($recurso);
-            }
+        // Si vienen recursos, los colocamos como array embebido
+        if (!empty($datos['recursos']) && is_array($datos['recursos'])) {
+            $recursos = array_map(function ($r) {
+                if (!isset($r['_id'])) {
+                    $r['_id'] = (string) new ObjectId();
+                }
+                return $r;
+            }, $datos['recursos']);
+
+            $tecnica->recursos = $recursos;
         }
+
+        $tecnica->save();
 
         return response()->json([
             'mensaje' => 'Técnica creada correctamente.',
-            'tecnica' => new TecnicaResource($tecnica->fresh()), // para incluir relaciones actualizadas
+            'tecnica' => new TecnicaResource($tecnica->fresh()),
         ], 201);
     }
 
     /**
-     * Mostrar la técnica especificada.
+     * Mostrar una técnica.
      */
     public function show(Tecnica $tecnica): JsonResponse
     {
@@ -71,20 +86,50 @@ class TecnicaController extends Controller
     }
 
     /**
-     * Actualizar la técnica especificada en el sistema.
+     * Actualizar técnica (reemplaza arrays embebidos si se envían).
      */
     public function update(TecnicaRequest $request, Tecnica $tecnica): JsonResponse
     {
-        $tecnica->update($request->validated());
+        $datos = $request->validated();
+
+        // Actualiza campos base
+        $base = Arr::except($datos, ['calificaciones', 'recursos']);
+        $tecnica->fill($base);
+
+        // Si el payload incluye 'calificaciones', se reemplaza el array completo
+        if (array_key_exists('calificaciones', $datos)) {
+            $califs = $datos['calificaciones'] ?? [];
+            if (is_array($califs)) {
+                $califs = array_map(function ($c) {
+                    $c['_id'] = $c['_id'] ?? (string) new ObjectId();
+                    return $c;
+                }, $califs);
+            }
+            $tecnica->calificaciones = $califs;
+        }
+
+        // Si el payload incluye 'recursos', se reemplaza el array completo
+        if (array_key_exists('recursos', $datos)) {
+            $recursos = $datos['recursos'] ?? [];
+            if (is_array($recursos)) {
+                $recursos = array_map(function ($r) {
+                    $r['_id'] = $r['_id'] ?? (string) new ObjectId();
+                    return $r;
+                }, $recursos);
+            }
+            $tecnica->recursos = $recursos;
+        }
+
+        $tecnica->save();
 
         return response()->json([
-            'mensaje'  => 'Técnica actualizada correctamente.',
-            'tecnica'  => new TecnicaResource($tecnica),
+            'mensaje' => 'Técnica actualizada correctamente.',
+            'tecnica' => new TecnicaResource($tecnica->fresh()),
         ], 200);
     }
 
     /**
-     * Eliminar la técnica especificada del sistema.
+     * Eliminar técnica.
      */
     public function destroy(Tecnica $tecnica): JsonResponse
     {

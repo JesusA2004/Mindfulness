@@ -1,0 +1,76 @@
+JSON POST ENCUESTA:
+{
+  "titulo": "Encuesta sobre bienestar emocional en el aula",
+  "descripcion": "Evaluación general del estado emocional y prácticas de mindfulness entre los estudiantes.",
+  "fechaAsignacion": "2025-10-06",
+  "fechaFinalizacion": "2025-10-25",
+  "duracion_estimada": 10,
+  "cuestionario": [
+    {
+      "_id": "q1",
+      "pregunta": "¿Con qué frecuencia practicas mindfulness o ejercicios de respiración consciente?",
+      "tipo": "opcion_multiple",
+      "opciones": ["Nunca", "1-2 veces por semana", "3-4 veces por semana", "A diario"]
+    },
+    {
+      "_id": "q2",
+      "pregunta": "Selecciona las emociones que más experimentas durante las clases.",
+      "tipo": "seleccion_multiple",
+      "opciones": ["Estrés", "Motivación", "Ansiedad", "Tranquilidad", "Aburrimiento"]
+    },
+    {
+      "_id": "q3",
+      "pregunta": "Describe una actividad que te ayude a mantener la calma o concentrarte.",
+      "tipo": "respuesta_abierta"
+    }
+  ]
+}
+
+JSON PUT ENCUESTA:
+{
+  "titulo": "Encuesta sobre bienestar emocional en el aula",
+  "descripcion": "Actualización: medimos cómo influyen las emociones en la concentración y el rendimiento.",
+  "fechaFinalizacion": "2025-10-30",
+  "duracion_estimada": 12,
+  "cuestionario": [
+    {
+      "_id": "q1",
+      "pregunta": "¿Con qué frecuencia practicas técnicas de respiración o relajación?",
+      "tipo": "opcion_multiple",
+      "opciones": ["Nunca", "1 vez por semana", "2-3 veces por semana", "A diario"],
+      "respuestas_por_usuario": []
+    },
+    {
+      "_id": "q2",
+      "pregunta": "Selecciona las emociones que más experimentas durante la jornada escolar.",
+      "tipo": "seleccion_multiple",
+      "opciones": ["Estrés", "Motivación", "Tranquilidad", "Ansiedad", "Alegría"],
+      "respuestas_por_usuario": []
+    },
+    {
+      "_id": "q3",
+      "pregunta": "¿Qué estrategias te ayudan a mantener la concentración en clase?",
+      "tipo": "respuesta_abierta",
+      "respuestas_por_usuario": []
+    }
+  ]
+}
+
+JSON RESPUESTAS ENCUESTAS: (http/api/encuestas/idEncuesta/responder)
+{
+  "usuario_id": "68dafc4ffe40ef27600dba32",
+  "respuestas": [
+    {
+      "pregunta_id": "q1",
+      "respuesta": "A diario"
+    },
+    {
+      "pregunta_id": "q2",
+      "respuesta": ["Motivación", "Tranquilidad"]
+    },
+    {
+      "pregunta_id": "q3",
+      "respuesta": "Practico respiraciones profundas y me concentro en el presente."
+    }
+  ]
+}

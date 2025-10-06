@@ -1,0 +1,78 @@
+JSON POST TECNICAS:
+{
+  "nombre": "Respiración consciente 4-7-8",
+  "descripcion": "Técnica de respiración enfocada en reducir el estrés mediante la concentración en los tiempos de inhalación, retención y exhalación.",
+  "dificultad": "Bajo",
+  "duracion": 10,
+  "categoria": "Respiración",
+  "recursos": [
+    {
+      "tipo": "Video",
+      "url": "https://mindfulness.com/videos/respiracion-478.mp4",
+      "descripcion": "Demostración guiada de la respiración 4-7-8.",
+      "fecha": "2025-10-06"
+    },
+    {
+      "tipo": "Audio",
+      "url": "https://mindfulness.com/audios/respiracion-478.mp3",
+      "descripcion": "Audio para realizar la técnica guiada.",
+      "fecha": "2025-10-06"
+    }
+  ],
+  "calificaciones": [
+    {
+      "usuario_id": "68dafc4ffe40ef27600dba32",
+      "puntaje": 5,
+      "comentario": "Muy relajante, fácil de seguir.",
+      "fecha": "2025-10-06"
+    }
+  ]
+}
+
+JSON PUT TECNICAS:
+{
+  "nombre": "Respiración consciente 4-7-8",
+  "descripcion": "Técnica de respiración actualizada: ayuda a reducir el estrés, controlar la ansiedad y mejorar el sueño al enfocar la respiración en ciclos 4-7-8.",
+  "dificultad": "Medio",
+  "duracion": 12,
+  "categoria": "Respiración",
+  "recursos": [
+    {
+      "_id": "671002aa3af0b1b3c22a1001",
+      "tipo": "Video",
+      "url": "https://mindfulness.com/videos/respiracion-478-v2.mp4",
+      "descripcion": "Nueva versión extendida de la técnica con explicación guiada paso a paso.",
+      "fecha": "2025-10-06"
+    },
+    {
+      "_id": "671002aa3af0b1b3c22a1002",
+      "tipo": "Audio",
+      "url": "https://mindfulness.com/audios/respiracion-478-v2.mp3",
+      "descripcion": "Versión de audio con respiraciones guiadas y campanillas para marcar el ritmo.",
+      "fecha": "2025-10-06"
+    },
+    {
+      "_id": "671002aa3af0b1b3c22a1003",
+      "tipo": "Documento",
+      "url": "https://mindfulness.com/docs/guia-respiracion-478.pdf",
+      "descripcion": "PDF con instrucciones detalladas y beneficios fisiológicos de la técnica.",
+      "fecha": "2025-10-06"
+    }
+  ],
+  "calificaciones": [
+    {
+      "_id": "671002aa3af0b1b3c22a1004",
+      "usuario_id": "68dafc4ffe40ef27600dba32",
+      "puntaje": 5,
+      "comentario": "Excelente técnica, la versión actualizada es aún más relajante.",
+      "fecha": "2025-10-06"
+    },
+    {
+      "_id": "671002aa3af0b1b3c22a1005",
+      "usuario_id": "68dafc4ffe40ef27600dba33",
+      "puntaje": 4,
+      "comentario": "Muy buena para dormir, aunque requiere práctica.",
+      "fecha": "2025-10-06"
+    }
+  ]
+}

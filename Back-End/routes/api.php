@@ -66,6 +66,12 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('tecnicas', TecnicaController::class);
     Route::apiResource('tests', TestController::class);
 
+    // Ruta especial para que un alumno responda una encuesta
+    Route::put('encuestas/{encuesta}/responder', [EncuestaController::class, 'responder']);
+
+    // Ruta especial para que un alumno responda un test
+    Route::put('tests/{test}/responder', [TestController::class, 'responder']);
+
     // Subida de foto (protegida)
     Route::post('/subir-foto', function (Request $request) {
         if ($request->hasFile('foto')) {
