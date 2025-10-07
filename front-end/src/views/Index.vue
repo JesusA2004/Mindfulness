@@ -95,66 +95,128 @@
     <!-- ====================== BENEFICIOS ====================== -->
     <section id="benefits" class="benefits-section py-5">
       <div class="container">
-        <h2 class="section-heading text-center fw-bold mb-4">
-          Beneficios del Mindfulness
-        </h2>
 
-        <p class="text-center text-muted mx-auto mb-4" style="max-width: 720px;">
-          Prácticas breves que fortalecen la atención, la calma y el bienestar emocional en el aula.
-        </p>
+        <!-- ENCABEZADO: texto izq / título der -->
+        <div class="row align-items-center mb-4 text-center text-lg-start">
+          <!-- Texto descriptivo -->
+          <div class="col-12 col-lg-6 order-2 order-lg-1">
+            <p class="benefit-subtext text-muted mb-0 pe-lg-5 ">
+              Prácticas breves que fortalecen la atención, la calma y el bienestar emocional en el aula.
+            </p>
+          </div>
 
-        <div class="row g-4 mt-2">
+          <!-- Título -->
+          <div class="col-12 col-lg-6 order-1 order-lg-2 text-center text-lg-end">
+            <h2 class="section-heading fw-bold mb-0" >
+              Beneficios del Mindfulness
+            </h2>
+          </div>
+        </div>
+
+        <!-- === TARJETAS DE BENEFICIOS === -->
+        <div class="row g-4 mt-3" id="benefits-cards">
           <div class="col-12 col-sm-6 col-lg-4" v-for="(b, i) in benefits" :key="i">
             <div class="card benefit-card h-100 text-center shadow-sm border-0">
-              
               <!-- Imagen superior -->
-              <img :src="b.icon" :alt="b.title" class="card-img-top benefit-img">
-
+              <img :src="b.icon" :alt="b.title" class="card-img-top benefit-img" />
               <!-- Contenido -->
               <div class="card-body">
-                <h5 class="card-title fw-bold text-dark mb-2">{{ b.title }}</h5>
+                <h5 class="card-title fw-bold text-dark mb-2 programs-kicker text-uppercase fw-semibold mb-2" data-animate="fade-right">{{ b.title }}</h5>
                 <p class="card-text text-muted mb-0">{{ b.text }}</p>
               </div>
-
             </div>
           </div>
         </div>
+
       </div>
     </section>
 
     <!-- ======================= PROGRAMAS ======================= -->
-    <section id="programs" class="programs-section py-5">
+    <section id="programs" class="programs-section text-light py-5">
       <div class="container">
-        <h2 class="section-heading text-center" data-animate="fade-up">
-          Nuestros Programas de Mindfulness
-        </h2>
 
-        <div class="row g-4 mt-4">
-          <div class="col-12 col-md-6 col-lg-4" v-for="(p, i) in programs" :key="i">
-            <article class="program-card text-center h-100" data-animate="fade-up" :data-delay="i*100">
-              <img :src="p.img" class="program-photo" :alt="p.title" />
-              <h6 class="program-title mt-3">{{ p.title }}</h6>
-            </article>
+        <!-- Hero de Programas: Título izq / Video der -->
+        <div class="row align-items-center programs-hero-row g-4">
+          <!-- Título -->
+          <div class="col-12 col-lg-6">
+            <div class="programs-kicker text-uppercase fw-semibold mb-2" data-animate="fade-right">
+              Tu espacio de calma interior
+            </div>
+            <h2 class="programs-hero-title fw-black m-0" data-animate="fade-right" data-delay="80">
+              Nuestros<br class="d-none d-xl-block"> Programas<br class="d-none d-xl-block"> Mindfulness
+            </h2>
+            <p class="text-light mt-3 mb-2" data-animate="fade-right" data-delay="140">
+              Diseñados para el aula: breves, prácticos y efectivos.
+            </p>
+            <p class="programs-brand mt-2 mb-0" data-animate="fade-right" data-delay="180">
+              <small>By <span>Mindora</span></small>
+            </p>
+          </div>
+
+          <!-- Video a la derecha -->
+          <div class="col-12 col-lg-6" data-animate="fade-left">
+            <div class="programs-video-wrap rounded-4 shadow overflow-hidden">
+              <video
+                class="w-100 h-100 object-fit-cover"
+                :src="heroProgramas"
+                autoplay
+                muted
+                loop
+                playsinline
+                preload="metadata"
+              ></video>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
 
-    <!-- ======================== CONTACTO ======================= -->
-    <section id="contact" class="contact-section py-5 text-white">
-      <div class="container">
-        <h2 class="section-heading text-center mb-4" data-animate="fade-up">Solicita tu Cotización</h2>
-        <form class="row g-3 justify-content-center" @submit.prevent="submitForm" novalidate>
-          <div class="col-12 col-md-4">
-            <input v-model.trim="form.name" type="text" class="form-control" placeholder="Nombre / Empresa" />
+        <!-- Lista de programas (UNA CARD POR FILA) -->
+        <TransitionGroup name="prog" tag="div" class="row g-4 mt-5">
+          <div
+            class="col-12"              
+            v-for="(p, i) in programs"
+            :key="p.title + i"
+          >
+            <article class="card program-hcard h-100 border-0 rounded-4" data-animate="fade-up" :data-delay="i*80">
+              <div class="row g-0 align-items-stretch">
+                <!-- Imagen -->
+                <div class="col-12 col-md-5">
+                  <div class="program-img-wrap h-100">
+                    <img
+                      :src="p.img"
+                      :alt="p.title"
+                      class="img-fluid w-100 h-100 object-fit-cover rounded-top-4 rounded-md-start-4"
+                    />
+                  </div>
+                </div>
+
+                <!-- Contenido -->
+                <div class="col-12 col-md-7">
+                  <div class="card-body d-flex flex-column program-card-body">
+                    <h5 class="card-title fw-bold mb-2 program-title text-white">{{ p.title }}</h5>
+
+                    <p class="program-text mb-3" v-if="p.desc">{{ p.desc }}</p>
+                    <p class="program-text mb-3" v-else>
+                      Sesiones breves de atención plena para mejorar enfoque, calma y regulación emocional.
+                    </p>
+
+                    <div v-if="p.tags" class="mb-3 d-flex flex-wrap gap-2">
+                      <span v-for="(t, ti) in p.tags" :key="ti" class="badge program-badge">{{ t }}</span>
+                    </div>
+
+                    <div class="mt-auto d-flex gap-2">
+                      <router-link
+                        to="/contacto"
+                        class="btn btn-outline-secondary btn-sm rounded-pill px-3"
+                      >
+                        Solicitar información
+                      </router-link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </article>
           </div>
-          <div class="col-12 col-md-4">
-            <input v-model.trim="form.email" type="email" class="form-control" placeholder="Correo electrónico" />
-          </div>
-          <div class="col-12 col-md-4 d-grid">
-            <button type="submit" class="btn btn-light">Enviar</button>
-          </div>
-        </form>
+        </TransitionGroup>
       </div>
     </section>
 
@@ -169,36 +231,21 @@ import Swal from 'sweetalert2'
 
 /* Recursos */
 const heroVideo  = new URL('@/assets/media/videoIndex.mp4', import.meta.url).href
+const heroProgramas = new URL('@/assets/media/programas.mp4', import.meta.url).href
 const aboutImg   = new URL('@/assets/images/conceptoMindfulness.jpg', import.meta.url).href
 
 /* Datos UI (mock) */
 const benefits = [
-  { icon: new URL('@/assets/images/meditationIndex.png', import.meta.url).href, title: 'Mejora la Concentración', text: 'Potencia la concentración y atención.' },
-  { icon: new URL('@/assets/images/meditationIndex.png', import.meta.url).href, title: 'Reduce la Ansiedad', text: 'Alivia el estrés y la preocupación.' },
-  { icon: new URL('@/assets/images/meditationIndex.png', import.meta.url).href, title: 'Potencia el Rendimiento', text: 'Aumenta la productividad y el compromiso.' },
+  { icon: new URL('@/assets/images/ansiedad.png', import.meta.url).href, title: 'Reduce la Ansiedad', text: 'Alivia el estrés y la preocupación.' },
+  { icon: new URL('@/assets/images/concentracion.png', import.meta.url).href, title: 'Mejora la Concentración', text: 'Potencia la concentración y atención.' },
+  { icon: new URL('@/assets/images/productividad.jpg', import.meta.url).href, title: 'Potencia el Rendimiento', text: 'Aumenta la productividad y el compromiso.' },
 ]
 
 const programs = [
-  { img: new URL('@/assets/images/meditationIndex.png', import.meta.url).href, title: 'Respiración guiada en aula' },
-  { img: new URL('@/assets/images/meditationIndex.png', import.meta.url).href, title: 'Prácticas de atención plena' },
-  { img: new URL('@/assets/images/meditationIndex.png', import.meta.url).href, title: 'Regulación emocional' },
+  { img: new URL('@/assets/images/respiracion.png', import.meta.url).href, title: 'Respiración guiada en aula' },
+  { img: new URL('@/assets/images/practicaAtencion.png', import.meta.url).href, title: 'Prácticas de atención plena' },
+  { img: new URL('@/assets/images/regulacion.png', import.meta.url).href, title: 'Regulación emocional' },
 ]
-
-/* Formulario */
-const form = ref({ name: '', email: '' })
-function submitForm () {
-  if (!form.value.name || !form.value.email) {
-    Swal.fire({ icon: 'warning', title: 'Campos incompletos', text: 'Escribe tu nombre/empresa y correo.', confirmButtonText: 'Entendido' })
-    return
-  }
-  const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email)
-  if (!ok) {
-    Swal.fire({ icon: 'error', title: 'Correo inválido', text: 'Revisa el formato del correo electrónico.', confirmButtonText: 'Corregir' })
-    return
-  }
-  Swal.fire({ icon: 'success', title: '¡Gracias!', text: 'Hemos recibido tu solicitud. Te contactaremos pronto.', confirmButtonText: 'Cerrar' })
-  form.value = { name: '', email: '' }
-}
 
 /* Smooth scroll */
 const scrollTo = id => {

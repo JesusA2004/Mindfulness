@@ -8,6 +8,10 @@
   --brand-green: #0b5b49;
   --brand-purple:#8a009c;
   --card-bg: #ffffff;
+  --glass-bg-1: rgba(140,140,140,.14);   /* gris suave */
+  --glass-bg-2: rgba(80,80,80,.22);      /* gris un poco más marcado */
+  --glass-border: rgba(255,255,255,.18); /* borde sutil sobre fondo oscuro */
+  --glass-border-hover: rgba(255,255,255,.28);
 
   /* Altura responsiva de la onda */
   --wave-h: clamp(56px, 14vw, 120px);
@@ -187,6 +191,17 @@
   color: transparent;
   letter-spacing: .2px;
 }
+/* Alineación perfecta con las cards */
+.benefit-subtext {
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--muted);
+  /* En desktop se alinea con el inicio de las cards */
+  padding-left: 0;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+}
 
 /* === Tarjetas con borde degradado === */
 .benefit-card {
@@ -205,7 +220,10 @@
   inset: 0;
   border-radius: inherit;
   padding: 2px; /* grosor del borde */
-  background: linear-gradient(135deg, var(--brand-green), var(--brand-purple));
+  border: 1px solid rgba(15, 23, 42, 0.06);               /* línea fina */
+  box-shadow:
+    0 12px 28px rgba(15, 23, 42, 0.10),                  /* sombra suave */
+    0 2px 6px rgba(15, 23, 42, 0.06);
   -webkit-mask: 
     linear-gradient(#fff 0 0) content-box, 
     linear-gradient(#fff 0 0);
@@ -238,31 +256,130 @@
   filter: brightness(1.15);
 }
 
-
-/* Tipografía */
-.benefit-title {
-  color: #0f172a;
-  font-size: 1.15rem;
+/* ===== Programas con fondo negro-gris ===== */
+.programs-section {
+  background: linear-gradient(135deg, #0a0a0a 0%, #1c1c1c 45%, #2a2a2a 100%);
+  color: #f8f9fa;
+  position: relative;
 }
-.benefit-text {
-  color: #667085;
+
+/* Hero interno */
+.programs-hero-row {
+  min-height: clamp(320px, 42vh, 520px);
+}
+
+.programs-kicker {
+  letter-spacing: .12em;
+  font-size: .78rem;
+  color: #11b902;
+}
+
+.programs-hero-title {
+  line-height: .9;
+  font-size: clamp(36px, 9.5vw, 108px);
+  letter-spacing: -0.5px;
+  background: linear-gradient(90deg, #00d09e, var(--brand-purple));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Firma de marca */
+.programs-brand {
   font-size: 0.95rem;
+  color: #d1d5db;
+}
+.programs-brand span {
+  background: linear-gradient(90deg, var(--brand-green), var(--brand-purple));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 700;
 }
 
-.programs-section{ background:#f8fafc; }
-.program-card{
-  background: var(--surface);
+/* Video */
+.programs-video-wrap {
+  height: 690px;
+  border: 1px solid rgba(255,255,255,0.05);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+}
+@media (max-width: 768px) {
+  .programs-video-wrap { height: 260px; }
+}
+
+/* ===== Card horizontal: gris semitransparente elegante ===== */
+.program-hcard{
+  background:
+    linear-gradient(180deg, var(--glass-bg-2), var(--glass-bg-1)) !important;
+  border: 1px solid var(--glass-border);
   border-radius: 18px;
-  padding: 14px;
-  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+  backdrop-filter: blur(8px);                 /* vidrio elegante */
+  -webkit-backdrop-filter: blur(8px);
+  max-height: 320px;                          /* si quieres más compactas */
+  box-shadow: 0 8px 28px rgba(0,0,0,.25);
 }
-.program-photo{
-  width:100%;
-  aspect-ratio: 4/3;
-  object-fit: cover;
-  border-radius: 14px;
+.program-hcard:hover{
+  transform: translateY(-4px);
+  border-color: var(--glass-border-hover);
+  box-shadow: 0 18px 44px rgba(0,0,0,.35);
 }
-.program-title{ font-weight:700; }
+
+/* Contenido sobre card traslúcida */
+.program-card-body{
+  background: transparent !important;         /* quita blanco */
+  color: rgba(248,249,250,.9);
+  padding: 1.25rem !important;                /* compáctalo si quieres bajar altura */
+}
+.program-title{
+  background: linear-gradient(90deg, var(--brand-green), var(--brand-purple));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.program-text{ color: rgba(248,249,250,.78); }
+
+/* Imagen: acompasa alturas para que no “estire” la card */
+.program-img-wrap{
+  min-height: 180px;
+  max-height: 300px;                           /* ajusta según gusto */
+}
+@media (min-width: 768px){
+  .program-img-wrap{ min-height: 100%; }
+}
+
+/* Badges afinados para fondo gris translúcido */
+.program-badge{
+  background: rgba(138,0,156,.12);
+  color: #eddcf1;
+  border: 1px solid rgba(138,0,156,.28);
+  padding: .35rem .6rem; border-radius: 999px;
+  font-weight: 600; font-size: .78rem;
+}
+/* ===== Transiciones Vue ===== */
+.prog-enter-active, .prog-leave-active { transition: all .45s ease; }
+.prog-enter-from { opacity: 0; transform: translateY(14px) scale(.98); }
+.prog-enter-to { opacity: 1; transform: none; }
+.prog-leave-to { opacity: 0; transform: translateY(-8px) scale(.98); }
+.prog-move { transition: transform .45s ease; }
+
+/* Botones */
+.programs-section .btn.btn-success {
+  background: var(--brand-green);
+  border-color: var(--brand-green);
+  box-shadow: 0 6px 16px rgba(11,91,73,.3);
+}
+.programs-section .btn.btn-success:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+.programs-section .btn.btn-outline-secondary {
+  border:2px solid var(--brand-purple);
+  color: var(--brand-purple);
+}
+.programs-section .btn.btn-outline-secondary:hover {
+  background: var(--brand-purple);
+  color:#fff;
+}
 
 .contact-section{
   background: linear-gradient(180deg, var(--bg-hero-end), #0a473a);
