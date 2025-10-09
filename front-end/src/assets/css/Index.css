@@ -374,7 +374,7 @@
 }
 .programs-section .btn.btn-outline-secondary {
   border:2px solid var(--brand-purple);
-  color: var(--brand-purple);
+  color: #ffffff;
 }
 .programs-section .btn.btn-outline-secondary:hover {
   background: var(--brand-purple);
