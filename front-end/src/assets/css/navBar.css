@@ -71,6 +71,19 @@ section[id]{ scroll-margin-top: calc(var(--nav-h) + 12px); }
   padding: .5rem;
 }
 
+/* ===== Páginas con HERO arriba: quita la reserva del body ===== */
+body.has-hero{
+  padding-top: 0;                 /* elimina la franja blanca */
+}
+
+/* El hero “tapa” la reserva subiendo bajo el navbar y compensa el espacio */
+body.has-hero .sobre-hero{
+  margin-top: calc(var(--nav-h) * -1);
+  /* suma el alto del navbar a tu padding original del hero */
+  padding-top: calc(var(--nav-h) + clamp(48px, 7vw, 96px));
+}
+
+
 /* Responsive */
 @media (max-width: 991.98px){
   .navbar-nav .nav-item{

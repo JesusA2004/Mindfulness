@@ -5,9 +5,10 @@
       <div class="row align-items-end g-4">
         <!-- TITULAR XXL a la izquierda -->
         <div class="col-12 col-lg-7">
-          <h3 class="card-kicker">Mindora</h3>
+          <h3 class="cta-title mb-3 programs-kicker text-uppercase fw-semibold mb-2">Mindora</h3>
           <Transition name="fadein">
-            <h1 key="hero-title" class="hero-split-title m-0">
+            <!-- utilidades Bootstrap para mejor legibilidad -->
+            <h1 key="hero-title" class="hero-split-title m-0 lh-1 fw-bold">
               CONECTAMOS<br />
               BIENESTAR<br />
               Y TECNOLOGÍA
@@ -20,7 +21,9 @@
           <Transition name="fadein">
             <div key="hero-copy" class="hero-aside">
               <div class="hero-dot"></div>
-              <h2 class="hero-aside-title m-0">PARA EQUIPOS, AULAS Y ORGANIZACIONES</h2>
+              <h2 class="hero-aside-title m-0 lh-1 fw-semibold">
+                PARA EQUIPOS, AULAS Y ORGANIZACIONES
+              </h2>
               <p class="hero-aside-text mt-3 mb-4">
                 <strong>Mindora</strong> integra mindfulness, ciencia emocional y diseño
                 para transformar cultura y desempeño — en escuelas, empresas y espacios de trabajo.
@@ -119,25 +122,21 @@
   <!-- ============== CTA FINAL ============== -->
   <section class="sobre-cta py-5 text-center">
     <div class="container">
-      <h4 class="cta-title mb-3">Llevemos el bienestar a tu organización</h4>
+      <h4 class="cta-title mb-3 programs-kicker text-uppercase fw-semibold mb-2">Llevemos el bienestar a tu organización</h4>
       <p class="text-light-80 mb-4">
         Agenda una conversación y diseñemos un plan Mindora a tu medida.
       </p>
       <router-link to="/contacto" class="btn btn-success rounded-pill px-4 fw-semibold me-2">
         Solicitar información
       </router-link>
-      <router-link :to="{ path: '/', hash: '#programs' }" class="btn btn-outline-light rounded-pill px-4 fw-semibold">
-        Ver programas
-      </router-link>
     </div>
   </section>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 
-const aboutImg = new URL('@/assets/images/backgroundMind.png', import.meta.url).href
-const sideImg  = new URL('@/assets/images/conceptoMindfulness.jpg', import.meta.url).href
+const sideImg  = new URL('@/assets/images/loquehacemos.png', import.meta.url).href
 
 const whatWeDo = ref([
   { title: 'Guías y micro-prácticas', desc: 'Rutinas breves que caben en reuniones, clases o turnos de trabajo.' },
@@ -145,8 +144,12 @@ const whatWeDo = ref([
   { title: 'Indicadores de bienestar', desc: 'Seguimiento de enfoque, calma y clima emocional del equipo.' },
   { title: 'Formación y acompañamiento', desc: 'Entrenamiento para líderes, docentes y equipos de RR.HH.' }
 ])
+
+/* === Indica que esta vista tiene HERO arriba === */
+onMounted(() => document.body.classList.add('has-hero'))
+onBeforeUnmount(() => document.body.classList.remove('has-hero'))
 </script>
 
 <style scoped>
-  @import '@/assets/css/sobreNosotros.css';
+@import '@/assets/css/sobreNosotros.css';
 </style>
