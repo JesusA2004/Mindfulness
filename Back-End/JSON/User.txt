@@ -1,5 +1,16 @@
 JSON POST USER:
-
+{
+  "name": "María López",
+  "matricula": "M20250045",
+  "email": "maria.lopez@itcuernavaca.edu.mx",
+  "password": "ClaveSegura2025",
+  "password_confirmation": "ClaveSegura2025",
+  "rol": "estudiante",
+  "estatus": "activo",
+  "urlFotoPerfil": "https://miapp.com/storage/perfiles/maria.png",
+  "persona_id": "68daf59387b4eea7b8014fd3",
+  "institucion_id": "68daf1cf87b4eea7b8014fd2"
+}
 
 JSON PUT USER:
 

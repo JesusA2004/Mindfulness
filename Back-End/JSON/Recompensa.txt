@@ -1,5 +1,16 @@
 JSON POST RECOMPENSAS:
-
+{
+  "nombre": "Tarjeta de Regalo Mercado",
+  "descripcion": "Vale electrónico de $200 MXN canjeable en Mercado Libre.",
+  "puntos_necesarios": 500,
+  "stock": 20,
+  "canjeo": [
+    {
+      "usuario_id": "651f3c2a9e8b123abc456789",
+      "fechaCanjeo": "2025-10-05"
+    }
+  ]
+}
 
 JSON PUT RECOMPENSAS:
 {

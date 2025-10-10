@@ -1,5 +1,16 @@
 JSON POST PERSONA:
-
+{
+  "nombre": "María Fernanda",
+  "apellidoPaterno": "López",
+  "apellidoMaterno": "Hernández",
+  "fechaNacimiento": "2004-05-18",
+  "telefono": "+52 777 555 2211",
+  "sexo": "Femenino",
+  "matricula": "M2025-00045",
+  "carrera": ["Ingeniería en Software"],
+  "cuatrimestre": ["5"],
+  "grupo": ["5B"]
+}
 
 JSON PUT PERSONA:
 
