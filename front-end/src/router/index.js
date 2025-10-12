@@ -16,6 +16,7 @@ import Login         from '@/views/Login.vue'
 import SobreNosotros from '@/views/SobreNosotros.vue'
 import Contacto      from '@/views/Contacto.vue'
 import Perfil      from '@/views/Perfil.vue'
+import Crud         from '@/views/Crud.vue'
 
 // Dashboard basado en el rol
 import ProfesorHome      from '@/views/profesor/Home.vue'
@@ -160,6 +161,10 @@ const routes = [
             path: 'tests',
             name: 'TestsE',
             component: TestsE
+          },
+          { path: 'crud',        
+            name: 'CrudPage',
+            component: Crud 
           }
         ]
       },
