@@ -59,15 +59,6 @@
         >
           <i class="bi bi-chevron-left"></i>
         </button>
-        <button
-          v-else
-          class="btn btn-sm btn-ghost ms-auto d-none d-lg-inline-flex"
-          @click="togglePin(true)"
-          aria-label="Fijar sidebar"
-          title="Fijar"
-        >
-          <i class="bi bi-pin-angle"></i>
-        </button>
 
         <!-- Cerrar en móvil -->
         <button
