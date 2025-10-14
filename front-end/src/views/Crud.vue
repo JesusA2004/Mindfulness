@@ -224,7 +224,7 @@ import 'sweetalert2/dist/sweetalert2.min.css';
 import Modal from 'bootstrap/js/dist/modal';
 import Tooltip from 'bootstrap/js/dist/tooltip';
 
-const API_BASE = (process.env.VUE_APP_API_URL || '') + '/instituciones';
+const API_BASE = (process.env.VUE_APP_API_URL || '') + '/tecnicas';
 
 const items = ref([]);
 const isLoading = ref(true);
