@@ -1,5 +1,57 @@
-JSON POST ACTIVIDADES:
+JSON POST ACTIVIDADES (CON PARTICIPANTES):
+{
+  "fechaAsignacion": "2025-10-15",
+  "fechaFinalizacion": "2025-10-25",
+  "fechaMaxima": "2025-10-24",
+  "nombre": "Ejercicio de Respiración Consciente",
+  "docente_id": "68f04468314091b9280d4c84",
+  "tecnica_id": "68f04588314091b9280d4c86",
+  "descripcion": "Práctica breve para ayudar a los estudiantes a reducir el estrés mediante la respiración guiada.",
+  "participantes": [
+    {
+      "user_id": "68dafc4ffe40ef27600dba32",
+      "estado": "Pendiente"
+    }
+  ]
+}
 
+JSON POST ACTIVIDADES (SIN PARTICIPANTES):
+{
+  "fechaAsignacion": "2025-10-15",
+  "fechaFinalizacion": "2025-10-25",
+  "fechaMaxima": "2025-10-24",
+  "nombre": "Ejercicio de Respiración Sin",
+  "docente_id": "68f04468314091b9280d4c84",
+  "tecnica_id": "68f04588314091b9280d4c86",
+  "descripcion": "Práctica breve para ayudar a los estudiantes a reducir el estrés mediante la respiración guiada."
+}
 
 JSON PUT ACTIVIDADES:
+{
+  "fechaAsignacion": "2025-10-15",
+  "fechaFinalizacion": "2025-10-28",
+  "fechaMaxima": "2025-10-26",
+  "nombre": "Ejercicio de Respiración Consciente (Avanzado)",
+  "descripcion": "Versión extendida con pausas contadas y enfoque corporal.",
+  "docente_id": "68f04468314091b9280d4c84",
+  "tecnica_id": "68f04588314091b9280d4c86",
+  "participantes": [
+    { "user_id": "68f046aa314091b9280d4c90", "estado": "Pendiente" },
+    { "user_id": "68f046bb314091b9280d4c91", "estado": "Omitido" }
+  ]
+}
 
+JSON PUT ACTIVIDADES CAMBIAR ESTADO DE ALUMNO:
+{
+  "fechaAsignacion": "2025-10-15",
+  "fechaFinalizacion": "2025-10-25",
+  "fechaMaxima": "2025-10-24",
+  "nombre": "Ejercicio de Respiración Consciente",
+  "descripcion": "Práctica breve para reducir el estrés mediante respiración guiada.",
+  "docente_id": "68f04468314091b9280d4c84",
+  "tecnica_id": "68f04588314091b9280d4c86",
+  "participantes": [
+    { "user_id": "68f046aa314091b9280d4c90", "estado": "Pendiente" },  // ← alumno asignado
+    { "user_id": "68f046bb314091b9280d4c91", "estado": "Pendiente" }   // ← si ya había otros, mantenlos
+  ]
+}

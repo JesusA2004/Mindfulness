@@ -1,4 +1,15 @@
 JSON POST BITACORA:
-
+{
+  "titulo": "Práctica de respiración consciente",
+  "descripcion": "Realicé una práctica de respiración profunda durante 10 minutos antes de dormir. Me ayudó a sentirme más tranquila y concentrada.",
+  "fecha": "2025-10-15",
+  "alumno_id": "68dafc4ffe40ef27600dba32"
+}
 
 JSON PUT BITACORA:
+{
+  "titulo": "Práctica de respiración consciente (actualizada)",
+  "descripcion": "Amplié la práctica a 15 minutos e incorporé música ambiental relajante. Me sentí con mayor calma y concentración al finalizar.",
+  "fecha": "2025-10-15",
+  "alumno_id": "68dafc4ffe40ef27600dba32"
+}

@@ -16,4 +16,8 @@ class Bitacora extends Model
         'alumno_id',
     ];
 
+    protected $casts = [
+        'fecha' => 'string', // 👈 importante
+    ];
+
 }

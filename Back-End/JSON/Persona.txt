@@ -1,4 +1,4 @@
-JSON POST PERSONA:
+JSON POST PERSONA (Estudiante):
 {
   "nombre": "María Fernanda",
   "apellidoPaterno": "López",
@@ -12,5 +12,45 @@ JSON POST PERSONA:
   "grupo": ["5B"]
 }
 
+JSON POST PERSONA (Profesor):
+{
+  "nombre": "Yatziry",
+  "apellidoPaterno": "Serrano",
+  "apellidoMaterno": "Hernández",
+  "fechaNacimiento": "2004-01-24",
+  "telefono": "+52 777 493 1305",
+  "sexo": "Femenino",
+  "matricula": "SHYO221058",
+  "carrera": ["Ingeniería en Software"],
+  "cuatrimestre": ["10"],
+  "grupo": ["10A"]
+}
+
+JSON POST PERSONA (Administrador):
+{
+  "nombre": "Jesus",
+  "apellidoPaterno": "Arizmendi",
+  "apellidoMaterno": "Maya",
+  "fechaNacimiento": "2004-12-10",
+  "telefono": "+52 777 4428209",
+  "sexo": "Masculino",
+  "matricula": "AMJO220898",
+  "carrera": ["Ingeniería en Software"],
+  "cuatrimestre": ["10"],
+  "grupo": ["10A"]
+}
+
 JSON PUT PERSONA:
+{
+  "nombre": "María Fernanda",
+  "apellidoPaterno": "López",
+  "apellidoMaterno": "Hernández",
+  "fechaNacimiento": "2004-05-18",
+  "telefono": "+52 777 888 4422",
+  "sexo": "Femenino",
+  "matricula": "M2025-00045",
+  "carrera": ["Ingeniería en Software"],
+  "cuatrimestre": ["6"],
+  "grupo": ["6A"]
+}
 
