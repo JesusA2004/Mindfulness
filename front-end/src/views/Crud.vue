@@ -17,6 +17,7 @@
               class="form-control"
               placeholder="Buscar por nombre o descripción…"
               @input="onInstantSearch"
+              aria-label="Buscar por nombre o descripción"
             />
 
             <!-- ÚNICA 'X' (botón propio) -->
@@ -61,35 +62,35 @@
               </div>
             </div>
 
-            <!-- Botonera: icon-only -->
+            <!-- Botonera: ahora con texto + ícono -->
             <div class="card-footer bg-transparent border-0 pt-0 pb-3 px-3">
               <div class="d-flex gap-2">
                 <button
-                  class="btn btn-outline-secondary btn-sm flex-fill btn-icon-only"
+                  class="btn btn-outline-secondary btn-sm flex-fill btn-with-label"
                   @click="openView(item)"
                   data-bs-toggle="tooltip"
                   title="Consultar"
-                  aria-label="Consultar"
                 >
-                  <i class="bi bi-eye"></i>
+                  <i class="bi bi-eye me-1"></i>
+                  <span>Consultar</span>
                 </button>
                 <button
-                  class="btn btn-outline-primary btn-sm flex-fill btn-icon-only"
+                  class="btn btn-outline-primary btn-sm flex-fill btn-with-label"
                   @click="openEdit(item)"
                   data-bs-toggle="tooltip"
                   title="Modificar"
-                  aria-label="Modificar"
                 >
-                  <i class="bi bi-pencil-square"></i>
+                  <i class="bi bi-pencil-square me-1"></i>
+                  <span>Modificar</span>
                 </button>
                 <button
-                  class="btn btn-outline-danger btn-sm flex-fill btn-icon-only"
+                  class="btn btn-outline-danger btn-sm flex-fill btn-with-label"
                   @click="confirmDelete(item)"
                   data-bs-toggle="tooltip"
                   title="Eliminar"
-                  aria-label="Eliminar"
                 >
-                  <i class="bi bi-trash"></i>
+                  <i class="bi bi-trash me-1"></i>
+                  <span>Eliminar</span>
                 </button>
               </div>
             </div>
@@ -140,6 +141,7 @@
     </div>
 
     <!-- ======= Modales ======= -->
+    <!-- Modal: Consulta -->
     <div class="modal fade" ref="viewModalRef" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg">
@@ -166,12 +168,24 @@
             </dl>
           </div>
           <div class="modal-footer border-0">
-            <button class="btn btn-secondary" @click="hideModal('view')">Cerrar</button>
+            <div class="d-flex flex-wrap w-100 gap-2 justify-content-between">
+              <div class="d-flex gap-2">
+                <!-- Acciones con texto (ya estaban) -->
+                <button type="button" class="btn btn-outline-primary" @click="modifyFromView">
+                  <i class="bi bi-pencil-square me-1"></i> Modificar
+                </button>
+                <button type="button" class="btn btn-outline-danger" @click="deleteFromView">
+                  <i class="bi bi-trash me-1"></i> Eliminar
+                </button>
+              </div>
+              <button class="btn btn-secondary ms-auto" @click="hideModal('view')">Cerrar</button>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- Modal: Form (Crear/Editar) -->
     <div class="modal fade" ref="formModalRef" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <form class="modal-content border-0 shadow-lg" @submit.prevent="onSubmit">
@@ -204,6 +218,7 @@
             </div>
           </div>
           <div class="modal-footer border-0">
+            <!-- Cancelar gris -->
             <button type="button" class="btn btn-outline-secondary" @click="hideModal('form')">Cancelar</button>
             <button type="submit" class="btn btn-gradient" :disabled="saving">
               <span v-if="!saving">{{ isEditing ? 'Guardar cambios' : 'Registrar' }}</span>
@@ -333,9 +348,15 @@ function getId(obj) { return obj?.id ?? obj?._id ?? obj?.uuid ?? null; }
 
 async function confirmDelete(item) {
   const result = await Swal.fire({
-    title: '¿Eliminar registro?', text: 'Esta acción no se puede deshacer.', icon: 'warning',
-    showCancelButton: true, confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar',
-    reverseButtons: true, confirmButtonColor: '#7a00b8', cancelButtonColor: '#6c757d',
+    title: '¿Eliminar registro?',
+    text: 'Esta acción no se puede deshacer.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Sí, eliminar',
+    cancelButtonText: 'Cancelar',
+    reverseButtons: true,
+    confirmButtonColor: '#dc3545',   // ROJO para confirmar eliminación
+    cancelButtonColor: '#6c757d',    // GRIS para cancelar
   });
   if (!result.isConfirmed) return;
   try {
@@ -344,6 +365,22 @@ async function confirmDelete(item) {
     items.value = items.value.filter(x => getId(x) !== id);
     toast('Eliminado correctamente.');
   } catch (e) { console.error(e); toast('No fue posible eliminar.', 'error'); }
+}
+
+// Acciones desde la vista de consulta
+async function modifyFromView() {
+  if (!selected.value) return;
+  const item = { ...selected.value };
+  hideModal('view');
+  await nextTick();
+  openEdit(item);
+}
+async function deleteFromView() {
+  if (!selected.value) return;
+  const item = { ...selected.value };
+  hideModal('view');
+  await nextTick();
+  await confirmDelete(item);
 }
 
 function toast(message, type = 'success') {
@@ -356,7 +393,6 @@ function formatDate(v) { if (!v) return '—'; const d = new Date(v); return Num
 /* Oculta la 'X' nativa del input type=search (dejamos SOLO nuestro botón) */
 .search-group input[type="search"]::-webkit-search-cancel-button { display:none; }
 .search-group input[type="search"]::-webkit-search-decoration { display:none; }
-/* Edge/IE legacy (por si acaso) */
 .search-group input[type="search"]::-ms-clear { display:none; width:0; height:0; }
 
 /* Mantén tus estilos globales */

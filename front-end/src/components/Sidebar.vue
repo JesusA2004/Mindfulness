@@ -175,6 +175,7 @@ const menusPorRol = {
   ],
   admin: [
     { to: '/app/admin/dashboard',   text: 'Inicio',       icon: 'bi-house'             },
+    { to: '/app/admin/usuarios',    text: 'Usuarios',     icon: 'bi-person'            },
     { to: '/app/admin/actividades', text: 'Actividades',  icon: 'bi-list-task'         },
     { to: '/app/admin/citas',       text: 'Citas',        icon: 'bi-calendar-event'    },
     { to: '/app/admin/encuestas',   text: 'Encuestas',    icon: 'bi-clipboard-data'    },
