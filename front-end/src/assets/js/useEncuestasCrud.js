@@ -1,20 +1,20 @@
-// src/assets/js/useTestsCrud.js
+// src/assets/js/useEncuestasCrud.js
 import { ref, reactive, computed, onMounted, nextTick } from 'vue';
 import Modal from 'bootstrap/js/dist/modal';
 import axios from 'axios';
 
-// 🔗 Importa TODO lo reutilizable desde crudUtils
+// ✅ Reutilizables centralizados
 import {
   apiBase, authHeaders, getId,
   normalizeCuestionario, sequentialId, randomKey,
   toDateInputValue, formatDate,
   makeDebouncer, toast, setupBsTooltips,
-  fetchPaginated, isRequired, validateOptions
+  fetchPaginated, isRequired, validateOptions, isPositiveInt
 } from '@/assets/js/crudUtils';
 
-const API_BASE = apiBase('/tests');
+const API_BASE = apiBase('/encuestas');
 
-export function useTestsCrud() {
+export function useEncuestasCrud() {
   /** === Estado raíz === */
   const items = ref([]);
   const isLoading = ref(true);
@@ -22,7 +22,7 @@ export function useTestsCrud() {
   const page = ref(1);
   const perPage = 20;
 
-  /** === Búsqueda (debounce reutilizable) === */
+  /** === Buscador (debounce utilitario) === */
   const searchQuery = ref('');
   const debounce = makeDebouncer(120);
   const onInstantSearch = () => debounce(() => {});
@@ -46,9 +46,10 @@ export function useTestsCrud() {
 
   const form = reactive({
     _id: null,
-    nombre: '',
+    titulo: '',
     descripcion: '',
-    fechaAplicacion: '',
+    fechaAsignacion: '',    // YYYY-MM-DD
+    fechaFinalizacion: '',  // YYYY-MM-DD
     duracion_estimada: null,
     cuestionario: [],
   });
@@ -63,64 +64,85 @@ export function useTestsCrud() {
     await nextTick();
     if (viewModalRef.value) viewModal = new Modal(viewModalRef.value, { backdrop: 'static' });
     if (formModalRef.value) formModal = new Modal(formModalRef.value, { backdrop: 'static' });
-    setupBsTooltips(); // activa tooltips globales (incluye botones de la UI)
+    setupBsTooltips(); // activa tooltips para los íconos de info
   });
 
-  /** === Helpers específicos del dominio Test === */
+  /** === Helpers de dominio === */
   function labelTipo(t) {
+    // Solo usamos selección múltiple en encuestas
     if (t === 'seleccion_multiple') return 'Selección múltiple';
-    if (t === 'respuesta_abierta') return 'Respuesta abierta';
     return t || '—';
+  }
+
+  function formatDateRange(inicio, fin) {
+    const a = formatDate(inicio);
+    const b = formatDate(fin);
+    if (!a && !b) return '—';
+    if (a && !b)   return a;
+    if (!a && b)   return b;
+    return `${a} — ${b}`;
   }
 
   /** === Fetch & Paginación === */
   async function fetchItems({ append = false } = {}) {
     try {
       isLoading.value = true;
-      const { list, hasMore: hm, raw } = await fetchPaginated(API_BASE, {
+      const { list, hasMore: hm } = await fetchPaginated(API_BASE, {
         page: page.value, perPage, headers: authHeaders()
       });
       hasMore.value = hm;
-      const normalized = list.map(normalizeTest);
+      const normalized = list.map(normalizeEncuesta);
       items.value = append ? [...items.value, ...normalized] : normalized;
     } catch (e) {
       console.error(e);
-      toast('No fue posible cargar los datos.', 'error');
+      toast('No fue posible cargar las encuestas.', 'error');
     } finally {
       isLoading.value = false;
     }
   }
 
-  function normalizeTest(t) {
-    const id = getId(t);
+  function normalizeEncuesta(raw) {
+    const id = getId(raw);
+    // Normalizamos cuestionario y forzamos tipo = seleccion_multiple
+    const base = normalizeCuestionario(raw?.cuestionario, { idPrefix: 'q' })
+      .map(q => ({
+        ...q,
+        tipo: 'seleccion_multiple',
+        opciones: Array.isArray(q.opciones) ? q.opciones : [],
+      }));
+
     return {
-      ...t,
+      ...raw,
       _id: id,
       id,
-      cuestionario: normalizeCuestionario(t?.cuestionario, { idPrefix: 't' }), // asegura _id, opciones, __key
+      titulo: raw?.titulo ?? '',
+      descripcion: raw?.descripcion ?? '',
+      fechaAsignacion: raw?.fechaAsignacion ?? '',
+      fechaFinalizacion: raw?.fechaFinalizacion ?? '',
+      duracion_estimada: raw?.duracion_estimada ?? null,
+      cuestionario: base
     };
   }
 
   /** === Paginación === */
-  function loadMore() {
-    page.value += 1;
-    fetchItems({ append: true });
-  }
+  function loadMore() { page.value += 1; fetchItems({ append: true }); }
 
-  /** === Filtro local === */
+  /** === Filtro local (título o duración) === */
   const filteredItems = computed(() => {
-    const q = searchQuery.value.toLowerCase();
+    const q = searchQuery.value.toLowerCase().trim();
     if (!q) return items.value;
+    const isNumber = /^\d+$/.test(q);
     return items.value.filter(it => {
-      const n = (it.nombre || '').toLowerCase();
-      const d = (it.descripcion || '').toLowerCase();
-      return n.includes(q) || d.includes(q);
+      const t = (it.titulo || '').toLowerCase();
+      const dur = (it.duracion_estimada ?? '').toString();
+      if (isNumber) return dur.includes(q);
+      return t.includes(q);
     });
   });
 
   /** === Abrir/Cerrar Modales === */
   function openView(item) {
-    selected.value = normalizeTest({ ...item });
+    selected.value = normalizeEncuesta({ ...item });
     viewToggle.meta = false;
     viewToggle.cuestionario = true;
     viewToggle.qOpen = {};
@@ -139,7 +161,7 @@ export function useTestsCrud() {
 
   function openEdit(item) {
     isEditing.value = true;
-    setForm(normalizeTest(item));
+    setForm(normalizeEncuesta(item));
     ui.meta = false;
     ui.cuestionario = true;
     ui.qOpen = {};
@@ -147,53 +169,59 @@ export function useTestsCrud() {
     formModal?.show();
   }
 
-  function hideModal(kind) {
-    if (kind === 'view') viewModal?.hide();
-    if (kind === 'form') formModal?.hide();
-  }
+  function hideModal(kind) { if (kind === 'view') viewModal?.hide(); if (kind === 'form') formModal?.hide(); }
 
   /** === Form: set/reset === */
   function resetForm() {
     form._id = null;
-    form.nombre = '';
+    form.titulo = '';
     form.descripcion = '';
-    form.fechaAplicacion = '';
+    form.fechaAsignacion = '';
+    form.fechaFinalizacion = '';
     form.duracion_estimada = null;
     form.cuestionario = [];
   }
 
   function setForm(item) {
     form._id = getId(item);
-    form.nombre = item.nombre ?? '';
+    form.titulo = item.titulo ?? '';
     form.descripcion = item.descripcion ?? '';
-    form.fechaAplicacion = toDateInputValue(item.fechaAplicacion);
+    form.fechaAsignacion = toDateInputValue(item.fechaAsignacion);
+    form.fechaFinalizacion = toDateInputValue(item.fechaFinalizacion);
     form.duracion_estimada = item.duracion_estimada ?? null;
-
-    form.cuestionario = normalizeCuestionario(item.cuestionario, { idPrefix: 't' });
+    form.cuestionario = normalizeCuestionario(item.cuestionario, { idPrefix: 'q' })
+      .map(q => ({ ...q, tipo: 'seleccion_multiple' }));
   }
 
   /** === Editor de preguntas === */
   function addPregunta() {
-    const nextId = sequentialId(form.cuestionario.length, form.cuestionario, 't');
-    form.cuestionario.push({ __key: randomKey(), _id: nextId, pregunta: '', tipo: '', opciones: [] });
+    const nextId = sequentialId(form.cuestionario.length, form.cuestionario, 'q');
+    form.cuestionario.push({
+      __key: randomKey(),
+      _id: nextId,
+      pregunta: '',
+      tipo: 'seleccion_multiple',
+      opciones: ['', ''] // dos por defecto para guiar
+    });
     const idx = form.cuestionario.length - 1;
     ui.qOpen[idx] = true;
   }
   function removePregunta(index) {
     form.cuestionario.splice(index, 1);
-    form.cuestionario.forEach((q, i) => { q._id = `t${i+1}`; });
+    form.cuestionario.forEach((q, i) => { q._id = `q${i+1}`; });
     const newOpen = {};
     form.cuestionario.forEach((_q, i) => { newOpen[i] = !!ui.qOpen[i]; });
     ui.qOpen = newOpen;
   }
   function onChangeTipo(q) {
-    const needsOptions = q?.tipo === 'seleccion_multiple';
-    if (!needsOptions) q.opciones = [];
-    if (needsOptions && (!q.opciones || q.opciones.length < 2)) {
+    // Salvaguarda (select está deshabilitado)
+    q.tipo = 'seleccion_multiple';
+    if (!needsOptions(q)) q.opciones = [];
+    if (needsOptions(q) && (!q.opciones || q.opciones.length < 2)) {
       q.opciones = q.opciones && q.opciones.length ? q.opciones : ['',''];
     }
   }
-  function needsOptions(q) { return q?.tipo === 'seleccion_multiple'; }
+  function needsOptions(_q) { return true; /* siempre requiere opciones */ }
   function addOpcion(q) { if (!Array.isArray(q.opciones)) q.opciones = []; q.opciones.push(''); }
   function removeOpcion(q, i) { q.opciones.splice(i, 1); }
 
@@ -201,15 +229,26 @@ export function useTestsCrud() {
   function toggleQuestion(idx) { ui.qOpen[idx] = !ui.qOpen[idx]; }
   function toggleViewQuestion(idx) { viewToggle.qOpen[idx] = !viewToggle.qOpen[idx]; }
 
+  /** === Validaciones específicas === */
+  function validDates() {
+    const a = form.fechaAsignacion ? new Date(form.fechaAsignacion) : null;
+    const b = form.fechaFinalizacion ? new Date(form.fechaFinalizacion) : null;
+    if (!a || !b) return true; // valida solo si ambas existen
+    return b.getTime() >= a.getTime();
+  }
+
   /** === Submit === */
   async function onSubmit() {
-    if (!isRequired(form.nombre)) { toast('El nombre es obligatorio.', 'error'); return; }
+    if (!isRequired(form.titulo)) { toast('El título es obligatorio.', 'error'); return; }
+    if (form.duracion_estimada != null && !isPositiveInt(form.duracion_estimada)) {
+      toast('La duración debe ser un entero positivo.', 'error'); return;
+    }
+    if (!validDates()) { toast('La fecha de fin no puede ser anterior a la fecha de inicio.', 'error'); return; }
     if (form.cuestionario.length === 0) { toast('Agrega al menos una pregunta.', 'error'); return; }
+
     for (const q of form.cuestionario) {
-      if (!isRequired(q.pregunta) || !isRequired(q.tipo)) { toast('Completa los campos obligatorios de cada pregunta.', 'error'); return; }
-      if (needsOptions(q) && !validateOptions(q.opciones, 2)) {
-        toast('Cada pregunta con opciones debe tener al menos 2 opciones válidas.', 'error'); return;
-      }
+      if (!isRequired(q.pregunta)) { toast('Completa el texto de cada pregunta.', 'error'); return; }
+      if (!validateOptions(q.opciones, 2)) { toast('Cada pregunta debe tener al menos 2 opciones no vacías.', 'error'); return; }
     }
 
     saving.value = true;
@@ -217,16 +256,16 @@ export function useTestsCrud() {
       const body = payload();
       if (isEditing.value && form._id) {
         const { data } = await axios.put(`${API_BASE}/${form._id}`, body, { headers: authHeaders() });
-        const saved = normalizeTest(data?.data ?? data);
+        const saved = normalizeEncuesta(data?.data ?? data);
         upsertLocal(saved);
         hideModal('form'); await refreshList();
-        toast('Test actualizado.');
+        toast('Encuesta actualizada.');
       } else {
         const { data } = await axios.post(API_BASE, body, { headers: authHeaders() });
-        const saved = normalizeTest(data?.data ?? data);
+        const saved = normalizeEncuesta(data?.data ?? data);
         prependLocal(saved);
         hideModal('form'); await refreshList();
-        toast('Test creado.');
+        toast('Encuesta creada.');
       }
     } catch (e) {
       console.error(e);
@@ -240,13 +279,14 @@ export function useTestsCrud() {
     const cuestionario = form.cuestionario.map(q => ({
       _id: q._id,
       pregunta: q.pregunta,
-      tipo: q.tipo,
-      ...(needsOptions(q) ? { opciones: (q.opciones || []).map(o => (o || '').trim()).filter(Boolean) } : {})
+      tipo: 'seleccion_multiple',
+      opciones: (q.opciones || []).map(o => (o || '').trim()).filter(Boolean)
     }));
     return {
-      nombre: form.nombre,
+      titulo: form.titulo,
       descripcion: form.descripcion || null,
-      fechaAplicacion: form.fechaAplicacion || null,
+      fechaAsignacion: form.fechaAsignacion || null,
+      fechaFinalizacion: form.fechaFinalizacion || null,
       duracion_estimada: form.duracion_estimada ?? null,
       cuestionario
     };
@@ -263,10 +303,11 @@ export function useTestsCrud() {
 
   /** === Eliminar === */
   async function confirmDelete(item) {
+    // usamos import dinámico para no cargar Swal en frío si no se usa
     const Swal = (await import('sweetalert2')).default;
-    await import('sweetalert2/dist/sweetalert2.min.css'); // garantía si haces code-splitting
+    await import('sweetalert2/dist/sweetalert2.min.css');
     const result = await Swal.fire({
-      title: '¿Eliminar test?',
+      title: '¿Eliminar encuesta?',
       text: 'Esta acción no se puede deshacer.',
       icon: 'warning',
       showCancelButton: true,
@@ -307,7 +348,7 @@ export function useTestsCrud() {
     // búsqueda
     searchQuery, onInstantSearch, clearSearch,
     // utilidades
-    getId, formatDate, labelTipo,
+    getId, formatDateRange, labelTipo,
     // refs
     viewModalRef, formModalRef, hideModal,
     // selección, formulario y UI

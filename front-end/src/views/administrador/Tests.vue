@@ -1,4 +1,3 @@
-<!-- CrudPanel.vue -->
 <template>
   <main class="panel-wrapper">
     <!-- ======= Toolbar: Búsqueda + Nuevo ======= -->
@@ -380,27 +379,17 @@
 </template>
 
 <script setup>
-/* Importa el composable y extrae TODO lo que usa el template */
 import { useTestsCrud } from '@/assets/js/useTestsCrud';
 
 const {
-  // estado y listas
   items, isLoading, hasMore, filteredItems, page,
-  // búsqueda
   searchQuery, onInstantSearch, clearSearch,
-  // utilidad
   getId, formatDate, labelTipo,
-  // modales y refs
   viewModalRef, formModalRef, hideModal,
-  // acciones de lista/paginación
   loadMore,
-  // selección y UI
   selected, ui, viewToggle, isEditing, saving, form,
-  // abrir/editar/ver
   openView, openCreate, openEdit,
-  // cuestionario
   addPregunta, removePregunta, toggleQuestion, needsOptions, addOpcion, removeOpcion, onChangeTipo, toggleViewQuestion,
-  // submit/eliminar
   onSubmit, confirmDelete, modifyFromView, deleteFromView,
 } = useTestsCrud();
 </script>
