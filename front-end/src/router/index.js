@@ -51,6 +51,7 @@ import TecnicasA from '@/views/administrador/Tecnicas.vue'
 import TestsA from '@/views/administrador/Tests.vue'
 import RespaldoA from '@/views/administrador/RespaldoBD.vue'
 import ReportesA from '@/views/administrador/Reportes.vue'
+import UsuariosA from '@/views/administrador/Usuarios.vue'
 
 const routes = [
   {
@@ -177,6 +178,11 @@ const routes = [
             path: 'dashboard',
             name: 'AdministradorHome',
             component: AdministradorHome
+          },
+          {
+            path: 'usuarios',
+            name: 'UsuariosA',
+            component: UsuariosA
           },
           {
             path: 'actividades',

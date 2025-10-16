@@ -4,9 +4,14 @@
     <!-- ======= Toolbar: Búsqueda + Nuevo ======= -->
     <div class="container-fluid toolbar px-3 px-lg-2">
       <div class="row g-2 align-items-center">
+        <!-- Barra de búsqueda -->
         <div class="col-12 col-lg-8">
-          <div class="input-group input-group-lg search-group shadow-sm">
-            <span class="input-group-text">
+          <div
+            class="input-group input-group-lg search-group shadow-sm rounded-pill"
+            role="search"
+            aria-label="Buscador de técnicas"
+          >
+            <span class="input-group-text rounded-start-pill">
               <i class="bi bi-search"></i>
             </span>
 
@@ -14,82 +19,108 @@
             <input
               v-model.trim="searchQuery"
               type="search"
-              class="form-control"
+              class="form-control search-input"
               placeholder="Buscar por nombre o descripción…"
               @input="onInstantSearch"
+              aria-label="Buscar por nombre o descripción"
             />
 
-            <!-- ÚNICA 'X' (botón propio) -->
+            <!-- Botón para limpiar -->
             <button
               v-if="searchQuery"
-              class="btn btn-link text-secondary px-3"
+              class="btn btn-link text-secondary px-3 d-none d-md-inline"
               @click="clearSearch"
               aria-label="Limpiar búsqueda"
             >
               <i class="bi bi-x-lg"></i>
             </button>
           </div>
+
+          <!-- Botón limpiar móvil -->
+          <div class="d-flex d-md-none justify-content-end mt-2" v-if="searchQuery">
+            <button
+              class="btn btn-sm btn-outline-secondary rounded-pill"
+              @click="clearSearch"
+              aria-label="Limpiar búsqueda móvil"
+            >
+              <i class="bi bi-x-lg me-1"></i> Limpiar
+            </button>
+          </div>
         </div>
 
+        <!-- Botón +Nuevo (más compacto) -->
         <div class="col-12 col-lg-4 text-lg-end mt-2 mt-lg-0">
-          <button class="btn btn-gradient btn-lg fw-semibold shadow-sm rounded-pill btn-new" @click="openCreate">
-            <i class="bi bi-plus-lg me-1"></i> Nuevo
+          <button
+            class="btn btn-gradient fw-semibold shadow-sm rounded-pill btn-new px-3 py-2"
+            @click="openCreate"
+          >
+            <i class="bi bi-plus-lg me-1"></i>
+            <span class="d-inline d-sm-inline">Nuevo</span>
           </button>
         </div>
       </div>
     </div>
 
+
     <!-- ======= Grid de Cards ======= -->
     <div class="container-fluid px-3 px-lg-2">
-      <div class="row g-3">
+      <!-- Usamos utilidades Bootstrap: 1 col en xs, 2 en sm, 3 en lg -->
+      <div class="row g-3 row-cols-1 row-cols-sm-2 row-cols-lg-3">
         <div
           v-for="item in filteredItems"
           :key="getId(item)"
-          class="col-12 col-sm-6 col-lg-4 col-xxl-3"
+          class="col"
         >
           <div class="card h-100 item-card shadow-sm">
             <div class="card-body">
               <div class="d-flex justify-content-between align-items-start mb-2">
-                <h5 class="card-title mb-0 text-truncate" :title="item.nombre">{{ item.nombre }}</h5>
-                <span class="badge rounded-pill bg-status" :class="item.activo ? 'bg-success' : 'bg-secondary'">
+                <h5 class="card-title mb-0 text-truncate fw-bold" :title="item.nombre">
+                  {{ item.nombre }}
+                </h5>
+                <span
+                  class="badge rounded-pill bg-status"
+                  :class="item.activo ? 'bg-success' : 'bg-secondary'"
+                >
                   {{ item.activo ? 'Activo' : 'Inactivo' }}
                 </span>
               </div>
-              <p class="card-text clamp-3" v-if="item.descripcion">{{ item.descripcion }}</p>
+
+              <p class="card-text clamp-3 mb-2" v-if="item.descripcion">{{ item.descripcion }}</p>
+
               <div class="small text-muted" v-if="item.categoria">
-                <i class="bi bi-tag"></i> {{ item.categoria }}
+                <i class="bi bi-tag me-1"></i> {{ item.categoria }}
               </div>
             </div>
 
-            <!-- Botonera: icon-only -->
+            <!-- Botonera: responsive full-width en móvil -->
             <div class="card-footer bg-transparent border-0 pt-0 pb-3 px-3">
-              <div class="d-flex gap-2">
+              <div class="d-flex flex-column flex-md-row gap-2">
                 <button
-                  class="btn btn-outline-secondary btn-sm flex-fill btn-icon-only"
+                  class="btn btn-outline-secondary btn-sm flex-fill btn-with-label"
                   @click="openView(item)"
                   data-bs-toggle="tooltip"
                   title="Consultar"
-                  aria-label="Consultar"
                 >
-                  <i class="bi bi-eye"></i>
+                  <i class="bi bi-eye me-1"></i>
+                  <span>Consultar</span>
                 </button>
                 <button
-                  class="btn btn-outline-primary btn-sm flex-fill btn-icon-only"
+                  class="btn btn-outline-primary btn-sm flex-fill btn-with-label"
                   @click="openEdit(item)"
                   data-bs-toggle="tooltip"
                   title="Modificar"
-                  aria-label="Modificar"
                 >
-                  <i class="bi bi-pencil-square"></i>
+                  <i class="bi bi-pencil-square me-1"></i>
+                  <span>Modificar</span>
                 </button>
                 <button
-                  class="btn btn-outline-danger btn-sm flex-fill btn-icon-only"
+                  class="btn btn-outline-danger btn-sm flex-fill btn-with-label"
                   @click="confirmDelete(item)"
                   data-bs-toggle="tooltip"
                   title="Eliminar"
-                  aria-label="Eliminar"
                 >
-                  <i class="bi bi-trash"></i>
+                  <i class="bi bi-trash me-1"></i>
+                  <span>Eliminar</span>
                 </button>
               </div>
             </div>
@@ -108,7 +139,7 @@
         </div>
 
         <!-- Skeletons -->
-        <div v-if="isLoading" class="col-12 col-sm-6 col-lg-4 col-xxl-3" v-for="n in 8" :key="'sk'+n">
+        <div v-if="isLoading" class="col" v-for="n in 6" :key="'sk'+n">
           <div class="card h-100 shadow-sm">
             <div class="card-body">
               <div class="placeholder-glow">
@@ -133,51 +164,67 @@
 
       <!-- Paginación simple -->
       <div class="d-flex justify-content-center my-4" v-if="!isLoading && hasMore">
-        <button class="btn btn-outline-secondary" @click="loadMore">
+        <button class="btn btn-outline-secondary btn-lg" @click="loadMore">
           Cargar más
         </button>
       </div>
     </div>
 
     <!-- ======= Modales ======= -->
+    <!-- Modal: Consulta -->
     <div class="modal fade" ref="viewModalRef" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg">
           <div class="modal-header border-0">
-            <h5 class="modal-title">Detalle</h5>
-            <button type="button" class="btn-close" @click="hideModal('view')"></button>
+            <h5 class="modal-title fw-bold">Detalle</h5>
+            <button type="button" class="btn-close" @click="hideModal('view')" aria-label="Cerrar"></button>
           </div>
           <div class="modal-body">
-            <dl class="row">
+            <dl class="row gy-2">
               <dt class="col-sm-3">Nombre</dt>
               <dd class="col-sm-9">{{ selected?.nombre }}</dd>
+
               <dt class="col-sm-3">Descripción</dt>
               <dd class="col-sm-9">{{ selected?.descripcion || '—' }}</dd>
+
               <dt class="col-sm-3">Categoría</dt>
               <dd class="col-sm-9">{{ selected?.categoria || '—' }}</dd>
+
               <dt class="col-sm-3">Estado</dt>
               <dd class="col-sm-9">
                 <span class="badge" :class="selected?.activo ? 'bg-success' : 'bg-secondary'">
                   {{ selected?.activo ? 'Activo' : 'Inactivo' }}
                 </span>
               </dd>
+
               <dt class="col-sm-3">Creado</dt>
               <dd class="col-sm-9">{{ formatDate(selected?.created_at) }}</dd>
             </dl>
           </div>
           <div class="modal-footer border-0">
-            <button class="btn btn-secondary" @click="hideModal('view')">Cerrar</button>
+            <div class="d-grid d-md-flex w-100 gap-2">
+              <div class="d-grid d-md-flex gap-2">
+                <button type="button" class="btn btn-outline-primary" @click="modifyFromView">
+                  <i class="bi bi-pencil-square me-1"></i> Modificar
+                </button>
+                <button type="button" class="btn btn-outline-danger" @click="deleteFromView">
+                  <i class="bi bi-trash me-1"></i> Eliminar
+                </button>
+              </div>
+              <button class="btn btn-secondary ms-md-auto" @click="hideModal('view')">Cerrar</button>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- Modal: Form (Crear/Editar) -->
     <div class="modal fade" ref="formModalRef" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <form class="modal-content border-0 shadow-lg" @submit.prevent="onSubmit">
           <div class="modal-header border-0">
-            <h5 class="modal-title">{{ isEditing ? 'Modificar' : 'Registrar' }}</h5>
-            <button type="button" class="btn-close" @click="hideModal('form')"></button>
+            <h5 class="modal-title fw-bold">{{ isEditing ? 'Modificar' : 'Registrar' }}</h5>
+            <button type="button" class="btn-close" @click="hideModal('form')" aria-label="Cerrar"></button>
           </div>
           <div class="modal-body">
             <div class="mb-3">
@@ -204,6 +251,7 @@
             </div>
           </div>
           <div class="modal-footer border-0">
+            <!-- Cancelar gris (Bootstrap + refuerzo en CSS) -->
             <button type="button" class="btn btn-outline-secondary" @click="hideModal('form')">Cancelar</button>
             <button type="submit" class="btn btn-gradient" :disabled="saving">
               <span v-if="!saving">{{ isEditing ? 'Guardar cambios' : 'Registrar' }}</span>
@@ -260,7 +308,11 @@ onMounted(async () => {
   await nextTick();
   viewModal = new Modal(viewModalRef.value, { backdrop: 'static' });
   formModal = new Modal(formModalRef.value, { backdrop: 'static' });
-  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((el) => { new Tooltip(el); });
+
+  // Tooltips de Bootstrap
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((el) => {
+    new Tooltip(el);
+  });
 });
 
 function authHeaders() {
@@ -284,7 +336,10 @@ async function fetchItems({ append = false } = {}) {
   }
 }
 
-function loadMore() { page.value += 1; fetchItems({ append: true }); }
+function loadMore() {
+  page.value += 1;
+  fetchItems({ append: true });
+}
 
 const filteredItems = computed(() => {
   const q = searchQuery.value.toLowerCase();
@@ -302,11 +357,18 @@ function openEdit(item) { isEditing.value = true; setForm(item); formModal.show(
 function hideModal(kind) { if (kind==='view') viewModal?.hide(); if (kind==='form') formModal?.hide(); }
 
 function resetForm() {
-  form._id = null; form.nombre = ''; form.descripcion = ''; form.categoria = ''; form.activo = true;
+  form._id = null;
+  form.nombre = '';
+  form.descripcion = '';
+  form.categoria = '';
+  form.activo = true;
 }
 function setForm(item) {
-  form._id = getId(item); form.nombre = item.nombre ?? ''; form.descripcion = item.descripcion ?? '';
-  form.categoria = item.categoria ?? ''; form.activo = !!item.activo;
+  form._id = getId(item);
+  form.nombre = item.nombre ?? '';
+  form.descripcion = item.descripcion ?? '';
+  form.categoria = item.categoria ?? '';
+  form.activo = !!item.activo;
 }
 
 async function onSubmit() {
@@ -314,28 +376,51 @@ async function onSubmit() {
   try {
     if (isEditing.value && form._id) {
       const { data } = await axios.put(`${API_BASE}/${form._id}`, payload(), { headers: authHeaders() });
-      upsertLocal(data?.data ?? data); toast('Registro actualizado.');
+      upsertLocal(data?.data ?? data);
+      toast('Registro actualizado.');
     } else {
       const { data } = await axios.post(API_BASE, payload(), { headers: authHeaders() });
-      prependLocal(data?.data ?? data); toast('Registro creado.');
+      prependLocal(data?.data ?? data);
+      toast('Registro creado.');
     }
     hideModal('form');
   } catch (e) {
     console.error(e);
     toast(e?.response?.data?.message || 'Ocurrió un error al guardar.', 'error');
-  } finally { saving.value = false; }
+  } finally {
+    saving.value = false;
+  }
 }
 
-function payload() { return { nombre: form.nombre, descripcion: form.descripcion, categoria: form.categoria || null, activo: !!form.activo }; }
-function upsertLocal(saved) { const id = getId(saved); const idx = items.value.findIndex(x => getId(x) === id); if (idx >= 0) items.value[idx] = saved; }
-function prependLocal(saved) { items.value = [saved, ...items.value]; }
+function payload() {
+  return {
+    nombre: form.nombre,
+    descripcion: form.descripcion,
+    categoria: form.categoria || null,
+    activo: !!form.activo
+  };
+}
+function upsertLocal(saved) {
+  const id = getId(saved);
+  const idx = items.value.findIndex(x => getId(x) === id);
+  if (idx >= 0) items.value[idx] = saved;
+}
+function prependLocal(saved) {
+  items.value = [saved, ...items.value];
+}
 function getId(obj) { return obj?.id ?? obj?._id ?? obj?.uuid ?? null; }
 
 async function confirmDelete(item) {
   const result = await Swal.fire({
-    title: '¿Eliminar registro?', text: 'Esta acción no se puede deshacer.', icon: 'warning',
-    showCancelButton: true, confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar',
-    reverseButtons: true, confirmButtonColor: '#7a00b8', cancelButtonColor: '#6c757d',
+    title: '¿Eliminar registro?',
+    text: 'Esta acción no se puede deshacer.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Sí, eliminar',
+    cancelButtonText: 'Cancelar',
+    reverseButtons: true,
+    confirmButtonColor: '#dc3545',   // ROJO
+    cancelButtonColor: '#6c757d',    // GRIS
   });
   if (!result.isConfirmed) return;
   try {
@@ -343,20 +428,49 @@ async function confirmDelete(item) {
     await axios.delete(`${API_BASE}/${id}`, { headers: authHeaders() });
     items.value = items.value.filter(x => getId(x) !== id);
     toast('Eliminado correctamente.');
-  } catch (e) { console.error(e); toast('No fue posible eliminar.', 'error'); }
+  } catch (e) {
+    console.error(e);
+    toast('No fue posible eliminar.', 'error');
+  }
+}
+
+async function modifyFromView() {
+  if (!selected.value) return;
+  const item = { ...selected.value };
+  hideModal('view');
+  await nextTick();
+  openEdit(item);
+}
+async function deleteFromView() {
+  if (!selected.value) return;
+  const item = { ...selected.value };
+  hideModal('view');
+  await nextTick();
+  await confirmDelete(item);
 }
 
 function toast(message, type = 'success') {
-  Swal.fire({ toast: true, position: 'top-end', icon: type, title: message, showConfirmButton: false, timer: 2000, timerProgressBar: true });
+  Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon: type,
+    title: message,
+    showConfirmButton: false,
+    timer: 2000,
+    timerProgressBar: true
+  });
 }
-function formatDate(v) { if (!v) return '—'; const d = new Date(v); return Number.isNaN(d.getTime()) ? v : d.toLocaleString(); }
+function formatDate(v) {
+  if (!v) return '—';
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? v : d.toLocaleString();
+}
 </script>
 
 <style scoped>
-/* Oculta la 'X' nativa del input type=search (dejamos SOLO nuestro botón) */
+/* Quitar la 'X' nativa del input search (usamos nuestro botón) */
 .search-group input[type="search"]::-webkit-search-cancel-button { display:none; }
 .search-group input[type="search"]::-webkit-search-decoration { display:none; }
-/* Edge/IE legacy (por si acaso) */
 .search-group input[type="search"]::-ms-clear { display:none; width:0; height:0; }
 
 /* Mantén tus estilos globales */

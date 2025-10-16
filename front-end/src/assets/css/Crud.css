@@ -4,8 +4,8 @@
 :root{
   --mf-green: #0b5b49;
   --mf-green-2:#0f7a61;
-  --mf-purple: #7a00b8;
-  --mf-purple-2:#9d3ad6;
+  --mf-purple: #0828f7;
+  --mf-purple-2:#1d0cb7;
   --mf-ink:#0f172a;
   --mf-soft:#f5f6f8;
   --mf-card:#ffffff;
@@ -25,7 +25,7 @@
 }
 
 .search-group .input-group-text{
-  background: #fff;
+  background:#fff;
   border-right:0;
   border-radius:9999px 0 0 9999px !important;
 }
@@ -42,54 +42,39 @@
   box-shadow:0 0 0 .2rem rgba(122,0,184,.12);
 }
 
-/* Botón "Nuevo" (gradiente) — SIEMPRE texto/ícono BLANCO */
+/* Botón "Nuevo" */
 .btn-gradient{
-  background: linear-gradient(135deg, var(--mf-green), var(--mf-purple));
-  color:#fff !important;
+  background: #0cc85a !important;
+  color:#ffffff !important;
   border:0;
   transition: filter .15s ease, transform .15s ease, box-shadow .15s ease;
 }
 .btn-gradient:hover,
 .btn-gradient:focus,
 .btn-gradient:active{
-  color:#fff !important;
   filter:brightness(1.06);
   transform: translateY(-1px);
   box-shadow:0 .9rem 1.6rem rgba(122,0,184,.18);
 }
 .btn-gradient i,
 .btn-gradient *{
-  color:#fff !important;
+  color:#fffefe !important;
 }
-.btn-new{
-  letter-spacing:.2px;
-}
-/* Spinner dentro del botón gradiente en blanco */
+.btn-new{ letter-spacing:.2px; }
 .btn-gradient .spinner-border{
   --bs-spinner-border-color: rgba(255,255,255,.85);
   --bs-spinner-border-width: .2em;
 }
 
 /* =========================
-   Grid: EXACTAMENTE 3 CARDS POR FILA
-   (1 en xs, 2 en sm, 3 en ≥lg; y forzamos 3 también en ≥xxl)
+   Grid: EXACTAMENTE 3 CARDS POR FILA en ≥992px
    ========================= */
-.row.g-3 > .col-12.col-sm-6.col-lg-4.col-xxl-3{
-  /* xs: 1 por fila (bootstrap ya lo hace con col-12) */
-}
 @media (min-width: 576px){
-  .row.g-3 > .col-12.col-sm-6.col-lg-4.col-xxl-3{
-    flex: 0 0 50%;
-    max-width:50%;
-  }
+  .row.g-3 > .col-12.col-sm-6.col-lg-4.col-xxl-3{ flex: 0 0 50%; max-width:50%; }
 }
 @media (min-width: 992px){
-  .row.g-3 > .col-12.col-sm-6.col-lg-4.col-xxl-3{
-    flex: 0 0 33.333333%;
-    max-width:33.333333%;
-  }
+  .row.g-3 > .col-12.col-sm-6.col-lg-4.col-xxl-3{ flex: 0 0 33.333333%; max-width:33.333333%; }
 }
-/* Forzamos 3 por fila también en pantallas XXL (anula col-xxl-3 de Bootstrap) */
 @media (min-width: 1400px){
   .row.g-3 > .col-12.col-sm-6.col-lg-4.col-xxl-3{
     flex: 0 0 33.333333% !important;
@@ -105,7 +90,7 @@
   border:1px solid rgba(122,0,184,.08);
   border-radius:1rem;
   transition: transform .15s ease, box-shadow .15s ease, border-color .2s ease;
-  min-height: 290px; /* altura equilibrada */
+  min-height: 290px;
   display:flex;
   flex-direction:column;
 }
@@ -114,15 +99,13 @@
   border-color: rgba(122,0,184,.22);
   box-shadow: 0 .9rem 1.6rem rgba(122,0,184,.12);
 }
+.item-card .card-body{ padding:1rem 1rem .75rem 1rem; }
+.card-title{ color:var(--mf-ink); font-size:1.08rem; }
 
-.item-card .card-body{
-  padding:1rem 1rem .75rem 1rem;
-}
-
-.card-title{
-  font-weight:800;
-  color:var(--mf-ink);
-  font-size:1.08rem;
+/* Tipografía responsive mínima (apoyo a móviles) */
+@media (max-width: 575.98px){
+  .card-title{ font-size:1rem; }
+  .btn-with-label{ font-size:.925rem; }
 }
 
 /* Descripción: clamp a 3 líneas */
@@ -136,9 +119,7 @@
 }
 
 /* Etiqueta categoría */
-.small.text-muted{
-  color: var(--mf-muted) !important;
-}
+.small.text-muted{ color: var(--mf-muted) !important; }
 
 /* Badges de estado con gradiente */
 .bg-status.bg-success{
@@ -151,30 +132,26 @@
 }
 
 /* Footer de la card fijo abajo para alinear botones */
-.item-card .card-footer{
-  margin-top:auto;
-}
+.item-card .card-footer{ margin-top:auto; }
 
 /* =========================
-   Botonera de acción (llamativa y consistente)
+   Botonera con texto (accesible)
    ========================= */
-.btn-icon-only{
+.btn-with-label{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  min-height:40px;
+  min-height:44px;      /* objetivo táctil recomendado */
+  gap:.35rem;
+  white-space:nowrap;
   border-radius:.8rem;
-  gap:.25rem;
   transition: transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease, color .12s ease;
 }
-.btn-icon-only i{
-  font-size:1.15rem;
-  line-height:1;
-}
+.btn-with-label i{ font-size:1.05rem; line-height:1; }
 
-/* Redefinimos outline para que sean más vistosos en el contexto del CRUD */
+/* Consultar */
 .item-card .btn-outline-secondary{
-  border:1px solid rgba(99,102,113,.28);
+  border:1px solid rgba(80, 81, 82, 0.28);
   color:#4b5563;
   background:#fff;
 }
@@ -184,53 +161,45 @@
   transform: translateY(-1px);
 }
 
+/* Modificar */
 .item-card .btn-outline-primary{
-  border:1px solid rgba(122,0,184,.35);
+  border:1px solid rgb(14, 103, 255);
   color: var(--mf-purple);
   background:#fff;
 }
 .item-card .btn-outline-primary:hover{
-  background: linear-gradient(135deg, rgba(11,91,73,.08), rgba(122,0,184,.08));
-  border-color: rgba(122,0,184,.55);
+  background:#245ff4;
+  border-color: rgba(0, 80, 184, 0.929);
   box-shadow:0 .35rem .9rem rgba(122,0,184,.15);
   transform: translateY(-1px);
-  color: #0f172a !important; 
+  color:#f6f6f7 !important;
 }
 
+/* Eliminar */
 .item-card .btn-outline-danger{
   border:1px solid rgba(220,53,69,.35);
   color:#c0392b;
   background:#fff;
 }
 .item-card .btn-outline-danger:hover{
-  background: rgba(220,53,69,.06);
+  background:#f51313;
   border-color: rgba(220,53,69,.55);
   box-shadow:0 .35rem .9rem rgba(220,53,69,.12);
   transform: translateY(-1px);
-  color: #0f172a !important; /* forzamos color oscuro al hacer hover */
+  color:#ffffff !important;
 }
 
 /* =========================
    Skeletons / Placeholders
    ========================= */
-.placeholder{
-  display:inline-block;
-  background-color:#e9ecef;
-  border-radius:.35rem;
-}
-.placeholder-glow .placeholder{
-  animation: placeholder-glow 1.6s ease-in-out infinite;
-}
-@keyframes placeholder-glow{
-  50%{ opacity:.4; }
-}
+.placeholder{ display:inline-block; background-color:#e9ecef; border-radius:.35rem; }
+.placeholder-glow .placeholder{ animation: placeholder-glow 1.6s ease-in-out infinite; }
+@keyframes placeholder-glow{ 50%{ opacity:.4; } }
 
 /* =========================
    Modales
    ========================= */
-.modal-content{
-  border-radius:1rem;
-}
+.modal-content{ border-radius:1rem; }
 .modal-title{
   font-weight:800;
   background: linear-gradient(135deg, var(--mf-green), var(--mf-purple));
@@ -239,3 +208,46 @@
   color: transparent;
 }
 .btn-close{ box-shadow:none !important; }
+
+/* === Botón Cancelar del modal en gris (refuerzo visual) === */
+.modal-footer .btn.btn-outline-secondary{
+  border:1px solid #9aa3ad;
+  color:#ffffff;
+  background:#616161;
+}
+.modal-footer .btn.btn-outline-secondary:hover,
+.modal-footer .btn.btn-outline-secondary:focus-visible{
+  border-color:#3f3f3f;
+  box-shadow:0 .3rem .8rem rgba(15,23,42,.12);
+  transform: translateY(-1px);
+}
+
+/* ====== Ajustes responsivos adicionales ====== */
+
+/* Botón +Nuevo más delgado */
+.btn-new {
+  padding: .5rem 1.2rem !important;
+  font-size: 1rem;
+}
+
+/* Placeholder adaptativo */
+.search-input::placeholder {
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+/* En pantallas pequeñas, reduce el texto */
+@media (max-width: 768px) {
+  .search-input::placeholder {
+    font-size: .9rem;
+    content: "Buscar…";
+  }
+}
+
+/* En móviles muy pequeños, aún más corto */
+@media (max-width: 480px) {
+  .search-input::placeholder {
+    font-size: .85rem;
+    content: "Buscar…";
+  }
+}
