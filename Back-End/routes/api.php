@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\RecompensaController;
 use App\Http\Controllers\Api\TecnicaController;
 use App\Http\Controllers\Api\TestController;
 use App\Http\Controllers\Api\UploadController;
+use App\Http\Controllers\Api\UserPointsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -74,6 +75,12 @@ Route::middleware('auth:api')->group(function () {
     // Importar: POST /api/backups/import  (multipart/form-data)
     // body: file, format=excel|csv|txt|mongo, mode=merge|replace
     Route::post('backups/import', [BackupController::class, 'import']);
+
+    Route::post('/users/{id}/points/earn',   [\App\Http\Controllers\Api\UserPointsController::class, 'earn']);
+
+    Route::post('/users/{id}/points/redeem', [\App\Http\Controllers\Api\UserPointsController::class, 'redeem']);
+
+    Route::get('/users/{id}/points', [UserPointsController::class, 'getPoints']);
 
     // Subida de foto (protegida)
     Route::post('/subir-foto', function (Request $request) {

@@ -2,9 +2,8 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use App\Models\Institucion;
+use Illuminate\Foundation\Http\FormRequest;
 
 class UserRequest extends FormRequest
 {
@@ -45,58 +44,59 @@ class UserRequest extends FormRequest
 
             'urlFotoPerfil'   => ['nullable', 'url'],
 
-            'persona_id'      => ['required', 'string', 'size:24'],
+            // >>> puntosCanjeo: entero y no negativo
+            'puntosCanjeo'    => ['sometimes', 'integer', 'min:0'],
 
-            // NUEVO: obligatorio y debe existir en instituciones
-            'institucion_id'  => [
-                'required', 'string', 'size:24',
-                function ($attribute, $value, $fail) {
-                    if (!Institucion::where('_id', $value)->exists()) {
-                        $fail('La institución especificada no existe.');
-                    }
-                },
-            ],
+            'persona_id'      => ['required', 'string', 'size:24'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'name.required'           => 'El nombre es obligatorio.',
-            'name.string'             => 'El nombre debe ser una cadena de texto.',
-            'name.max'                => 'El nombre no debe exceder los 255 caracteres.',
+            'name.required'           => 'El nombre es obligatorio. Capture el nombre del usuario.',
+            'name.string'             => 'El nombre debe ser texto.',
+            'name.max'                => 'El nombre no debe exceder 255 caracteres.',
 
-            'matricula.required'      => 'La matrícula es obligatoria.',
-            'matricula.string'        => 'La matrícula debe ser una cadena de texto.',
-            'matricula.max'           => 'La matrícula no debe exceder los 50 caracteres.',
-            'matricula.unique'        => 'La matrícula ya está registrada.',
+            'matricula.required'      => 'La matrícula es obligatoria. Ingrésela tal como aparece en su registro.',
+            'matricula.string'        => 'La matrícula debe ser texto.',
+            'matricula.max'           => 'La matrícula no debe exceder 50 caracteres.',
+            'matricula.unique'        => 'La matrícula ya está registrada. Use una diferente.',
 
             'email.required'          => 'El correo electrónico es obligatorio.',
-            'email.email'             => 'El correo electrónico no es válido.',
-            'email.unique'            => 'El correo electrónico ya está registrado.',
+            'email.email'             => 'Ingrese un correo electrónico válido (ejemplo@dominio.com).',
+            'email.unique'            => 'El correo electrónico ya está registrado. Use uno diferente.',
 
             'password.required'       => 'La contraseña es obligatoria.',
-            'password.string'         => 'La contraseña debe ser una cadena de texto.',
+            'password.string'         => 'La contraseña debe ser texto.',
             'password.min'            => 'La contraseña debe tener al menos 6 caracteres.',
-            'password.confirmed'      => 'La confirmación de la contraseña no coincide.',
+            'password.confirmed'      => 'La confirmación de la contraseña no coincide. Vuelva a escribirla.',
 
-            'rol.required'            => 'El rol es obligatorio.',
-            'rol.string'              => 'El rol debe ser una cadena de texto.',
-            'rol.in'                  => 'El rol debe ser uno de los siguientes: estudiante, profesor o admin.',
+            'rol.required'            => 'El rol es obligatorio. Seleccione estudiante, profesor o admin.',
+            'rol.string'              => 'El rol debe ser texto.',
+            'rol.in'                  => 'El rol debe ser uno de: estudiante, profesor o admin.',
 
-            'estatus.string'          => 'El estatus debe ser una cadena de texto.',
+            'estatus.string'          => 'El estatus debe ser texto.',
             'estatus.in'              => 'El estatus debe ser: activo, bajaSistema o bajaTemporal.',
 
-            'urlFotoPerfil.url'       => 'La URL de la foto de perfil no es válida.',
+            'urlFotoPerfil.url'       => 'La URL de la foto de perfil no es válida. Ingrese una dirección web correcta.',
+
+            // >>> mensajes claros para puntosCanjeo
+            'puntosCanjeo.integer'    => 'Los puntos de canje deben ser un número entero.',
+            'puntosCanjeo.min'        => 'No se permiten números negativos en los puntos de canje. Ingrese un valor mayor o igual a 0.',
 
             'persona_id.required'     => 'El ID de la persona es obligatorio.',
             'persona_id.string'       => 'El ID de la persona debe ser una cadena.',
             'persona_id.size'         => 'El ID de la persona debe tener exactamente 24 caracteres.',
+        ];
+    }
 
-            'institucion_id.required' => 'El ID de la institución es obligatorio.',
-            'institucion_id.string'   => 'El ID de la institución debe ser una cadena.',
-            'institucion_id.size'     => 'El ID de la institución debe tener exactamente 24 caracteres.',
-            // El mensaje “no existe” se maneja en la closure del rule.
+    public function attributes(): array
+    {
+        // Para que los mensajes se lean más naturales
+        return [
+            'puntosCanjeo'   => 'puntos de canje',
+            'persona_id'     => 'ID de la persona',
         ];
     }
 }

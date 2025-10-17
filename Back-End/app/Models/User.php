@@ -24,6 +24,7 @@ class User extends Authenticatable implements JWTSubject
         'email',
         'rol',            // estudiante | profesor | admin
         'estatus',        // activo | bajaSistema | bajaTemporal
+        'puntosCanjeo',
         'urlFotoPerfil',
         'persona_id',
     ];
@@ -36,6 +37,11 @@ class User extends Authenticatable implements JWTSubject
     // >>>> Usa el CAST correcto basado en clases
     protected $casts = [
         'persona_id'     => ObjectId::class,
+        'puntosCanjeo'  => 'int',
+    ];
+
+    protected $attributes = [
+        'puntosCanjeo' => 0,
     ];
 
     public function persona()
@@ -83,4 +89,32 @@ class User extends Authenticatable implements JWTSubject
     {
         return [];
     }
+
+    /** Incrementa puntos de forma segura */
+    public function earnPoints(int $points, ?string $reason = null): self
+    {
+        if ($points <= 0) return $this;
+        // $inc es atómico en Mongo
+        static::where('_id', $this->_id)->update(['$inc' => ['puntosCanjeo' => $points]]);
+        $this->refresh();
+        // (Opcional) dispara evento/log si llevas bitácora
+        return $this;
+    }
+
+    /** Canjea (resta) puntos sin permitir negativos */
+    public function redeemPoints(int $points, ?string $reason = null): self
+    {
+        if ($points <= 0) return $this;
+
+        // Lee el valor actual y aplica regla de no-negativo
+        $current = (int) ($this->puntosCanjeo ?? 0);
+        $toSubtract = min($points, $current);
+
+        if ($toSubtract > 0) {
+            static::where('_id', $this->_id)->update(['$inc' => ['puntosCanjeo' => -$toSubtract]]);
+            $this->refresh();
+        }
+        return $this;
+    }
+
 }

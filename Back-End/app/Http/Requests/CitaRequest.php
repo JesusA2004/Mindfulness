@@ -13,8 +13,7 @@ class CitaRequest extends FormRequest
 
     public function rules(): array
     {
-        // Obtén el ID de la cita para update (si aplica)
-        $citaId = $this->route('cita');
+        // $citaId = $this->route('cita'); // por si lo necesitas en el futuro
 
         return [
             // Ambos deben existir en users y ser IDs válidos de MongoDB
@@ -30,24 +29,29 @@ class CitaRequest extends FormRequest
             // Motivo opcional
             'motivo'       => 'nullable|string',
 
-            // Estado al crear puede omitirse (usa default), pero si se envía:
+            // Estado (si se envía). Por regla, "Pendiente" = aún no vista
             'estado'       => 'sometimes|string|in:Pendiente,Aceptada,Rechazada,Finalizada',
+
+            // NUEVO: observaciones
+            'observaciones'=> 'nullable|string|max:2000',
         ];
     }
 
     public function messages(): array
     {
         return [
-            'alumno_id.required'              => 'Debe indicar el alumno que solicita la cita.',
-            'alumno_id.exists'                => 'El alumno seleccionado no está registrado.',
-            'docente_id.required'             => 'Debe indicar el docente asignado a la cita.',
-            'docente_id.exists'               => 'El docente seleccionado no está registrado.',
-            'fecha_cita.required'             => 'La fecha y hora de la cita son obligatorias.',
-            'fecha_cita.date_format'          => 'La fecha debe tener el formato ISO 8601 (ej. 2025-05-18T14:30:00+00:00).',
-            'modalidad.required'              => 'La modalidad de la cita es obligatoria.',
-            'modalidad.in'                    => 'La modalidad debe ser "Presencial" o "Virtual".',
-            'motivo.string'                   => 'El motivo debe ser un texto válido.',
-            'estado.in'                       => 'El estado debe ser uno de: Pendiente, Aceptada, Rechazada o Finalizada.',
+            'alumno_id.required'     => 'Debe indicar el alumno que solicita la cita.',
+            'alumno_id.exists'       => 'El alumno seleccionado no está registrado.',
+            'docente_id.required'    => 'Debe indicar el docente asignado a la cita.',
+            'docente_id.exists'      => 'El docente seleccionado no está registrado.',
+            'fecha_cita.required'    => 'La fecha y hora de la cita son obligatorias.',
+            'fecha_cita.date_format' => 'La fecha debe tener el formato ISO 8601 (ej. 2025-05-18T14:30:00+00:00).',
+            'modalidad.required'     => 'La modalidad de la cita es obligatoria.',
+            'modalidad.in'           => 'La modalidad debe ser "Presencial" o "Virtual".',
+            'motivo.string'          => 'El motivo debe ser un texto válido.',
+            'estado.in'              => 'El estado debe ser uno de: Pendiente, Aceptada, Rechazada o Finalizada.',
+            'observaciones.string'   => 'Las observaciones deben ser texto.',
+            'observaciones.max'      => 'Las observaciones no deben exceder 2000 caracteres.',
         ];
     }
 }

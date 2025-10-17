@@ -1,3 +1,4 @@
+<!-- src/views/administrador/Citas.vue -->
 <template>
   <main class="panel-wrapper container-fluid">
     <!-- ===== Toolbar ===== -->
@@ -66,7 +67,7 @@
                   Cita programada para el:
                 </span>
                 <h5 class="mb-0 fw-bold text-primary">
-                  {{ formatDate(c.fecha_cita) }}
+                  {{ formatDatePretty(c.fecha_cita) }}
                 </h5>
               </div>
               <span class="badge rounded-pill" :class="badgeClass(c.estado)">
@@ -90,7 +91,7 @@
             </p>
 
             <!-- Motivo -->
-            <p class="card-text clamp-3 mb-0">Motivo: {{ c.motivo }}</p>
+            <p class="card-text clamp-3 mb-0">Motivo: {{ c.motivo || '—' }}</p>
           </div>
 
           <div class="card-footer bg-transparent border-0 pt-0 pb-3 px-3">
@@ -110,7 +111,7 @@
       </div>
     </transition-group>
 
-    <!-- ===== Modal Form (fijo + scroll + secciones colapsables) ===== -->
+    <!-- ===== Modal Form ===== -->
     <div class="modal fade" ref="formModalRef" tabindex="-1">
       <div class="modal-dialog modal-dialog-centered modal-lg modal-fixed">
         <form
@@ -126,10 +127,7 @@
           </div>
 
           <div class="modal-body">
-            <div
-              v-if="Object.keys(errors).length"
-              class="alert alert-danger animate__animated animate__shakeX"
-            >
+            <div v-if="hasErrors" class="alert alert-danger animate__animated animate__shakeX">
               <div class="fw-semibold mb-1">Revisa los campos:</div>
               <ul class="mb-0">
                 <li v-for="(arr, field) in errors" :key="field">
@@ -138,13 +136,9 @@
               </ul>
             </div>
 
-            <!-- Participantes (colapsable) -->
+            <!-- Participantes -->
             <div class="section mb-3">
-              <button
-                class="section-toggle"
-                type="button"
-                @click="sec.participantes = !sec.participantes"
-              >
+              <button class="section-toggle" type="button" @click="sec.participantes = !sec.participantes">
                 <i :class="['bi me-2', sec.participantes ? 'bi-chevron-down' : 'bi-chevron-right']"></i>
                 Participantes
               </button>
@@ -156,7 +150,7 @@
                       v-model="form.alumno_id"
                       class="form-select"
                       required
-                      :disabled="user.rol === 'estudiante'"
+                      :disabled="userRole === 'estudiante'"
                     >
                       <option value="" disabled>Selecciona…</option>
                       <option v-for="a in alumnos" :key="a.id" :value="String(a.id)">
@@ -180,13 +174,9 @@
               </transition>
             </div>
 
-            <!-- Detalles (colapsable) -->
+            <!-- Detalles -->
             <div class="section mb-3">
-              <button
-                class="section-toggle"
-                type="button"
-                @click="sec.detalles = !sec.detalles"
-              >
+              <button class="section-toggle" type="button" @click="sec.detalles = !sec.detalles">
                 <i :class="['bi me-2', sec.detalles ? 'bi-chevron-down' : 'bi-chevron-right']"></i>
                 Detalles
               </button>
@@ -194,14 +184,20 @@
                 <div v-show="sec.detalles" class="section-body">
                   <div class="row g-2">
                     <div class="col-12 col-sm-6">
-                      <label class="form-label">Fecha</label>
+                      <label class="form-label">Fecha <span class="text-danger">*</span></label>
                       <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-calendar-event"></i></span>
-                        <input v-model="form.fecha" type="date" class="form-control" required />
+                        <input
+                          v-model="form.fecha"
+                          type="date"
+                          class="form-control"
+                          :min="today"
+                          required
+                        />
                       </div>
                     </div>
                     <div class="col-12 col-sm-6">
-                      <label class="form-label">Hora</label>
+                      <label class="form-label">Hora <span class="text-danger">*</span></label>
                       <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-clock"></i></span>
                         <input v-model="form.hora" type="time" class="form-control" required />
@@ -210,7 +206,7 @@
                   </div>
 
                   <div class="mt-3">
-                    <label class="form-label">Modalidad</label>
+                    <label class="form-label">Modalidad <span class="text-danger">*</span></label>
                     <select v-model="form.modalidad" class="form-select" required>
                       <option value="">Selecciona…</option>
                       <option>Presencial</option>
@@ -221,15 +217,11 @@
               </transition>
             </div>
 
-            <!-- Motivo y estado (colapsable) -->
+            <!-- Motivo / Estado / Observaciones -->
             <div class="section">
-              <button
-                class="section-toggle"
-                type="button"
-                @click="sec.motivo = !sec.motivo"
-              >
+              <button class="section-toggle" type="button" @click="sec.motivo = !sec.motivo">
                 <i :class="['bi me-2', sec.motivo ? 'bi-chevron-down' : 'bi-chevron-right']"></i>
-                Motivo y estado
+                Motivo, estado y observaciones
               </button>
               <transition name="collapse-y">
                 <div v-show="sec.motivo" class="section-body">
@@ -244,20 +236,29 @@
                     ></textarea>
                   </div>
 
-                  <div>
+                  <div class="mb-3">
                     <label class="form-label">Estado</label>
-                    <select v-model="form.estado" class="form-select" :disabled="user.rol === 'estudiante'">
+                    <select v-model="form.estado" class="form-select" :disabled="userRole === 'estudiante'">
                       <option>Pendiente</option>
                       <option>Aceptada</option>
                       <option>Rechazada</option>
                       <option>Finalizada</option>
                     </select>
-                    <small
-                      v-if="user.rol === 'estudiante'"
-                      class="text-muted fst-italic"
-                    >
+                    <small v-if="userRole === 'estudiante'" class="text-muted fst-italic">
                       Solo profesores o administradores pueden cambiar el estado.
                     </small>
+                  </div>
+
+                  <div class="mb-1">
+                    <label class="form-label">Observaciones</label>
+                    <textarea
+                      v-model.trim="form.observaciones"
+                      rows="3"
+                      class="form-control"
+                      maxlength="2000"
+                      placeholder="Notas internas o acuerdos específicos (opcional)"
+                    ></textarea>
+                    <small class="text-muted">Máx. 2000 caracteres.</small>
                   </div>
                 </div>
               </transition>
@@ -265,9 +266,7 @@
           </div>
 
           <div class="modal-footer border-0">
-            <button type="button" class="btn btn-outline-secondary" @click="hideModal">
-              Cancelar
-            </button>
+            <button type="button" class="btn btn-outline-secondary" @click="hideModal">Cancelar</button>
             <button type="submit" class="btn btn-primary" :disabled="saving">
               <span v-if="!saving">{{ isEditing ? 'Guardar cambios' : 'Registrar' }}</span>
               <span v-else class="spinner-border spinner-border-sm ms-2"></span>
@@ -297,7 +296,7 @@
 
               <dt class="col-sm-4 col-lg-3">Cita programada</dt>
               <dd class="col-sm-8 col-lg-9">
-                <span class="fw-semibold">{{ formatDate(selected?.fecha_cita) }}</span>
+                <span class="fw-semibold">{{ formatDatePretty(selected?.fecha_cita) }}</span>
               </dd>
 
               <dt class="col-sm-4 col-lg-3">Modalidad</dt>
@@ -311,8 +310,11 @@
                 <span class="badge" :class="badgeClass(selected?.estado)">{{ selected?.estado }}</span>
               </dd>
 
+              <dt class="col-sm-4 col-lg-3">Observaciones</dt>
+              <dd class="col-sm-8 col-lg-9">{{ selected?.observaciones || '—' }}</dd>
+
               <dt class="col-sm-4 col-lg-3">Creado</dt>
-              <dd class="col-sm-8 col-lg-9">{{ formatDate(selected?.created_at) }}</dd>
+              <dd class="col-sm-8 col-lg-9">{{ formatDatePretty(selected?.created_at) }}</dd>
             </dl>
           </div>
           <div class="modal-footer border-0 d-flex w-100">
@@ -335,20 +337,20 @@
 <script setup>
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import axios from 'axios'
-import Swal from 'sweetalert2'
-import 'sweetalert2/dist/sweetalert2.min.css'
 import Modal from 'bootstrap/js/dist/modal'
 import 'animate.css'
 
-const API_ROOT = process.env.VUE_APP_API_URL?.replace(/\/+$/, '') || ''
-const API_BASE  = `${API_ROOT}/citas`
-const API_USERS = `${API_ROOT}/users`
-const user = safeParse(localStorage.getItem('user') || '{}')
+/* ==== Importa utilidades comunes ==== */
+import {
+  apiBase, authHeaders, toast, getId,
+  makeDebouncer, toDateInputValue, isRequired
+} from '@/assets/js/crudUtils.js'
 
-const authHeaders = () => {
-  const token = localStorage.getItem('token')
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
+const API_BASE  = apiBase('citas')
+const API_USERS = apiBase('users')
+
+const user = safeParse(localStorage.getItem('user') || '{}')
+const userRole = String(user?.rol || '').toLowerCase()
 
 /* ----- Estado ----- */
 const itemsRaw  = ref([])
@@ -363,6 +365,7 @@ let viewModal = null
 const isEditing   = ref(false)
 const saving      = ref(false)
 const errors      = reactive({})
+const hasErrors   = computed(() => Object.keys(errors).length > 0)
 const searchQuery = ref('')
 const selected    = ref(null)
 
@@ -377,7 +380,8 @@ const form = reactive({
   hora: '',
   modalidad: '',
   motivo: '',
-  estado: 'Pendiente'
+  estado: 'Pendiente',
+  observaciones: ''
 })
 
 /* ===== Init ===== */
@@ -462,12 +466,12 @@ function decorateNames (c) {
   }
 }
 
-/* ===== Búsqueda ===== */
-function onInstantSearch () {}
+/* ===== Búsqueda (debounced) ===== */
+const debouncer = makeDebouncer(120)
+function onInstantSearch () { debouncer(() => {}) }
 function clearSearch () { searchQuery.value = '' }
 
 /* ===== Helpers UI ===== */
-function getId (obj) { return obj?.id ?? obj?._id ?? null }
 function badgeClass (estado) {
   switch ((estado || '').toLowerCase()) {
     case 'aceptada': return 'bg-success'
@@ -476,11 +480,15 @@ function badgeClass (estado) {
     default: return 'bg-warning text-dark'
   }
 }
-function formatDate (v) {
+function formatDatePretty (v) {
   if (!v) return '—'
   const d = new Date(v)
   return isNaN(d) ? v : d.toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })
 }
+function safeParse (str) { try { return JSON.parse(str) } catch { return {} } }
+
+/* ===== Fecha mínima = hoy ===== */
+const today = toDateInputValue(new Date())
 
 /* ===== Modal: Form ===== */
 async function openCreate () {
@@ -488,7 +496,7 @@ async function openCreate () {
   resetForm()
   clearErrors()
   if (!alumnos.value.length || !docentes.value.length) await loadUsuarios()
-  if (String(user?.rol || '').toLowerCase() === 'estudiante') {
+  if (userRole === 'estudiante') {
     form.alumno_id = String(user?.id ?? user?._id ?? '')
   }
   formModal.show()
@@ -500,9 +508,10 @@ async function openEdit (cita) {
   if (!alumnos.value.length || !docentes.value.length) await loadUsuarios()
 
   const c = decorateNames(cita)
-  form._id = getId(c)
-  form.alumno_id = String(c.alumno_id ?? '')
+  form._id        = getId(c)
+  form.alumno_id  = String(c.alumno_id ?? '')
   form.docente_id = String(c.docente_id ?? '')
+
   const d = new Date(c.fecha_cita)
   if (!isNaN(d)) {
     form.fecha = d.toISOString().slice(0, 10)
@@ -511,38 +520,101 @@ async function openEdit (cita) {
     form.fecha = ''
     form.hora  = ''
   }
-  form.modalidad = c.modalidad || ''
-  form.motivo    = c.motivo || ''
-  form.estado    = c.estado || 'Pendiente'
+  form.modalidad     = c.modalidad || ''
+  form.motivo        = c.motivo || ''
+  form.estado        = c.estado || 'Pendiente'
+  form.observaciones = c.observaciones || ''
   formModal.show()
 }
 
 function hideModal () { formModal.hide() }
 function resetForm () {
   Object.assign(form, {
-    _id: null, alumno_id: '', docente_id: '', fecha: '', hora: '',
-    modalidad: '', motivo: '', estado: 'Pendiente'
+    _id: null,
+    alumno_id: '',
+    docente_id: '',
+    fecha: '',
+    hora: '',
+    modalidad: '',
+    motivo: '',
+    estado: 'Pendiente',
+    observaciones: ''
   })
 }
 function clearErrors () { Object.keys(errors).forEach(k => delete errors[k]) }
 
-/* ===== Envío ===== */
-function combineDateTime () {
-  if (!form.fecha || !form.hora) return null
-  return `${form.fecha}T${form.hora}:00Z`
+/* ===== Construir ISO 8601 con offset local ===== */
+function localIsoWithOffset (dateStr, timeStr) {
+  // Espera "YYYY-MM-DD" y "HH:mm"
+  if (!dateStr || !timeStr) return null
+  const [h, m] = timeStr.split(':').map(Number)
+  const [Y, M, D] = dateStr.split('-').map(Number)
+  const d = new Date(Y, (M - 1), D, h, m, 0, 0)
+  if (isNaN(d)) return null
+  const pad = (n) => String(Math.abs(n)).padStart(2, '0')
+  const tzMin = -d.getTimezoneOffset() // minutos respecto a UTC
+  const sign = tzMin >= 0 ? '+' : '-'
+  const tzH = pad(Math.trunc(Math.abs(tzMin) / 60))
+  const tzM = pad(Math.abs(tzMin) % 60)
+  const yyyy = d.getFullYear()
+  const mm = pad(d.getMonth() + 1)
+  const dd = pad(d.getDate())
+  const HH = pad(d.getHours())
+  const MM = pad(d.getMinutes())
+  const SS = '00'
+  // YYYY-MM-DDTHH:mm:ss±HH:MM
+  return `${yyyy}-${mm}-${dd}T${HH}:${MM}:${SS}${sign}${tzH}:${tzM}`
 }
+
+/* ===== Validación previa a enviar (usa crudUtils) ===== */
+function validateFormFront () {
+  clearErrors()
+  const errs = {}
+  if (!isRequired(form.alumno_id)) errs.alumno_id = ['El alumno es obligatorio.']
+  if (!isRequired(form.docente_id)) errs.docente_id = ['El docente es obligatorio.']
+  if (!isRequired(form.fecha)) errs.fecha_cita = ['La fecha de la cita es obligatoria.']
+  if (!isRequired(form.hora)) errs.fecha_cita = ['La hora de la cita es obligatoria.']
+  if (!isRequired(form.modalidad)) errs.modalidad = ['La modalidad es obligatoria.']
+
+  // fecha mínima: hoy
+  if (form.fecha && form.fecha < today) {
+    errs.fecha_cita = ['La fecha no puede ser anterior a hoy.']
+  }
+
+  if (Object.keys(errs).length) {
+    Object.assign(errors, errs)
+    return false
+  }
+  return true
+}
+
+/* ===== Envío ===== */
 async function onSubmit () {
+  if (!validateFormFront()) {
+    toast('Revisa los campos obligatorios.', 'error')
+    return
+  }
+
+  const fechaISO = localIsoWithOffset(form.fecha, form.hora)
+  if (!fechaISO) {
+    errors.fecha_cita = ['La fecha debe tener el formato ISO 8601 (ej. 2025-05-18T14:30:00+00:00).']
+    toast('Fecha/hora inválidas.', 'error')
+    return
+  }
+
   saving.value = true
   clearErrors()
   try {
     const payload = {
       alumno_id: form.alumno_id,
       docente_id: form.docente_id,
-      fecha_cita: combineDateTime(),
+      fecha_cita: fechaISO,
       modalidad: form.modalidad,
-      motivo: form.motivo,
-      estado: form.estado
+      motivo: form.motivo || null,
+      estado: form.estado || 'Pendiente',
+      observaciones: form.observaciones || null
     }
+
     if (isEditing.value) {
       await axios.put(`${API_BASE}/${form._id}`, payload, { headers: authHeaders() })
       toast('Cita actualizada.')
@@ -587,6 +659,9 @@ async function deleteFromView () {
 }
 
 /* ===== Delete ===== */
+import Swal from 'sweetalert2'
+import 'sweetalert2/dist/sweetalert2.min.css'
+
 async function confirmDelete (cita) {
   const result = await Swal.fire({
     title: '¿Eliminar cita?',
@@ -605,12 +680,6 @@ async function confirmDelete (cita) {
     console.error(e)
     toast('Error al eliminar.', 'error')
   }
-}
-
-/* ===== Util & Toast ===== */
-function safeParse (str) { try { return JSON.parse(str) } catch { return {} } }
-function toast (msg, type = 'success') {
-  Swal.fire({ toast: true, icon: type, position: 'top-end', title: msg, showConfirmButton: false, timer: 2000 })
 }
 </script>
 

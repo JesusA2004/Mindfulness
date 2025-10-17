@@ -49,26 +49,91 @@ class CitaController extends Controller
     }
 
     /**
+     * POST /citas
+     * Crea una nueva cita. Por convención, si no envían "estado" se asume "Pendiente".
+     * Dispara notificación de creación (alumno, docente y admins).
+     */
+    public function store(CitaRequest $request): JsonResponse
+    {
+        $data = $request->validated();
+
+        // Normaliza estado si viene; si no, por defecto Pendiente
+        $estado = isset($data['estado'])
+            ? ucfirst(strtolower($data['estado']))
+            : 'Pendiente';
+
+        $cita = Cita::create([
+            'alumno_id'     => $data['alumno_id'],
+            'docente_id'    => $data['docente_id'],
+            'fecha_cita'    => $data['fecha_cita'],
+            'modalidad'     => $data['modalidad'],
+            'motivo'        => $data['motivo']        ?? null,
+            'estado'        => $estado,
+            'observaciones' => $data['observaciones'] ?? null, // nuevo campo soportado
+        ]);
+
+        // Notificaciones de creación (websocket). Mantengo tu helper:
+        try {
+            $this->notificarCreacion($cita);
+        } catch (\Throwable $e) {
+            \Log::error('Broadcast cita.store falló', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
+
+        return response()->json([
+            'mensaje' => 'Cita creada correctamente.',
+            'cita'    => new \App\Http\Resources\CitaResource($cita),
+        ], 201);
+    }
+
+    /**
      * PUT /citas/{cita}
      * Actualiza la cita (lo hace PROFESOR o ADMIN) y
      * notifica SOLO al ALUMNO del nuevo estado.
+     *
+     * Regla de "visto" (derivada, sin campo): si estado != 'Pendiente',
+     * el front debe considerarla como ya vista.
      */
     public function update(CitaRequest $request, Cita $cita): JsonResponse
     {
         $data = $request->validated();
+
+        // Normaliza estado (si viene)
         if (isset($data['estado'])) {
             $data['estado'] = ucfirst(strtolower($data['estado']));
         }
 
-        $cita->update($data);
+        // Detectar si cambia el estado para decidir si se notifica
+        $estadoOriginal = $cita->estado;
+        $estadoNuevo    = $data['estado'] ?? $estadoOriginal;
+        $cambioDeEstado = array_key_exists('estado', $data) && ($estadoNuevo !== $estadoOriginal);
 
-        try {
-            $this->notificarActualizacion($cita);
-        } catch (\Throwable $e) {
-            Log::error('Broadcast cita.update falló', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
+        // Permitir actualizar observaciones (nullable)
+        if (array_key_exists('observaciones', $data)) {
+            $cita->observaciones = $data['observaciones']; // null|string
+        }
+
+        // Actualizar demás campos validados
+        foreach (['alumno_id','docente_id','fecha_cita','modalidad','motivo','estado'] as $k) {
+            if (array_key_exists($k, $data)) {
+                $cita->{$k} = $data[$k];
+            }
+        }
+
+        $cita->save();
+
+        // Notificar solo si hubo cambio de estado
+        if ($cambioDeEstado) {
+            try {
+                $this->notificarActualizacion($cita);
+            } catch (\Throwable $e) {
+                Log::error('Broadcast cita.update falló', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+            }
         }
 
         return response()->json([
@@ -92,6 +157,9 @@ class CitaController extends Controller
     /**
      * PATCH /citas/{id}/estado  (opcional, si mantienes esta ruta separada)
      * Cambia solo el estado y notifica al alumno.
+     *
+     * Regla de "visto" (derivada, sin campo): si el nuevo estado != 'Pendiente',
+     * el front debe considerarla como ya vista.
      */
     public function updateEstado(string $id): JsonResponse
     {
