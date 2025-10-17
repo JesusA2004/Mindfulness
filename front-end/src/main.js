@@ -7,7 +7,6 @@ import store from './store'
 import '@fortawesome/fontawesome-free/css/all.min.css'
 import 'bootstrap/dist/css/bootstrap.min.css'   // 1) Bootstrap primero
 import './assets/css/_global.css'               // 2) Tu CSS global después (impone la fuente)
-// Si tienes otros: import './assets/css/Index.css'; etc.
 
 import 'bootstrap/dist/js/bootstrap.bundle.min.js' // JS de Bootstrap (bundle con Popper)
 

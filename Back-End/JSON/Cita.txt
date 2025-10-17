@@ -1,4 +1,29 @@
-JSON POST CITA:
+JSON POST CITA (alumno):
+{
+  "alumno_id": "68dafc4ffe40ef27600dba32",
+  "docente_id": "68f04468314091b9280d4c84",
+  "fecha_cita": "2025-10-20T15:30:00+00:00",
+  "modalidad": "Presencial",
+  "motivo": "Evaluación de avance emocional y técnicas aplicadas.",
+  "estado": "Pendiente"
+}
 
+JSON POST CITA (profesor):
+{
+  "alumno_id": "68dafc4ffe40ef27600dba32",
+  "docente_id": "68f04468314091b9280d4c84",
+  "fecha_cita": "2025-10-21T10:00:00+00:00",
+  "modalidad": "Virtual",
+  "motivo": "Revisión de seguimiento y asignación de nueva técnica.",
+  "estado": "Aceptada"
+}
 
 JSON PUT CITA:
+{
+  "alumno_id": "68dafc4ffe40ef27600dba32",
+  "docente_id": "68f04468314091b9280d4c84",
+  "fecha_cita": "2025-10-22T09:00:00+00:00",
+  "modalidad": "Virtual",
+  "motivo": "Reprogramación para revisión de avances y nuevas metas personales.",
+  "estado": "Aceptada"
+}

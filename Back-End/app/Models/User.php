@@ -3,11 +3,12 @@
 namespace App\Models;
 
 use Exception;
+use App\Models\Persona;
+use App\Models\Institucion;
 use MongoDB\Laravel\Auth\User as Authenticatable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
-use MongoDB\Laravel\Eloquent\Casts\ObjectId;   // <-- IMPORTANTE
-use App\Models\Institucion;
-use App\Models\Persona;
+use MongoDB\Laravel\Eloquent\Casts\ObjectId;
+use MongoDB\Laravel\Eloquent\Casts\ObjectId as ObjectIdCast;
 
 class User extends Authenticatable implements JWTSubject
 {
@@ -25,7 +26,6 @@ class User extends Authenticatable implements JWTSubject
         'estatus',        // activo | bajaSistema | bajaTemporal
         'urlFotoPerfil',
         'persona_id',
-        'institucion_id',
     ];
 
     protected $hidden = [
@@ -36,14 +36,7 @@ class User extends Authenticatable implements JWTSubject
     // >>>> Usa el CAST correcto basado en clases
     protected $casts = [
         'persona_id'     => ObjectId::class,
-        'institucion_id' => ObjectId::class,
     ];
-
-    // Relaciones
-    public function institucion()
-    {
-        return $this->belongsTo(Institucion::class, 'institucion_id', '_id');
-    }
 
     public function persona()
     {

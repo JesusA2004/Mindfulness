@@ -14,7 +14,7 @@ use App\Http\Controllers\Api\PersonaController;
 use App\Http\Controllers\Api\RecompensaController;
 use App\Http\Controllers\Api\TecnicaController;
 use App\Http\Controllers\Api\TestController;
-use App\Http\Controllers\Api\InstitucionController;
+use App\Http\Controllers\Api\UploadController;
 
 /*
 |--------------------------------------------------------------------------
@@ -38,9 +38,6 @@ Route::prefix('auth')->group(function () {
     });
 });
 
-// Registro de institución SIN autenticación (setup inicial)
-Route::post('instituciones', [InstitucionController::class, 'store']);
-
 // Registro de persona SIN autenticación (necesario antes de registrar user)
 Route::post('personas', [PersonaController::class, 'store']);
 
@@ -50,9 +47,6 @@ Route::post('personas', [PersonaController::class, 'store']);
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth:api')->group(function () {
-    // Instituciones (todas las operaciones excepto store que es pública)
-    Route::apiResource('instituciones', InstitucionController::class)->except(['store']);
-
     // Personas (todas las operaciones excepto store que es pública)
     Route::apiResource('personas', PersonaController::class)->except(['store']);
 
@@ -71,6 +65,8 @@ Route::middleware('auth:api')->group(function () {
 
     // Ruta especial para que un alumno responda un test
     Route::put('tests/{test}/responder', [TestController::class, 'responder']);
+
+    Route::post('/uploads', [UploadController::class, 'store']);
 
     // Subida de foto (protegida)
     Route::post('/subir-foto', function (Request $request) {
