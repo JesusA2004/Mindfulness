@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
-
+use App\Http\Controllers\Api\BackupController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ActividadController;
@@ -67,6 +67,13 @@ Route::middleware('auth:api')->group(function () {
     Route::put('tests/{test}/responder', [TestController::class, 'responder']);
 
     Route::post('/uploads', [UploadController::class, 'store']);
+
+    // Exportar: GET /api/backups/export?type=excel|csv|mongo
+    Route::get('backups/export', [BackupController::class, 'export']);
+
+    // Importar: POST /api/backups/import  (multipart/form-data)
+    // body: file, format=excel|csv|txt|mongo, mode=merge|replace
+    Route::post('backups/import', [BackupController::class, 'import']);
 
     // Subida de foto (protegida)
     Route::post('/subir-foto', function (Request $request) {
