@@ -8,7 +8,7 @@ import axios from 'axios';
    Base / API
    ========================= */
 export function apiBase(path = '') {
-  const base = (import.meta?.env?.VITE_API_URL) || (process.env?.VUE_APP_API_URL) || '';
+  const base = process.env.VUE_APP_API_URL;
   return `${base}${path ? (path.startsWith('/') ? '' : '/') + path : ''}`;
 }
 

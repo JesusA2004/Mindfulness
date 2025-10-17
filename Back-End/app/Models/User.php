@@ -27,6 +27,7 @@ class User extends Authenticatable implements JWTSubject
         'puntosCanjeo',
         'urlFotoPerfil',
         'persona_id',
+        'current_jti'
     ];
 
     protected $hidden = [

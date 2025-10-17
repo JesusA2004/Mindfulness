@@ -240,6 +240,7 @@ import axios from 'axios'
 import { useRouter } from 'vue-router'
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
+import Swal from 'sweetalert2'
 window.Pusher = Pusher
 
 defineOptions({ name: 'SidebarShell' })
@@ -273,13 +274,14 @@ const isLoggingOut = ref(false)
 async function confirmLogout () {
   isLoggingOut.value = true
   try {
-    const url = (import.meta.env.VITE_API_URL || process.env.VUE_APP_API_URL) + '/auth/logout'
+    const url = process.env.VUE_APP_API_URL + '/auth/logout'
     const token = localStorage.getItem('token')
     if (token) await axios.post(url, {}, { headers: { Authorization: `Bearer ${token}` } })
   } catch (e) {
     console.error(e)
   } finally {
     localStorage.clear()
+    destroyEcho()
     router.push('/login')
   }
 }
@@ -384,10 +386,11 @@ function initEcho () {
 
     echo = new Echo({
       broadcaster: 'pusher',
-      key: import.meta.env.VITE_PUSHER_KEY || process.env.VUE_APP_PUSHER_APP_KEY,
-      cluster: import.meta.env.VITE_PUSHER_CLUSTER || process.env.VUE_APP_PUSHER_APP_CLUSTER || 'mt1',
-      forceTLS: true,
-      authEndpoint: (import.meta.env.VITE_API_BASE || process.env.VUE_APP_API_BASE) + '/broadcasting/auth',
+      key: process.env.VUE_APP_PUSHER_APP_KEY,
+      cluster: process.env.VUE_APP_PUSHER_APP_CLUSTER || 'mt1',
+      // Usa TLS solo si la app está en https (evita errores en 127.0.0.1 http)
+      forceTLS: window.location.protocol === 'https:',
+      authEndpoint: process.env.VUE_APP_API_BASE + '/broadcasting/auth',
       auth: {
         headers: {
           Authorization: `Bearer ${jwt}`,
@@ -407,6 +410,8 @@ function initEcho () {
       bound = true
       channel.subscribed(() => console.log('[Echo] subscription_succeeded user.' + uid))
       channel.error((status) => console.error('[Echo] subscription_error', status))
+
+      // Notificaciones de Cita
       channel.listen('.CitaEstadoCambiado', (data) => {
         notifCount.value++
         notifications.value.unshift({
@@ -415,6 +420,22 @@ function initEcho () {
           time: new Date().toLocaleString(),
           raw: data
         })
+      })
+
+      // 🔐 Cierre forzado por login en otro navegador
+      channel.listen('.ForcedLogout', async (payload) => {
+        try {
+          await Swal.fire({
+            icon: 'warning',
+            title: 'Se inició sesión en otro lugar',
+            text: 'Esta sesión se cerrará en este navegador.',
+            timer: 2500,
+            showConfirmButton: false
+          })
+        } catch (e) {}
+        localStorage.clear()
+        destroyEcho()
+        router.push('/login')
       })
     }
   } catch (e) {
@@ -426,6 +447,7 @@ function destroyEcho () {
   try {
     if (channel) {
       channel.stopListening('.CitaEstadoCambiado')
+      channel.stopListening('.ForcedLogout')
       channel = null
     }
     if (echo) {
@@ -452,7 +474,19 @@ function toggleExpand () {
   showAll.value = !showAll.value
 }
 
-onMounted(() => { initEcho() })
+onMounted(() => {
+  initEcho()
+
+  // (Opcional) Re-armar aviso de expiración si existe expires_at y expira pronto
+  const expiresAt = localStorage.getItem('expires_at')
+  if (expiresAt && typeof window.scheduleExpiryPrompt === 'function') {
+    const diffMs = new Date(expiresAt).getTime() - Date.now()
+    if (diffMs > 0) {
+      const expiresInSec = Math.floor(diffMs / 1000)
+      window.scheduleExpiryPrompt(expiresInSec)
+    }
+  }
+})
 onBeforeUnmount(() => { destroyEcho() })
 </script>
 
@@ -519,10 +553,10 @@ onBeforeUnmount(() => { destroyEcho() })
 .user-dropdown .dropdown-item:hover{
   background: #f5f6f8;
 }
-/* ✅ Tablet: que no se salga por la derecha y use un ancho razonable */
+
+/* ✅ Tablet: ancho razonable y control de overflow */
 @media (max-width: 991.98px){
   .notif-dropdown{
-    /* ignora inline styles del template en este breakpoint */
     min-width: 360px !important;
     max-width: calc(100vw - 24px) !important;
     right: 12px !important;
@@ -533,7 +567,7 @@ onBeforeUnmount(() => { destroyEcho() })
   }
 }
 
-/* ✅ Teléfono: conviértelo en un "sheet" centrado y ancho casi completo */
+/* ✅ Teléfono: sheet centrado y ancho casi completo */
 @media (max-width: 575.98px){
   .notif-dropdown{
     position: fixed !important;

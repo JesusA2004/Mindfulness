@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
+
 use App\Http\Controllers\Api\BackupController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\UserController;
@@ -22,18 +23,17 @@ use App\Http\Controllers\Api\UserPointsController;
 | Rutas públicas (no requieren login)
 |--------------------------------------------------------------------------
 | - Bootstrap inicial del sistema.
-| - Se permite registrar una institución y una persona sin autenticación.
-| - El registro/login/refresh siguen siendo públicos.
+| - Registro/login/refresh siguen siendo públicos (refresh requiere token válido pero NO valid.session).
 */
 
 // Autenticación
 Route::prefix('auth')->group(function () {
-    Route::post('register', [AuthController::class, 'register']); // Registro de usuario (requiere institucion_id y persona_id válidos)
+    Route::post('register', [AuthController::class, 'register']); // Registro de usuario
     Route::post('login',    [AuthController::class, 'login']);    // Login y obtención de token
-    Route::post('refresh',  [AuthController::class, 'refresh']);  // Refrescar token
+    Route::post('refresh',  [AuthController::class, 'refresh']);  // Refrescar token (sin valid.session)
 
-    // Rutas protegidas dentro de /auth (solo con token)
-    Route::middleware('auth:api')->group(function () {
+    // Rutas protegidas bajo /auth (requieren token + sesión vigente)
+    Route::middleware(['auth:api', 'valid.session'])->group(function () {
         Route::post('logout',      [AuthController::class, 'logout']);
         Route::get('user-profile', [AuthController::class, 'userProfile']);
     });
@@ -44,11 +44,11 @@ Route::post('personas', [PersonaController::class, 'store']);
 
 /*
 |--------------------------------------------------------------------------
-| Rutas protegidas por JWT (requieren token válido)
+| Rutas protegidas por JWT (requieren token válido y sesión vigente)
 |--------------------------------------------------------------------------
 */
-Route::middleware('auth:api')->group(function () {
-    // Personas (todas las operaciones excepto store que es pública)
+Route::middleware(['auth:api', 'valid.session'])->group(function () {
+    // Personas (todas excepto store que fue pública)
     Route::apiResource('personas', PersonaController::class)->except(['store']);
 
     // CRUD de los demás modelos
@@ -61,32 +61,27 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('tecnicas', TecnicaController::class);
     Route::apiResource('tests', TestController::class);
 
-    // Ruta especial para que un alumno responda una encuesta
+    // Rutas especiales
     Route::put('encuestas/{encuesta}/responder', [EncuestaController::class, 'responder']);
+    Route::put('tests/{test}/responder',         [TestController::class, 'responder']);
 
-    // Ruta especial para que un alumno responda un test
-    Route::put('tests/{test}/responder', [TestController::class, 'responder']);
-
+    // Subidas
     Route::post('/uploads', [UploadController::class, 'store']);
 
-    // Exportar: GET /api/backups/export?type=excel|csv|mongo
+    // Backups
     Route::get('backups/export', [BackupController::class, 'export']);
-
-    // Importar: POST /api/backups/import  (multipart/form-data)
-    // body: file, format=excel|csv|txt|mongo, mode=merge|replace
     Route::post('backups/import', [BackupController::class, 'import']);
 
-    Route::post('/users/{id}/points/earn',   [\App\Http\Controllers\Api\UserPointsController::class, 'earn']);
-
-    Route::post('/users/{id}/points/redeem', [\App\Http\Controllers\Api\UserPointsController::class, 'redeem']);
-
-    Route::get('/users/{id}/points', [UserPointsController::class, 'getPoints']);
+    // Puntos de usuario
+    Route::post('/users/{id}/points/earn',   [UserPointsController::class, 'earn']);
+    Route::post('/users/{id}/points/redeem', [UserPointsController::class, 'redeem']);
+    Route::get('/users/{id}/points',         [UserPointsController::class, 'getPoints']);
 
     // Subida de foto (protegida)
     Route::post('/subir-foto', function (Request $request) {
         if ($request->hasFile('foto')) {
             $path = $request->file('foto')->store('public/fotos');
-            $url  = Storage::url($path); // Devuelve /storage/fotos/xxx.jpg
+            $url  = Storage::url($path); // /storage/fotos/xxx.jpg
             return response()->json(['url' => asset($url)], 200);
         }
         return response()->json(['error' => 'No se recibió archivo'], 400);

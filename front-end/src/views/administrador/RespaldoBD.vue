@@ -135,37 +135,13 @@
 import axios from 'axios'
 import { ref, computed, onMounted } from 'vue'
 
-/* ==========================================
-   Resolución robusta de API_BASE:
-   - Vue CLI: process.env.VUE_APP_API_URL
-   - Vite:    import.meta.env.VITE_API_URL
-   - Fallback: 'http://127.0.0.1:8000/api'
-   ========================================== */
-function resolveApiBase() {
-  // Vue CLI (webpack)
-  const cli = typeof process !== 'undefined' && process && process.env
-    ? (process.env.VUE_APP_API_URL || process.env.VUE_APP_API_BASE && (process.env.VUE_APP_API_BASE.replace(/\/+$/, '') + '/api'))
-    : ''
-
-  // Vite
-  let vite = ''
-  try {
-    // import.meta puede no existir en webpack, por eso el try/catch
-    vite = (import.meta?.env?.VITE_API_URL)
-      || (import.meta?.env?.VITE_API_BASE && (import.meta.env.VITE_API_BASE.replace(/\/+$/, '') + '/api'))
-      || ''
-  } catch (_) {}
-
-  const chosen = (cli || vite || '').replace(/\/+$/, '')
-  return chosen || 'http://127.0.0.1:8000/api' // último recurso
-}
-const API_BASE = resolveApiBase()
+const API_BASE = process.env.VUE_APP_API_URL
 
 const apiBaseWarning = ref('')
 onMounted(() => {
   if (!API_BASE) {
     apiBaseWarning.value =
-      'Advertencia: No se definió VUE_APP_API_URL / VITE_API_URL. Usando fallback por defecto.'
+      'Advertencia: Error con la conexion al servidor API.'
   }
 })
 

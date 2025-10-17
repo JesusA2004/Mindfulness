@@ -2,41 +2,32 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\ForcedLogout;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UserRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use MongoDB\BSON\ObjectId;
+use Tymon\JWTAuth\Facades\JWTAuth;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
-    /**
-     * Registrar nuevo usuario (requiere persona_id e institucion_id válidos)
-     */
     public function register(UserRequest $request): JsonResponse
     {
         $data = $request->validated();
-
-        // Valor por defecto
         $data['estatus'] = $data['estatus'] ?? 'activo';
-
-        // Casteo explícito a ObjectId para evitar problemas de tipo
         $data['institucion_id'] = new ObjectId($data['institucion_id']);
         $data['persona_id']     = new ObjectId($data['persona_id']);
 
-        // El mutator setPasswordAttribute en User ya hashea si viene en texto plano.
-        // Si prefieres hashear aquí también es válido: $data['password'] = bcrypt($data['password']);
-
         try {
             $user = User::create($data);
-
             return response()->json([
                 'mensaje' => 'Usuario registrado correctamente.',
                 'usuario' => $user,
             ], 201);
         } catch (\Throwable $e) {
-            // Captura validaciones del booted() (ej. institución/persona inexistente) u otros errores
             return response()->json([
                 'mensaje' => 'No se pudo registrar el usuario.',
                 'error'   => $e->getMessage(),
@@ -44,56 +35,85 @@ class AuthController extends Controller
         }
     }
 
-    /**
-     * Login de usuario
-     */
     public function login(Request $request): JsonResponse
     {
         $credentials = $request->only('email', 'password');
 
         if (!$token = auth('api')->attempt($credentials)) {
-            return response()->json([
-                'error' => 'Datos de acceso incorrectos. Por favor, verifica tus credenciales.'
-            ], 401);
+            return response()->json(['error' => 'Datos de acceso incorrectos. Por favor, verifica tus credenciales.'], 401);
         }
 
-        return $this->createNewToken($token);
+        // Generar un JTI único y reemitir el token con ese claim
+        $user = auth('api')->user();
+        $jti = (string) Str::uuid();
+
+        $customClaims = ['jti' => $jti];
+        $token = JWTAuth::claims($customClaims)->fromUser($user);
+
+        // Si el usuario ya tenía una sesión activa, avisar al navegador anterior
+        if (!empty($user->current_jti) && $user->current_jti !== $jti) {
+            event(new ForcedLogout($user->_id ?? $user->id, 'new_login'));
+        }
+
+        // Guardar el jti como sesión actual
+        $user->current_jti = $jti;
+        $user->save();
+
+        return $this->createNewToken($token, $jti);
     }
 
-    /**
-     * Refrescar token
-     */
     public function refresh(): JsonResponse
     {
-        return $this->createNewToken(auth('api')->refresh());
+        // Refrescar conserva claims por defecto. Volvemos a emitir con un jti nuevo
+        $user = auth('api')->user();
+        if (!$user) {
+            return response()->json(['error' => 'No autenticado'], 401);
+        }
+
+        $jti = (string) Str::uuid();
+        $token = JWTAuth::claims(['jti' => $jti])->fromUser($user);
+
+        // invalidar sesión anterior para “sesión única”
+        if (!empty($user->current_jti) && $user->current_jti !== $jti) {
+            event(new ForcedLogout($user->_id ?? $user->id, 'refresh'));
+        }
+
+        $user->current_jti = $jti;
+        $user->save();
+
+        return $this->createNewToken($token, $jti);
     }
 
-    /**
-     * Cerrar sesión
-     */
     public function logout(): JsonResponse
     {
+        try {
+            $user = auth('api')->user();
+            if ($user) {
+                $user->current_jti = null; // limpiar sesión activa
+                $user->save();
+            }
+        } catch (\Throwable $e) {
+            // no-op
+        }
+
         auth('api')->logout();
         return response()->json(['message' => 'Cierre de sesión exitoso']);
     }
 
-    /**
-     * Perfil del usuario autenticado
-     */
     public function userProfile(): JsonResponse
     {
         return response()->json(auth('api')->user());
     }
 
-    /**
-     * Formatear respuesta del token
-     */
-    protected function createNewToken(string $token): JsonResponse
+    protected function createNewToken(string $token, ?string $jti = null): JsonResponse
     {
+        $ttlSeconds = auth('api')->factory()->getTTL() * 60; // en segundos
         return response()->json([
             'access_token' => $token,
             'token_type'   => 'bearer',
-            'expires_in'   => auth('api')->factory()->getTTL() * 60,
+            'expires_in'   => $ttlSeconds,
+            'expires_at'   => now()->addSeconds($ttlSeconds)->toISOString(),
+            'jti'          => $jti,
             'user'         => auth('api')->setToken($token)->user(),
         ]);
     }
