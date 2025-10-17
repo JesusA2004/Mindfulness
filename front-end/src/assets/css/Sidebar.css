@@ -2,6 +2,8 @@
 :root{
   --rail-collapsed: 76px;
   --rail-expanded: 248px;
+
+  /* Este valor puede ser actualizado por JS con la altura real del navbar */
   --navbar-h: 56px;
 
   --mf-ink:#0f172a;
@@ -28,6 +30,9 @@
   height: var(--navbar-h);
   z-index: 1060;
   border-bottom: 1px solid #eef0f4;
+  margin: 0;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 /* ===== Sidebar: ocupa TODO el alto ===== */
@@ -52,11 +57,22 @@
 
 /* ===== Contenido: empujado por navbar y rail ===== */
 .app-content{
-  padding-top: var(--navbar-h);
   padding-left: var(--rail-width);
   min-height: 100vh;
-  background: #f5f6f8;
-  transition: padding-left .2s ease;
+
+  /* 2) Truco visual: debajo del navbar se pinta BLANCO, el resto gris */
+  /* La primera capa es un gradiente que cubre desde 0 hasta --navbar-h en blanco;
+     de --navbar-h hacia abajo es transparente para dejar ver el color base. */
+  background:
+    linear-gradient(#ffffff 0, #ffffff var(--navbar-h), transparent var(--navbar-h), transparent 100%),
+    #f5f6f8;
+
+  transition: padding-left .2s ease, padding-top .2s ease, background .2s ease;
+}
+
+/* Quita margen del primer hijo dentro del contenido (evita “hueco” extra) */
+.app-content > *:first-child{
+  margin-top: 0 !important;
 }
 
 /* ===== Responsive: en móvil, el rail es overlay y navbar ocupa todo ===== */
@@ -72,7 +88,12 @@
     box-shadow: 6px 0 24px rgba(16,24,40,.12);
   }
   .app-sidebar.mobile-open{ transform: translateX(0); }
-  .app-content{ padding-left: 0; }
+  .app-content{
+    padding-left: 0;
+    background:
+      linear-gradient(#ffffff 0, #ffffff var(--navbar-h), transparent var(--navbar-h), transparent 100%),
+      #f5f6f8;
+  }
 }
 
 /* ===== Sidebar Head ===== */
@@ -186,5 +207,4 @@
   background: linear-gradient(90deg, transparent 25%, rgba(255,255,255,.22) 50%, transparent 75%);
   animation: btn-shine 1.6s linear infinite;
 }
-@keyframes btn-shine{ from{transform:translateX(-100%)} to{transform:translateX(100%)} }
 .btn-danger .spinner-border{ --bs-spinner-border-color: rgba(255,255,255,.9); }

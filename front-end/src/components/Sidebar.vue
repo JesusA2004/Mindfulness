@@ -1,6 +1,6 @@
 <template>
   <!-- Shell -->
-  <div :class="['app-shell', (isPinned || isHovering) ? 'rail-expanded' : 'rail-collapsed']">
+  <div :class="['app-shell', (isPinned || isHovering || mobileOpen) ? 'rail-expanded' : 'rail-collapsed']">
     <!-- NAVBAR -->
     <nav class="navbar navbar-expand-lg shadow-sm fixed-top mf-navbar">
       <div class="container-fluid px-3">
@@ -10,7 +10,7 @@
           <button
             class="btn d-lg-none me-2"
             type="button"
-            @click="mobileOpen = true"
+            @click="mobileOpen = !mobileOpen"
             aria-label="Abrir menú"
           >
             <i class="bi bi-list fs-3"></i>
@@ -212,6 +212,11 @@
       </div>
     </aside>
 
+    <!-- ===== CONTENIDO (empujado por rail + navbar) ===== -->
+    <section class="app-content">
+      <slot />
+    </section>
+
     <!-- MODAL logout -->
     <div v-if="showLogoutModal" class="modal-backdrop-custom" @click.self="showLogoutModal=false">
       <div class="card shadow p-3 modal-card">
@@ -233,14 +238,27 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
-
-// Echo (Pusher)
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
 window.Pusher = Pusher
 
-defineOptions({ name: 'LoginLayout' })
+defineOptions({ name: 'SidebarShell' })
 const router = useRouter()
+
+/* ==== Ajuste dinámico de altura del navbar (quita hueco gris) ==== */
+function applyNavbarHeight() {
+  const el = document.querySelector('.mf-navbar') || document.querySelector('.navbar.fixed-top')
+  if (!el) return
+  const h = Math.ceil(el.getBoundingClientRect().height)
+  document.documentElement.style.setProperty('--navbar-h', `${h}px`)
+}
+onMounted(() => {
+  applyNavbarHeight()
+  window.addEventListener('resize', applyNavbarHeight, { passive: true })
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', applyNavbarHeight)
+})
 
 /* Usuario */
 const user = ref({})
@@ -500,5 +518,48 @@ onBeforeUnmount(() => { destroyEcho() })
 }
 .user-dropdown .dropdown-item:hover{
   background: #f5f6f8;
+}
+/* ✅ Tablet: que no se salga por la derecha y use un ancho razonable */
+@media (max-width: 991.98px){
+  .notif-dropdown{
+    /* ignora inline styles del template en este breakpoint */
+    min-width: 360px !important;
+    max-width: calc(100vw - 24px) !important;
+    right: 12px !important;
+    left: auto !important;
+    border-radius: 12px;
+    max-height: calc(100vh - var(--navbar-h) - 24px);
+    overflow: auto;
+  }
+}
+
+/* ✅ Teléfono: conviértelo en un "sheet" centrado y ancho casi completo */
+@media (max-width: 575.98px){
+  .notif-dropdown{
+    position: fixed !important;
+    top: calc(var(--navbar-h) + 8px) !important;
+    right: 8px !important;
+    left: 8px !important;
+    min-width: unset !important;
+    width: auto !important;
+    max-width: none !important;
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(16,24,40,.18);
+    max-height: calc(100vh - var(--navbar-h) - 16px);
+    overflow: auto;
+    z-index: 1301; /* sobre la sidebar móvil */
+  }
+
+  /* Tap targets más cómodos */
+  .notif-dropdown .list-group-item{
+    padding: 12px 14px;
+    font-size: 0.95rem;
+  }
+
+  /* Barra de acciones: botones más grandes/fáciles de pulsar */
+  .action-btn{
+    width: 40px;
+    height: 40px;
+  }
 }
 </style>
