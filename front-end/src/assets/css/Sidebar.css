@@ -30,12 +30,12 @@
   border-bottom: 1px solid #eef0f4;
 }
 
-/* ===== Sidebar: ahora ocupa TODO el alto (top:0) ===== */
+/* ===== Sidebar: ocupa TODO el alto ===== */
 .app-sidebar{
   position: fixed;
-  top: 0;                    /* <— ocupa desde arriba */
+  top: 0;
   left: 0;
-  height: 100vh;             /* <— full height */
+  height: 100vh;
   width: var(--rail-collapsed);
   background: var(--rail-bg);
   border-right: 1px solid var(--rail-ring);
@@ -50,10 +50,10 @@
   box-shadow: 6px 0 24px rgba(16,24,40,.06);
 }
 
-/* ===== Contenido: sin huecos arriba ni a la izquierda ===== */
+/* ===== Contenido: empujado por navbar y rail ===== */
 .app-content{
-  padding-top: var(--navbar-h);          /* espacio exacto del navbar */
-  padding-left: var(--rail-width);       /* empuje exacto del rail */
+  padding-top: var(--navbar-h);
+  padding-left: var(--rail-width);
   min-height: 100vh;
   background: #f5f6f8;
   transition: padding-left .2s ease;

@@ -2,23 +2,30 @@
   <!-- Shell -->
   <div :class="['app-shell', (isPinned || isHovering) ? 'rail-expanded' : 'rail-collapsed']">
     <!-- NAVBAR -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm fixed-top">
+    <nav class="navbar navbar-expand-lg shadow-sm fixed-top mf-navbar">
       <div class="container-fluid px-3">
-        <!-- Hamburguesa solo en móviles -->
-        <button
-          class="btn d-lg-none me-2"
-          type="button"
-          @click="mobileOpen = true"
-          aria-label="Abrir menú"
-        >
-          <i class="bi bi-list fs-3"></i>
-        </button>
+        <!-- Brand / Hamburguesa -->
+        <div class="d-flex align-items-center gap-2">
+          <!-- Hamburguesa solo en móviles -->
+          <button
+            class="btn d-lg-none me-2"
+            type="button"
+            @click="mobileOpen = true"
+            aria-label="Abrir menú"
+          >
+            <i class="bi bi-list fs-3"></i>
+          </button>
 
-        <div class="ms-auto d-flex align-items-center gap-3">
+          <div class="d-flex align-items-center gap-2 mf-brand">
+            <span class="fw-700 d-none d-md-inline text-truncate">Mindora</span>
+          </div>
+        </div>
+
+        <div class="ms-auto d-flex align-items-center gap-2 gap-lg-3">
           <!-- ====== CAMPANA ====== -->
           <div class="position-relative">
             <button
-              class="btn btn-light border rounded-circle position-relative"
+              class="btn btn-light border-0 mf-icon-btn position-relative"
               @click="bellOpen = !bellOpen"
               aria-label="Notificaciones de citas"
               title="Notificaciones de citas"
@@ -79,6 +86,7 @@
                   :to="citasRoute"
                   title="Ir a Citas"
                   aria-label="Ir a Citas"
+                  @click="bellOpen=false"
                 >
                   <i class="bi bi-eye"></i>
                 </router-link>
@@ -96,26 +104,50 @@
           </div>
           <!-- ====== /CAMPANA ====== -->
 
-          <!-- Usuario -->
+          <!-- Usuario (dropdown personalizado) -->
           <div class="dropdown">
-            <a
-              class="nav-link dropdown-toggle d-flex align-items-center"
-              href="#"
-              role="button"
+            <button
+              class="btn d-flex align-items-center gap-2 mf-user-btn"
               data-bs-toggle="dropdown"
               aria-expanded="false"
+              aria-label="Abrir menú de usuario"
+              @click="bellOpen=false"
             >
-              <span class="me-2 fw-medium">{{ user.name }}</span>
               <img
                 src="https://img.icons8.com/ios-glyphs/30/000000/user-male-circle.png"
                 alt="perfil"
-                class="rounded-circle"
+                class="rounded-circle user-avatar"
               />
-            </a>
-            <ul class="dropdown-menu dropdown-menu-end">
-              <li><router-link class="dropdown-item" to="/app/perfil">Perfil</router-link></li>
-              <li><hr class="dropdown-divider" /></li>
-              <li><button class="dropdown-item" @click="showLogoutModal = true">Cerrar sesión</button></li>
+              <span class="fw-600 d-none d-sm-inline text-truncate">{{ user.name }}</span>
+              <i class="bi bi-chevron-down ms-1 opacity-75 d-none d-sm-inline"></i>
+            </button>
+
+            <ul class="dropdown-menu dropdown-menu-end user-dropdown shadow-lg">
+              <li class="px-3 pt-3 pb-2">
+                <div class="d-flex align-items-center gap-2">
+                  <img
+                    src="https://img.icons8.com/ios-glyphs/30/000000/user-male-circle.png"
+                    alt="perfil"
+                    class="rounded-circle user-avatar-sm"
+                  />
+                  <div class="small">
+                    <div class="fw-700">{{ user.name }}</div>
+                    <div class="text-muted text-truncate" style="max-width: 160px;">{{ user.email }}</div>
+                  </div>
+                </div>
+              </li>
+              <li><hr class="dropdown-divider my-2" /></li>
+              <li>
+                <router-link class="dropdown-item py-2 d-flex align-items-center gap-2" to="/app/perfil">
+                  <i class="bi bi-person-circle"></i> <span>Perfil</span>
+                </router-link>
+              </li>
+              <li>
+                <button class="dropdown-item py-2 d-flex align-items-center gap-2 text-danger"
+                        @click="showLogoutModal = true">
+                  <i class="bi bi-box-arrow-right"></i> <span>Cerrar sesión</span>
+                </button>
+              </li>
             </ul>
           </div>
         </div>
@@ -156,7 +188,7 @@
               :to="item.to"
               class="nav-a"
               active-class="is-active"
-              @click.native="handleNavClick"
+              @click="onNavItemClick"
               :title="(!isPinned && !isHovering) ? item.text : null"
             >
               <span class="nav-icon-wrap">
@@ -223,7 +255,7 @@ const isLoggingOut = ref(false)
 async function confirmLogout () {
   isLoggingOut.value = true
   try {
-    const url = process.env.VUE_APP_API_URL + '/auth/logout'
+    const url = (import.meta.env.VITE_API_URL || process.env.VUE_APP_API_URL) + '/auth/logout'
     const token = localStorage.getItem('token')
     if (token) await axios.post(url, {}, { headers: { Authorization: `Bearer ${token}` } })
   } catch (e) {
@@ -281,10 +313,20 @@ function togglePin (val) {
   isPinned.value = !!val
   localStorage.setItem('sidebarPinned', JSON.stringify(isPinned.value))
 }
-function handleNavClick () {
-  if (!isPinned.value) togglePin(true)
-  mobileOpen.value = false
+/* Clic en item del menú: autocierre si NO está fijado (desktop hover) o si es móvil */
+function onNavItemClick () {
+  if (mobileOpen.value) mobileOpen.value = false
+  if (!isPinned.value) isHovering.value = false
 }
+
+/* Cerrar overlays al cambiar de ruta; si no está fijado, colapsar */
+onMounted(() => {
+  router.afterEach(() => {
+    bellOpen.value = false
+    if (mobileOpen.value) mobileOpen.value = false
+    if (!isPinned.value) isHovering.value = false
+  })
+})
 
 /* Logo */
 const logoSrc = '/img/logoDark.png'
@@ -320,16 +362,14 @@ function initEcho () {
     const u = JSON.parse(uStr) || {}
     const uid = String(u.id || u._id || '')
     if (!uid) return
-
-    if (echo) return // ya inicializado
+    if (echo) return
 
     echo = new Echo({
       broadcaster: 'pusher',
-      key: process.env.VUE_APP_PUSHER_APP_KEY,
-      cluster: process.env.VUE_APP_PUSHER_APP_CLUSTER || 'mt1',
+      key: import.meta.env.VITE_PUSHER_KEY || process.env.VUE_APP_PUSHER_APP_KEY,
+      cluster: import.meta.env.VITE_PUSHER_CLUSTER || process.env.VUE_APP_PUSHER_APP_CLUSTER || 'mt1',
       forceTLS: true,
-      // endpoint ABSOLUTO (sin /api)
-      authEndpoint: process.env.VUE_APP_API_BASE + '/broadcasting/auth',
+      authEndpoint: (import.meta.env.VITE_API_BASE || process.env.VUE_APP_API_BASE) + '/broadcasting/auth',
       auth: {
         headers: {
           Authorization: `Bearer ${jwt}`,
@@ -343,24 +383,13 @@ function initEcho () {
     p?.connection?.bind('error', e => console.error('[Echo] error', e))
     p?.connection?.bind('connected', () => console.log('[Echo] connected'))
 
-    // Suscribirse una sola vez
     channel = echo.private(`user.${uid}`)
 
     if (!bound) {
       bound = true
-      // Exitoso
-      channel.subscribed(() => {
-        console.log('[Echo] subscription_succeeded user.' + uid)
-      })
-
-      // Error de suscripción (403 policy / 401 auth)
-      channel.error((status) => {
-        console.error('[Echo] subscription_error', status)
-      })
-
-      // Evento de Citas (alias con punto)
+      channel.subscribed(() => console.log('[Echo] subscription_succeeded user.' + uid))
+      channel.error((status) => console.error('[Echo] subscription_error', status))
       channel.listen('.CitaEstadoCambiado', (data) => {
-        console.log('[Echo] evento CitaEstadoCambiado', data)
         notifCount.value++
         notifications.value.unshift({
           title: `Cita ${data?.estado ?? ''}`.trim(),
@@ -405,12 +434,8 @@ function toggleExpand () {
   showAll.value = !showAll.value
 }
 
-onMounted(() => {
-  initEcho()
-})
-onBeforeUnmount(() => {
-  destroyEcho()
-})
+onMounted(() => { initEcho() })
+onBeforeUnmount(() => { destroyEcho() })
 </script>
 
 <style src="@/assets/css/Sidebar.css"></style>
@@ -432,5 +457,48 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+/* ===== Navbar moderno ===== */
+.mf-navbar{
+  backdrop-filter: blur(8px) saturate(140%);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
+  background: linear-gradient(180deg, rgba(255,255,255,.85) 0%, rgba(255,255,255,.65) 100%) !important;
+  border-bottom: 1px solid rgba(16,24,40,.06);
+}
+.mf-brand .brand-mini{
+  width: 28px; height: 28px; object-fit: contain; border-radius: 8px;
+}
+.fw-700{ font-weight:700; }
+.fw-600{ font-weight:600; }
+.mf-icon-btn{
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(16,24,40,.08);
+}
+
+/* ===== Usuario dropdown moderno ===== */
+.mf-user-btn{
+  background: #fff;
+  border: 1px solid rgba(16,24,40,.08);
+  border-radius: 999px;
+  padding: .35rem .6rem;
+}
+.user-avatar{ width: 28px; height: 28px; }
+.user-avatar-sm{ width: 30px; height: 30px; }
+
+.user-dropdown{
+  border: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  min-width: 240px;
+}
+.user-dropdown .dropdown-item{
+  font-weight: 500;
+  border-radius: 8px;
+  margin: 4px 8px;
+}
+.user-dropdown .dropdown-item:hover{
+  background: #f5f6f8;
 }
 </style>
