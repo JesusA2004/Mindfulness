@@ -3,10 +3,10 @@ import axios from 'axios';
 import Modal from 'bootstrap/js/dist/modal';
 import { apiBase, authHeaders, makeDebouncer, toast as baseToast, getId } from '@/assets/js/crudUtils';
 
-const API_BASE = apiBase('/bitacoras');
+const API_BASE = process.env.VUE_APP_API_URL + '/bitacoras';
 const AUTH_PROFILE = apiBase('/auth/user-profile');
-const USERS_POINTS = (id) => apiBase(`/users/${id}/points`);
-const USERS_EARN   = (id) => apiBase(`/users/${id}/points/earn`);
+const USERS_POINTS = (id) => API_BASE + `/users/${id}/points`;
+const USERS_EARN   = (id) => API_BASE + `/users/${id}/points/earn`;
 
 export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
   const items = ref([]);
@@ -42,7 +42,7 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
     emoji: ''
   });
 
-  // Utils
+  // ===== Utils
   function emojiFromTitle(t) {
     if (!t) return '';
     const m = String(t).trim().match(/^([\u{1F600}-\u{1FAFF}\u{1F300}-\u{1F64F}\u{1F680}-\u{1F6FF}])\s+/u);
@@ -78,7 +78,7 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
     };
   }
 
-  // Usuario + puntos
+  // ===== Usuario + puntos (con headers)
   async function loadUserAndPoints() {
     try {
       const { data: profile } = await axios.get(AUTH_PROFILE, { headers: authHeaders() });
@@ -91,8 +91,8 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
       puntos.value = Number(ptsRes?.puntosCanjeo ?? 0);
       puntosCargados.value = true;
     } catch (e) {
-      console.error(e);
-      puntos.value = 0; puntosCargados.value = true;
+      console.error('loadUserAndPoints error:', e?.response?.data || e);
+      puntos.value = 0; puntosCargados.value = true;en
     }
   }
 
@@ -102,7 +102,7 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
       const { data } = await axios.get(USERS_POINTS(currentUserId.value), { headers: authHeaders() });
       puntos.value = Number(data?.puntosCanjeo ?? 0);
     } catch (e) {
-      console.error(e);
+      console.error('refreshPoints error:', e?.response?.data || e);
     }
   }
 
@@ -112,12 +112,12 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
       await axios.post(USERS_EARN(currentUserId.value), { puntos: amount }, { headers: authHeaders() });
       await refreshPoints();
     } catch (e) {
-      console.error(e);
+      console.error('earnPoints error:', e?.response?.data || e);
       toast('No fue posible abonar puntos.', 'error');
     }
   }
 
-  // Fetch por mes
+  // ===== Fetch por mes/año
   async function fetchMonth(m, y) {
     try {
       isLoading.value = true;
@@ -129,14 +129,14 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
       const list = Array.isArray(data?.bitacoras) ? data.bitacoras : [];
       items.value = list.map(normalize);
     } catch (e) {
-      console.error(e);
+      console.error('fetchMonth error:', e?.response?.data || e);
       toast('No fue posible cargar las bitácoras de este mes.', 'error');
     } finally {
       isLoading.value = false;
     }
   }
 
-  // Ver/Crear/Editar
+  // ===== Ver/Crear/Editar
   function openView(item) {
     selected.value = normalize(item);
     if (!viewModal && viewModalRef.value) viewModal = new Modal(viewModalRef.value, { backdrop: 'static' });
@@ -152,13 +152,13 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
     formModal?.show();
   }
 
-    function openEdit(item) {
+  function openEdit(item) {
     isEditing.value = true;
     const n = normalize(item);
     form._id = n._id;
     form.titulo = titleWithoutEmoji(n.titulo);
     form.descripcion = n.descripcion || '';
-    form.fecha = n.fecha; // readonly en UI
+    form.fecha = n.fecha;
     form.emoji = n.emoji || (EMOJIS[0] || '🙂');
     if (!formModal && formModalRef.value) formModal = new Modal(formModalRef.value, { backdrop: 'static' });
     formModal?.show();
@@ -177,7 +177,7 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
     return `${yyyy}-${mm}-${dd}`;
   }
 
-  // ===== Esquema motivacional de puntos =====
+  // ===== Esquema motivacional
   function pointsForDate(isoDate) {
     // 1–10: doble (2), 11–20: simple (1), 21–31: triple (3)
     const day = Number(isoDate?.slice(8, 10) || '0');
@@ -186,11 +186,14 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
     return 3;
   }
 
-  // ===== Submit (Create/Update) =====
+  // ===== Submit — con fallback local para "awarded"
   async function onSubmit() {
     if (!form.titulo?.trim()) { toast('El título es obligatorio.', 'error'); return; }
     if (!form.fecha) { toast('La fecha es inválida.', 'error'); return; }
     if (!form.emoji) { toast('Selecciona un emoji.', 'error'); return; }
+
+    // ¿ya había bitácora ese día? (para fallback si el back no manda awarded)
+    const existedBefore = items.value.some(b => b.fecha === form.fecha);
 
     saving.value = true;
     try {
@@ -198,7 +201,6 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
         titulo: withEmojiPrefix(form.emoji, form.titulo),
         descripcion: form.descripcion || null,
         fecha: form.fecha
-        // alumno_id NO se envía; lo asigna el backend con auth()->id()
       };
 
       if (isEditing.value && form._id) {
@@ -212,8 +214,9 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
         upsertLocal(saved);
         toast('Bitácora guardada.');
 
-        // Si el backend indica que es la PRIMERA del día, abonamos puntos
-        if (data?.awarded === true) {
+        // ← Abona puntos si: el back lo indica, o localmente era la primera del día
+        const mustAward = data?.awarded === true || existedBefore === false;
+        if (mustAward) {
           const pts = pointsForDate(saved.fecha);
           await earnPoints(pts);
           toast(`🎉 ¡Ganaste ${pts} punto(s)!`, 'success');
@@ -223,7 +226,7 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
       formModal?.hide();
       if (month.value && year.value) await fetchMonth(month.value, year.value);
     } catch (e) {
-      console.error(e?.response?.data || e);
+      console.error('onSubmit error:', e?.response?.data || e);
       const msg = e?.response?.data?.message || e?.response?.data?.error || 'Ocurrió un error al guardar.';
       toast(msg, 'error');
     } finally {
@@ -239,9 +242,8 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
     else items.value.push(saved);
   }
 
-  // ===== Eliminar =====
+  // ===== Eliminar
   async function confirmDelete(item) {
-    // Doble guarda: UI ya deshabilita, pero validamos aquí también.
     if (puntos.value <= 0) { toast('No puedes eliminar con 0 puntos.', 'error'); return; }
 
     const Swal = (await import('sweetalert2')).default;
@@ -265,10 +267,9 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
       await axios.delete(`${API_BASE}/${id}`, { headers: authHeaders() });
       items.value = items.value.filter(x => getId(x) !== id);
       toast('Eliminado correctamente.');
-      // Política actual: eliminar NO descuenta puntos.
-      await refreshPoints(); // por si otra lógica externa los movió
+      await refreshPoints();
     } catch (e) {
-      console.error(e);
+      console.error('confirmDelete error:', e?.response?.data || e);
       toast('No fue posible eliminar.', 'error');
     }
   }
@@ -295,7 +296,6 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
     form.emoji = EMOJIS[0] || '🙂';
   }
 
-  // ===== Exposición del composable =====
   return {
     // estado
     items, isLoading, month, year,
