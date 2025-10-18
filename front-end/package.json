@@ -8,6 +8,10 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.7.2",
+    "@fullcalendar/core": "^6.1.19",
+    "@fullcalendar/daygrid": "^6.1.19",
+    "@fullcalendar/interaction": "^6.1.19",
+    "@fullcalendar/vue3": "^6.1.19",
     "animate.css": "^4.1.1",
     "axios": "^1.9.0",
     "bootstrap": "^5.3.6",
