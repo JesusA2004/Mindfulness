@@ -33,7 +33,7 @@ Route::prefix('auth')->group(function () {
     Route::post('refresh',  [AuthController::class, 'refresh']);  // Refrescar token (sin valid.session)
 
     // Rutas protegidas bajo /auth (requieren token + sesión vigente)
-    Route::middleware(['auth:api', 'valid.session'])->group(function () {
+    Route::middleware(['auth:api'])->group(function () {
         Route::post('logout',      [AuthController::class, 'logout']);
         Route::get('user-profile', [AuthController::class, 'userProfile']);
     });
@@ -47,7 +47,7 @@ Route::post('personas', [PersonaController::class, 'store']);
 | Rutas protegidas por JWT (requieren token válido y sesión vigente)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth:api', 'valid.session'])->group(function () {
+Route::middleware(['auth:api'])->group(function () {
     // Personas (todas excepto store que fue pública)
     Route::apiResource('personas', PersonaController::class)->except(['store']);
 

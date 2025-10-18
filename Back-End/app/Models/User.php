@@ -70,10 +70,6 @@ class User extends Authenticatable implements JWTSubject
             if (empty($user->persona_id)) {
                 throw new Exception('persona_id es requerido para crear un usuario.');
             }
-
-            if (!Institucion::where('_id', $user->institucion_id)->exists()) {
-                throw new Exception('La institución referenciada no existe.');
-            }
             if (!Persona::where('_id', $user->persona_id)->exists()) {
                 throw new Exception('La persona referenciada no existe.');
             }

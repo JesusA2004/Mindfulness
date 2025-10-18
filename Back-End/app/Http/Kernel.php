@@ -64,8 +64,5 @@ class Kernel extends HttpKernel
         'signed' => \App\Http\Middleware\ValidateSignature::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
-
-        // 🔐 Sesión única por usuario (valida jti del token contra current_jti del usuario)
-        'valid.session' => \App\Http\Middleware\EnsureValidSession::class,
     ];
 }

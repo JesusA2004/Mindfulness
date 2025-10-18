@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Events\ForcedLogout;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UserRequest;
 use App\Models\User;
@@ -49,11 +48,6 @@ class AuthController extends Controller
 
         $customClaims = ['jti' => $jti];
         $token = JWTAuth::claims($customClaims)->fromUser($user);
-
-        // Si el usuario ya tenía una sesión activa, avisar al navegador anterior
-        if (!empty($user->current_jti) && $user->current_jti !== $jti) {
-            event(new ForcedLogout($user->_id ?? $user->id, 'new_login'));
-        }
 
         // Guardar el jti como sesión actual
         $user->current_jti = $jti;
