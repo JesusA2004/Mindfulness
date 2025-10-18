@@ -422,21 +422,6 @@ function initEcho () {
         })
       })
 
-      // 🔐 Cierre forzado por login en otro navegador
-      channel.listen('.ForcedLogout', async (payload) => {
-        try {
-          await Swal.fire({
-            icon: 'warning',
-            title: 'Se inició sesión en otro lugar',
-            text: 'Esta sesión se cerrará en este navegador.',
-            timer: 2500,
-            showConfirmButton: false
-          })
-        } catch (e) {}
-        localStorage.clear()
-        destroyEcho()
-        router.push('/login')
-      })
     }
   } catch (e) {
     console.error('Echo init error:', e)

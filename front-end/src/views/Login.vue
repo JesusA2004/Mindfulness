@@ -15,6 +15,7 @@
             required
           />
         </div>
+
         <div class="mb-3 position-relative">
           <label for="password" class="form-label">Contraseña</label>
           <div class="input-group">
@@ -26,11 +27,13 @@
               placeholder="••••••••"
               required
             />
-            <span class="input-group-text password-toggle" @click="togglePasswordVisibility">
+            <span class="input-group-text password-toggle" @click="togglePasswordVisibility" role="button">
+              <!-- Si usas Bootstrap Icons cambia estas clases a 'bi bi-eye/bi-eye-slash' -->
               <i :class="iconClass"></i>
             </span>
           </div>
         </div>
+
         <button
           type="submit"
           class="btn btn-success w-100 btn-login d-flex justify-content-center align-items-center"
@@ -53,6 +56,7 @@ import axios from 'axios'
 
 const isPasswordVisible = ref(false)
 const inputType = computed(() => (isPasswordVisible.value ? 'text' : 'password'))
+// Si usas Bootstrap Icons, cambia a: const iconClass = computed(() => isPasswordVisible.value ? 'bi bi-eye' : 'bi bi-eye-slash')
 const iconClass = computed(() => (isPasswordVisible.value ? 'bx bx-show' : 'bx bx-hide'))
 const togglePasswordVisibility = () => { isPasswordVisible.value = !isPasswordVisible.value }
 
@@ -60,48 +64,10 @@ const email = ref('')
 const password = ref('')
 const isLoading = ref(false)
 
-const loginUrl = process.env.VUE_APP_API_URL + '/auth/login'
 const router = useRouter()
 
-function scheduleExpiryPrompt (expiresInSec) {
-  // Muestra confirmación 60s antes del vencimiento
-  const lead = Math.max(0, (expiresInSec - 60) * 1000)
-  window.clearTimeout(window.__mf_expiry_timer)
-  window.__mf_expiry_timer = setTimeout(async () => {
-    const res = await Swal.fire({
-      icon: 'info',
-      title: 'Tu sesión está por expirar',
-      text: '¿Deseas continuar en la sesión?',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, continuar',
-      cancelButtonText: 'Salir',
-      allowOutsideClick: false
-    })
-    if (res.isConfirmed) {
-      try {
-        const refreshUrl = process.env.VUE_APP_API_URL + '/auth/refresh'
-        const { data } = await axios.post(refreshUrl, {}, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        })
-        // Actualizar token y nuevo timer
-        localStorage.setItem('token', data.access_token)
-        localStorage.setItem('token_type', data.token_type)
-        localStorage.setItem('jti', data.jti)
-        localStorage.setItem('expires_at', data.expires_at)
-        scheduleExpiryPrompt(data.expires_in)
-        Swal.fire({ icon: 'success', title: 'Sesión renovada', timer: 1200, showConfirmButton: false })
-      } catch (e) {
-        // Si falla el refresh, hacemos logout local
-        localStorage.clear()
-        router.push('/login')
-      }
-    } else {
-      // Salir
-      localStorage.clear()
-      router.push('/login')
-    }
-  }, lead)
-}
+const API = (process.env.VUE_APP_API_URL || '').replace(/\/+$/, '')
+const loginUrl   = API + '/auth/login'
 
 const login = async () => {
   isLoading.value = true
@@ -114,37 +80,45 @@ const login = async () => {
   }
 
   try {
-    const { data } = await axios.post(loginUrl, { email: email.value, password: password.value })
+    const resp = await axios.post(loginUrl, { email: email.value, password: password.value })
+    const payload = resp.data
 
-    localStorage.setItem('token', data.access_token)
-    localStorage.setItem('token_type', data.token_type)
-    localStorage.setItem('user', JSON.stringify(data.user))
-    localStorage.setItem('jti', data.jti || '')
-    localStorage.setItem('expires_at', data.expires_at || '')
+    // Si tu main.js expuso onLoginSuccess (con timers globales), úsalo
+    if (typeof window.onLoginSuccess === 'function') {
+      window.onLoginSuccess(payload)
+    } else {
+      // Fallback local
+      localStorage.setItem('token', payload.access_token)
+      localStorage.setItem('token_type', payload.token_type)
+      localStorage.setItem('user', JSON.stringify(payload.user))
+      if (payload.expires_at) localStorage.setItem('expires_at', payload.expires_at)
+      axios.defaults.headers.common.Authorization = `Bearer ${payload.access_token}`
+      if (payload.expires_in) scheduleExpiryPrompt(payload.expires_in)
+    }
 
-    // Programa el aviso de expiración
-    if (data.expires_in) scheduleExpiryPrompt(data.expires_in)
-
-    const nombreUsuario = data.user.name
+    const nombreUsuario = payload.user?.name || 'Usuario'
     Swal.fire({
       icon: 'success',
       title: `¡Hola de nuevo, ${nombreUsuario}! 👋`,
       text: 'Tu sesión ha sido iniciada con éxito.',
       confirmButtonColor: '#28a745',
-      timer: 1500,
+      timer: 1200,
       showConfirmButton: false
     })
 
-    setTimeout(() => {
-      router.push(`/app/${data.user.rol}/dashboard`)
-    }, 900)
+    // Redirigir por rol
+    const rol = payload.user?.rol
+    const destino =
+      rol === 'admin' ? '/app/admin/dashboard' :
+      rol === 'profesor' ? '/app/profesor/dashboard' :
+      '/app/estudiante/dashboard'
+
+    setTimeout(() => { router.push(destino) }, 800)
 
   } catch (err) {
-    let message = 'El servicio no está disponible. Intenta más tarde.'
-    if (err.response) {
-      message = err.response.data.error || 'Datos de acceso incorrectos.'
-    }
-    Swal.fire({ icon: 'error', title: 'Error de acceso', text: message, confirmButtonColor: '#dc3545' })
+    let msg = 'El servicio no está disponible. Intenta más tarde.'
+    if (err?.response?.data?.error) msg = err.response.data.error
+    Swal.fire({ icon: 'error', title: 'Error de acceso', text: msg, confirmButtonColor: '#dc3545' })
   } finally {
     isLoading.value = false
   }

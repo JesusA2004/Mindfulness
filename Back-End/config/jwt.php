@@ -101,7 +101,7 @@ return [
     |
     */
 
-    'ttl' => 10,
+    'ttl' => 5,
 
     /*
     |--------------------------------------------------------------------------
@@ -232,7 +232,7 @@ return [
     |
     */
 
-    'blacklist_grace_period' => env('JWT_BLACKLIST_GRACE_PERIOD', 0),
+    'blacklist_grace_period' => env('JWT_BLACKLIST_GRACE_PERIOD', 5),
 
     /*
     |--------------------------------------------------------------------------
