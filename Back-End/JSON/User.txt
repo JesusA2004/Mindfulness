@@ -1,6 +1,6 @@
 JSON POST USER:
 {
-  "name": "María López",
+  "name": "María Fernanda López",
   "matricula": "M20250045",
   "email": "maria.lopez@itcuernavaca.edu.mx",
   "password": "ClaveSegura2025",
@@ -8,8 +8,7 @@ JSON POST USER:
   "rol": "estudiante",
   "estatus": "activo",
   "urlFotoPerfil": "https://miapp.com/storage/perfiles/maria.png",
-  "persona_id": "68daf59387b4eea7b8014fd3",
-  "institucion_id": "68daf1cf87b4eea7b8014fd2"
+  "persona_id": "68f472a4a82be0f6960d7ba2"
 }
 
 {
@@ -21,8 +20,7 @@ JSON POST USER:
   "rol": "profesor",
   "estatus": "activo",
   "urlFotoPerfil": "https://miapp.com/storage/perfiles/yatziry.png",
-  "persona_id": "68daf59387b4eea7b8014fd4",
-  "institucion_id": "68daf1cf87b4eea7b8014fd2"
+  "persona_id": "68daf59387b4eea7b8014fd4"
 }
 
 {
@@ -34,8 +32,7 @@ JSON POST USER:
   "rol": "administrador",
   "estatus": "activo",
   "urlFotoPerfil": "https://miapp.com/storage/perfiles/jesus.png",
-  "persona_id": "68daf59387b4eea7b8014fd5",
-  "institucion_id": "68daf1cf87b4eea7b8014fd2"
+  "persona_id": "68daf59387b4eea7b8014fd5"
 }
 
 JSON PUT USER:

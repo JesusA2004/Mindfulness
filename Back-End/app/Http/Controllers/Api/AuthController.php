@@ -21,8 +21,7 @@ class AuthController extends Controller
         $data = $request->validated();
 
         // Valores por defecto / normalización de ObjectId (Mongo)
-        $data['estatus']        = $data['estatus']        ?? 'activo';
-        $data['institucion_id'] = new ObjectId($data['institucion_id']);
+        $data['estatus']        = $data['estatus']        ?? 'activo';;
         $data['persona_id']     = new ObjectId($data['persona_id']);
 
         try {
@@ -162,7 +161,6 @@ class AuthController extends Controller
                 'estatus'        => $user->estatus ?? null,
                 'urlFotoPerfil'  => $user->urlFotoPerfil ?? null,
                 'persona_id'     => isset($user->persona_id) ? (string) $user->persona_id : null,
-                'institucion_id' => isset($user->institucion_id) ? (string) $user->institucion_id : null,
                 'puntosCanjeo'   => $user->puntosCanjeo ?? 0,
                 'current_jti'    => $user->current_jti ?? $jti,
                 'id'             => (string) ($user->_id ?? $user->id),

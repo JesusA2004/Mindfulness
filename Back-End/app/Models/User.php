@@ -64,9 +64,6 @@ class User extends Authenticatable implements JWTSubject
     protected static function booted()
     {
         static::creating(function (self $user) {
-            if (empty($user->institucion_id)) {
-                throw new Exception('institucion_id es requerido para crear un usuario.');
-            }
             if (empty($user->persona_id)) {
                 throw new Exception('persona_id es requerido para crear un usuario.');
             }
