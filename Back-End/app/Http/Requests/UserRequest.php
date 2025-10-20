@@ -14,89 +14,81 @@ class UserRequest extends FormRequest
 
     public function rules(): array
     {
-        // Soporta tanto route-model binding como id string
+        // Soporta binding por modelo o id directo
         $routeUser = $this->route('user');
         $userId = is_object($routeUser) && method_exists($routeUser, 'getKey')
             ? $routeUser->getKey()
             : $routeUser;
 
         return [
-            'name'            => ['required', 'string', 'max:255'],
+            'name'          => ['required', 'string', 'max:255'],
 
-            'matricula'       => [
+            'matricula'     => [
                 'required', 'string', 'max:50',
                 Rule::unique('users', 'matricula')->ignore($userId, '_id'),
             ],
 
-            'email'           => [
-                'required', 'email',
+            'email'         => [
+                'required', 'email', 'max:255',
                 Rule::unique('users', 'email')->ignore($userId, '_id'),
             ],
 
-            'password'        => $this->isMethod('POST')
-                ? ['required', 'string', 'min:6', 'confirmed']
-                : ['nullable', 'string', 'min:6', 'confirmed'],
+            // La contraseña es OPCIONAL: si no llega, se generará en el controlador
+            'password'      => ['nullable', 'string', 'min:8'],
 
-            // Usa los valores en minúsculas que definiste
-            'rol'             => ['required', 'string', Rule::in(['estudiante','profesor','admin'])],
+            'rol'           => ['required', 'string', Rule::in(['estudiante','profesor','admin'])],
 
-            'estatus'         => ['nullable', 'string', Rule::in(['activo','bajaSistema','bajaTemporal'])],
+            'estatus'       => ['nullable', 'string', Rule::in(['activo','bajaSistema','bajaTemporal'])],
 
-            'urlFotoPerfil'   => ['nullable', 'url'],
+            'urlFotoPerfil' => ['nullable', 'url'],
 
-            // >>> puntosCanjeo: entero y no negativo
-            'puntosCanjeo'    => ['sometimes', 'integer', 'min:0'],
+            // bandera para que el backend envíe o no el correo con la contraseña
+            'notify_email'  => ['sometimes', 'boolean'],
 
-            'persona_id'      => ['required', 'string', 'size:24'],
+            // id de la persona (usa size:24 si tu _id es ObjectId; ajusta si usas UUID/auto-increment)
+            'persona_id'    => ['required', 'string', 'size:24'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'name.required'           => 'El nombre es obligatorio. Capture el nombre del usuario.',
-            'name.string'             => 'El nombre debe ser texto.',
-            'name.max'                => 'El nombre no debe exceder 255 caracteres.',
+            'name.required'        => 'El nombre es obligatorio.',
+            'name.string'          => 'El nombre debe ser texto.',
+            'name.max'             => 'El nombre no debe exceder 255 caracteres.',
 
-            'matricula.required'      => 'La matrícula es obligatoria. Ingrésela tal como aparece en su registro.',
-            'matricula.string'        => 'La matrícula debe ser texto.',
-            'matricula.max'           => 'La matrícula no debe exceder 50 caracteres.',
-            'matricula.unique'        => 'La matrícula ya está registrada. Use una diferente.',
+            'matricula.required'   => 'La matrícula es obligatoria.',
+            'matricula.string'     => 'La matrícula debe ser texto.',
+            'matricula.max'        => 'La matrícula no debe exceder 50 caracteres.',
+            'matricula.unique'     => 'La matrícula ya está registrada.',
 
-            'email.required'          => 'El correo electrónico es obligatorio.',
-            'email.email'             => 'Ingrese un correo electrónico válido (ejemplo@dominio.com).',
-            'email.unique'            => 'El correo electrónico ya está registrado. Use uno diferente.',
+            'email.required'       => 'El correo es obligatorio.',
+            'email.email'          => 'El correo debe ser válido.',
+            'email.max'            => 'El correo no debe exceder 255 caracteres.',
+            'email.unique'         => 'El correo ya está registrado.',
 
-            'password.required'       => 'La contraseña es obligatoria.',
-            'password.string'         => 'La contraseña debe ser texto.',
-            'password.min'            => 'La contraseña debe tener al menos 6 caracteres.',
-            'password.confirmed'      => 'La confirmación de la contraseña no coincide. Vuelva a escribirla.',
+            'password.string'      => 'La contraseña debe ser texto.',
+            'password.min'         => 'La contraseña debe tener al menos 8 caracteres.',
 
-            'rol.required'            => 'El rol es obligatorio. Seleccione estudiante, profesor o admin.',
-            'rol.string'              => 'El rol debe ser texto.',
-            'rol.in'                  => 'El rol debe ser uno de: estudiante, profesor o admin.',
+            'rol.required'         => 'El rol es obligatorio.',
+            'rol.in'               => 'El rol debe ser: estudiante, profesor o admin.',
 
-            'estatus.string'          => 'El estatus debe ser texto.',
-            'estatus.in'              => 'El estatus debe ser: activo, bajaSistema o bajaTemporal.',
+            'estatus.in'           => 'El estatus debe ser: activo, bajaSistema o bajaTemporal.',
 
-            'urlFotoPerfil.url'       => 'La URL de la foto de perfil no es válida. Ingrese una dirección web correcta.',
+            'urlFotoPerfil.url'    => 'La URL de la foto de perfil no es válida.',
 
-            // >>> mensajes claros para puntosCanjeo
-            'puntosCanjeo.integer'    => 'Los puntos de canje deben ser un número entero.',
-            'puntosCanjeo.min'        => 'No se permiten números negativos en los puntos de canje. Ingrese un valor mayor o igual a 0.',
+            'notify_email.boolean' => 'El campo de notificación por correo es inválido.',
 
-            'persona_id.required'     => 'El ID de la persona es obligatorio.',
-            'persona_id.string'       => 'El ID de la persona debe ser una cadena.',
-            'persona_id.size'         => 'El ID de la persona debe tener exactamente 24 caracteres.',
+            'persona_id.required'  => 'El ID de la persona es obligatorio.',
+            'persona_id.string'    => 'El ID de la persona debe ser una cadena.',
+            'persona_id.size'      => 'El ID de la persona debe tener exactamente 24 caracteres.',
         ];
     }
 
     public function attributes(): array
     {
-        // Para que los mensajes se lean más naturales
         return [
-            'puntosCanjeo'   => 'puntos de canje',
-            'persona_id'     => 'ID de la persona',
+            'persona_id' => 'ID de la persona',
         ];
     }
 }

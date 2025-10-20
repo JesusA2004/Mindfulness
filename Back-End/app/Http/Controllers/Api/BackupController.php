@@ -4,187 +4,147 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Symfony\Component\Process\Process;
-use Symfony\Component\Process\Exception\ProcessFailedException;
 use MongoDB\Client as MongoClient;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Str;
+use ZipArchive;
+use Throwable;
 
 class BackupController extends Controller
 {
     /**
-     * GET /api/backups/export?type=excel|csv|mongo
-     * - excel: genera un XLSX con una hoja por colección
-     * - csv: genera un ZIP con un CSV por colección
-     * - mongo: genera un dump nativo (archivo .archive.gz mediante mongodump)
+     * GET /api/backups/export?type=excel|csv|json
+     * - excel: XLSX con una hoja por colección
+     * - csv: ZIP con un CSV por colección
+     * - json: ZIP con un JSON por colección (array de documentos)
      */
     public function export(Request $request)
     {
-        $type = strtolower($request->query('type', 'mongo')); // default mongo
-        $db     = config('database.connections.mongodb.database');
-        $folder = 'backups';
-        Storage::makeDirectory($folder);
+        try {
+            $type   = strtolower($request->query('type', 'json'));
+            $db     = config('database.connections.mongodb.database');
+            $folder = 'backups';
+            Storage::makeDirectory($folder);
 
-        switch ($type) {
-            case 'excel':
+            if ($type === 'excel') {
                 $fileName = 'backup_'.$db.'_'.now()->format('Ymd_His').'.xlsx';
                 $path = $folder . '/' . $fileName;
-                // Construir Excel con una hoja por colección:
-                $dataByCollection = $this->fetchAllCollectionsAsArrays();
-                // Usamos Excel::raw para crear el archivo en disco:
-                Excel::store(new \App\Exports\MongoCollectionsExport($dataByCollection), $path, null, \Maatwebsite\Excel\Excel::XLSX);
-                return Storage::download($path, $fileName);
 
-            case 'csv':
+                $dataByCollection = $this->fetchAllCollectionsAsArrays();
+                Excel::store(
+                    new \App\Exports\MongoCollectionsExport($dataByCollection),
+                    $path,
+                    null,
+                    \Maatwebsite\Excel\Excel::XLSX
+                );
+
+                return Storage::download($path, $fileName, [
+                    'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
+                ]);
+            }
+
+            if ($type === 'csv') {
+                // ZIP con un CSV por colección (usando buffer en memoria)
                 $zipName = 'backup_'.$db.'_'.now()->format('Ymd_His').'.zip';
-                $zipPath = storage_path('app/'.$folder.'/'.$zipName);
+                $zipDiskPath = storage_path('app/'.$folder.'/'.$zipName);
 
                 $dataByCollection = $this->fetchAllCollectionsAsArrays();
-                // Crear CSVs temporales y zipearlos:
-                $zip = new \ZipArchive();
-                if ($zip->open($zipPath, \ZipArchive::CREATE) !== TRUE) {
+
+                $zip = new ZipArchive();
+                if ($zip->open($zipDiskPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+                    Log::error('No se pudo crear el ZIP de respaldo (CSV).', ['path' => $zipDiskPath]);
                     return response()->json(['message' => 'No se pudo crear ZIP'], 500);
                 }
 
                 foreach ($dataByCollection as $collection => $rows) {
-                    $csvTemp = tmpfile();
-                    $meta = stream_get_meta_data($csvTemp);
-                    $tmpPath = $meta['uri'];
-
-                    // Escribir encabezados + filas (asumiendo documentos flat/normalizados)
                     $headers = $this->collectAllKeys($rows);
-                    fputcsv($csvTemp, $headers);
-                    foreach ($rows as $row) {
-                        $line = [];
-                        foreach ($headers as $h) {
-                            $val = $row[$h] ?? null;
-                            if (is_array($val) || is_object($val)) $val = json_encode($val, JSON_UNESCAPED_UNICODE);
-                            $line[] = $val;
-                        }
-                        fputcsv($csvTemp, $line);
-                    }
-                    fflush($csvTemp);
-                    $zip->addFile($tmpPath, $collection.'.csv');
-
-                    // No cerramos tmpfile hasta cerrar zip (Windows lock-safe)
+                    $csv = $this->rowsToCsvString($headers, $rows);
+                    $zip->addFromString($collection.'.csv', $csv);
                 }
+
                 $zip->close();
 
-                return response()->download($zipPath, $zipName)->deleteFileAfterSend(true);
+                return response()->download($zipDiskPath, $zipName, [
+                    'Content-Type' => 'application/zip',
+                    'Content-Disposition' => 'attachment; filename="'.$zipName.'"',
+                ])->deleteFileAfterSend(true);
+            }
 
-            case 'mongo':
-            default:
-                // Dump nativo: archivo .archive.gz
-                $fileName = 'backup_'.$db.'_'.now()->format('Ymd_His').'.archive.gz';
-                $fullPath = storage_path('app/'.$folder.'/'.$fileName);
-                $cmd = [
-                    'mongodump',
-                    '--db='.$db,
-                    '--archive='.$fullPath,
-                    '--gzip',
-                ];
+            // === JSON (ZIP por colección) ===
+            if ($type === 'json') {
+                $zipName = 'backup_'.$db.'_'.now()->format('Ymd_His').'.json.zip';
+                $zipDiskPath = storage_path('app/'.$folder.'/'.$zipName);
 
-                // Si usas usuario/contraseña:
-                $username = config('database.connections.mongodb.username');
-                $password = config('database.connections.mongodb.password');
-                $host     = config('database.connections.mongodb.host', '127.0.0.1');
-                $port     = config('database.connections.mongodb.port', 27017);
+                $dataByCollection = $this->fetchAllCollectionsAsArrays();
 
-                $cmd[] = '--host='.$host.':'.$port;
-                if ($username) $cmd[] = '--username='.$username;
-                if ($password) $cmd[] = '--password='.$password;
-                // Si tienes authSource
-                $authSource = config('database.connections.mongodb.options.database') ?? null;
-                if ($authSource) $cmd[] = '--authenticationDatabase='.$authSource;
-
-                $process = new Process($cmd);
-                $process->setTimeout(3600);
-                $process->run();
-
-                if (!$process->isSuccessful()) {
-                    return response()->json([
-                        'message' => 'Error al generar dump Mongo',
-                        'error'   => $process->getErrorOutput(),
-                    ], 500);
+                $zip = new ZipArchive();
+                if ($zip->open($zipDiskPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+                    Log::error('No se pudo crear el ZIP de respaldo (JSON).', ['path' => $zipDiskPath]);
+                    return response()->json(['message' => 'No se pudo crear ZIP'], 500);
                 }
 
-                return response()->download($fullPath, $fileName)->deleteFileAfterSend(true);
+                foreach ($dataByCollection as $collection => $rows) {
+                    // Guardamos cada colección como un array JSON pretty
+                    $json = json_encode($rows, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+                    $zip->addFromString($collection.'.json', $json === false ? '[]' : $json);
+                }
+
+                $zip->close();
+
+                return response()->download($zipDiskPath, $zipName, [
+                    'Content-Type' => 'application/zip',
+                    'Content-Disposition' => 'attachment; filename="'.$zipName.'"',
+                ])->deleteFileAfterSend(true);
+            }
+
+            return response()->json(['message' => 'Tipo no soportado. Usa excel|csv|json'], 422);
+
+        } catch (Throwable $e) {
+            Log::error('Export backup error', ['ex' => $e]);
+            return response()->json([
+                'message' => 'No se pudo generar el respaldo.',
+                'error' => $e->getMessage(),
+            ], 500);
         }
     }
 
     /**
      * POST /api/backups/import
-     * multipart/form-data: file, mode (replace|merge opcional), format (excel|csv|txt|mongo)
+     * multipart/form-data: file, format (excel|csv|txt|json), mode (replace|merge)
+     *
+     * JSON soportado:
+     *  - Un .zip con varios .json (cada archivo es una colección: <nombre>.json = array de documentos)
+     *  - Un .json único con un array de documentos => requiere ?collection=Nombre
+     *  - Un .json único con objeto { "coleccionA": [...], "coleccionB": [...] }  (combinado)
      */
     public function import(Request $request)
     {
         $request->validate([
             'file'   => ['required', 'file'],
-            'format' => ['required', 'in:excel,csv,txt,mongo'],
-            'mode'   => ['nullable', 'in:replace,merge'] // replace: borra colección antes de importar
+            'format' => ['required', 'in:excel,csv,txt,json'],
+            'mode'   => ['nullable', 'in:replace,merge']
         ]);
 
-        $format = $request->input('format');
-        $mode   = $request->input('mode', 'merge');
-        $file   = $request->file('file');
+        try {
+            $format = $request->input('format');
+            $mode   = $request->input('mode', 'merge');
+            $file   = $request->file('file');
 
-        switch ($format) {
-            case 'mongo':
-                // Restaurar dump nativo (.archive.gz o .bson con --archive)
-                $db = config('database.connections.mongodb.database');
+            if ($format === 'excel') {
                 $uploadedPath = $file->store('imports');
                 $fullPath = storage_path('app/'.$uploadedPath);
 
-                $cmd = [
-                    'mongorestore',
-                    '--db='.$db,
-                    '--archive='.$fullPath,
-                    '--gzip',
-                ];
-                if ($mode === 'replace') $cmd[] = '--drop';
-
-                // Conexión
-                $username = config('database.connections.mongodb.username');
-                $password = config('database.connections.mongodb.password');
-                $host     = config('database.connections.mongodb.host', '127.0.0.1');
-                $port     = config('database.connections.mongodb.port', 27017);
-
-                $cmd[] = '--host='.$host.':'.$port;
-                if ($username) $cmd[] = '--username='.$username;
-                if ($password) $cmd[] = '--password='.$password;
-                $authSource = config('database.connections.mongodb.options.database') ?? null;
-                if ($authSource) $cmd[] = '--authenticationDatabase='.$authSource;
-
-                $process = new Process($cmd);
-                $process->setTimeout(3600);
-                $process->run();
-
-                if (!$process->isSuccessful()) {
-                    return response()->json([
-                        'message' => 'Error al restaurar dump Mongo',
-                        'error'   => $process->getErrorOutput(),
-                    ], 500);
-                }
-                return response()->json(['message' => 'Restauración Mongo completada']);
-
-            case 'excel':
-                // Un XLSX con varias hojas (una por colección).
-                // Requiere que las primeras filas sean encabezados.
-                $uploadedPath = $file->store('imports');
-                $fullPath = storage_path('app/'.$uploadedPath);
-
-                $sheets = Excel::toArray([], $fullPath); // array de hojas
-                // sheets: [ [ [row1], [row2], ... ], [ ... ] ]
+                $sheets = \Maatwebsite\Excel\Facades\Excel::toArray([], $fullPath);
                 if (empty($sheets)) {
                     return response()->json(['message' => 'El Excel no contiene hojas'], 422);
                 }
 
-                // Convención: el nombre de la hoja define el nombre de la colección
-                // y la primera fila son los headers.
                 $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($fullPath);
                 foreach ($spreadsheet->getAllSheets() as $sheet) {
-                    $collectionName = Str::snake($sheet->getTitle()); // o deja tal cual
+                    $collectionName = Str::snake($sheet->getTitle());
                     $rows = $sheet->toArray(null, true, true, true);
                     if (count($rows) < 2) continue;
 
@@ -196,9 +156,8 @@ class BackupController extends Controller
                         $doc = [];
                         $j=0;
                         foreach ($headers as $h) {
-                            $col = chr(65+$j); // A,B,C...
+                            $col = chr(65+$j);
                             $val = $row[$col] ?? null;
-                            // Intenta decodificar JSON si luce como objeto/array
                             if (is_string($val) && $this->looksLikeJson($val)) {
                                 $decoded = json_decode($val, true);
                                 if (json_last_error() === JSON_ERROR_NONE) $val = $decoded;
@@ -211,23 +170,21 @@ class BackupController extends Controller
                     $this->bulkUpsert($collectionName, $docs, $mode);
                 }
                 return response()->json(['message' => 'Importación Excel completada']);
+            }
 
-            case 'csv':
-            case 'txt':
-                // Recibe un ZIP de varios CSV (uno por colección) o un CSV único (una colección)
+            if ($format === 'csv' || $format === 'txt') {
                 $uploadedPath = $file->store('imports');
                 $fullPath = storage_path('app/'.$uploadedPath);
 
                 $ext = strtolower($file->getClientOriginalExtension());
                 if ($ext === 'zip') {
-                    $zip = new \ZipArchive();
-                    if ($zip->open($fullPath) === TRUE) {
+                    $zip = new ZipArchive();
+                    if ($zip->open($fullPath) === true) {
                         $extractPath = storage_path('app/imports/'.pathinfo($uploadedPath, PATHINFO_FILENAME));
                         @mkdir($extractPath, 0775, true);
                         $zip->extractTo($extractPath);
                         $zip->close();
 
-                        // Procesar todos los CSV en la carpeta
                         $files = glob($extractPath.'/*.csv');
                         foreach ($files as $csvPath) {
                             $collectionName = Str::snake(pathinfo($csvPath, PATHINFO_FILENAME));
@@ -238,12 +195,67 @@ class BackupController extends Controller
                         return response()->json(['message' => 'No se pudo abrir ZIP'], 422);
                     }
                 } else {
-                    // Un solo CSV/TXT -> requiere query param ?collection=Nombre
                     $collectionName = Str::snake($request->query('collection', 'import_generic'));
                     $docs = $this->readCsv($fullPath);
                     $this->bulkUpsert($collectionName, $docs, $mode);
                 }
                 return response()->json(['message' => 'Importación CSV/TXT completada']);
+            }
+
+            if ($format === 'json') {
+                $uploadedPath = $file->store('imports');
+                $fullPath = storage_path('app/'.$uploadedPath);
+
+                $ext = strtolower($file->getClientOriginalExtension());
+                if ($ext === 'zip') {
+                    // ZIP con varios .json => cada archivo es una colección
+                    $zip = new ZipArchive();
+                    if ($zip->open($fullPath) === true) {
+                        $extractPath = storage_path('app/imports/'.pathinfo($uploadedPath, PATHINFO_FILENAME));
+                        @mkdir($extractPath, 0775, true);
+                        $zip->extractTo($extractPath);
+                        $zip->close();
+
+                        $files = glob($extractPath.'/*.json');
+                        foreach ($files as $jsonPath) {
+                            $collectionName = Str::snake(pathinfo($jsonPath, PATHINFO_FILENAME));
+                            $docs = $this->readJsonFile($jsonPath, $request->query('collection'));
+                            // readJsonFile retorna:
+                            // - array de docs (para colecciones sueltas)
+                            // - o ['__combined__' => [ 'colA'=>[], 'colB'=>[] ]] si es combinado (no será el caso por archivo)
+                            if (isset($docs['__combined__'])) {
+                                foreach ($docs['__combined__'] as $col => $arr) {
+                                    $this->bulkUpsert(Str::snake($col), $arr, $mode);
+                                }
+                            } else {
+                                $this->bulkUpsert($collectionName, $docs, $mode);
+                            }
+                        }
+                    } else {
+                        return response()->json(['message' => 'No se pudo abrir ZIP'], 422);
+                    }
+                } else {
+                    // Un solo .json: puede ser colección única (array) o combinado (objeto con colecciones)
+                    $parsed = $this->readJsonFile($fullPath, $request->query('collection'));
+                    if (isset($parsed['__combined__'])) {
+                        foreach ($parsed['__combined__'] as $col => $arr) {
+                            $this->bulkUpsert(Str::snake($col), $arr, $mode);
+                        }
+                    } else {
+                        $collectionName = Str::snake($request->query('collection', 'import_generic'));
+                        $this->bulkUpsert($collectionName, $parsed, $mode);
+                    }
+                }
+                return response()->json(['message' => 'Importación JSON completada']);
+            }
+
+            return response()->json(['message' => 'Formato no soportado'], 422);
+        } catch (Throwable $e) {
+            Log::error('Import backup error', ['ex' => $e]);
+            return response()->json([
+                'message' => 'Error en importación',
+                'error'   => $e->getMessage(),
+            ], 500);
         }
     }
 
@@ -260,7 +272,6 @@ class BackupController extends Controller
         $out = [];
         foreach ($list as $colInfo) {
             $name = $colInfo->getName();
-            // Evita system collections
             if (Str::startsWith($name, 'system.')) continue;
 
             $cursor = $db->selectCollection($name)->find();
@@ -286,7 +297,75 @@ class BackupController extends Controller
         foreach ($rows as $r) {
             foreach (array_keys($r) as $k) $keys[$k] = true;
         }
-        return array_values(array_keys($keys));
+        // _id primero si existe
+        $all = array_keys($keys);
+        usort($all, function ($a, $b) {
+            if ($a === '_id') return -1;
+            if ($b === '_id') return 1;
+            return strcmp($a, $b);
+        });
+        return $all;
+    }
+
+    protected function rowsToCsvString(array $headers, array $rows): string
+    {
+        $fh = fopen('php://temp', 'r+');
+        if (!empty($headers)) {
+            fputcsv($fh, $headers);
+            foreach ($rows as $row) {
+                $line = [];
+                foreach ($headers as $h) {
+                    $val = $row[$h] ?? null;
+                    if (is_array($val) || is_object($val)) {
+                        $val = json_encode($val, JSON_UNESCAPED_UNICODE);
+                    }
+                    $line[] = $val;
+                }
+                fputcsv($fh, $line);
+            }
+        }
+        rewind($fh);
+        $csv = stream_get_contents($fh);
+        fclose($fh);
+        return (string)$csv;
+    }
+
+    /**
+     * Lee un archivo JSON y devuelve:
+     * - array de documentos (colección simple)
+     * - o ['__combined__' => [ 'colA' => [...], 'colB' => [...] ]] si es combinado
+     */
+    protected function readJsonFile(string $path, ?string $collectionQueryParam = null): array
+    {
+        $content = @file_get_contents($path);
+        if ($content === false) return [];
+
+        $decoded = json_decode($content, true);
+        if (json_last_error() !== JSON_ERROR_NONE) return [];
+
+        // Caso A: array => documentos para UNA colección (necesita ?collection si no está en ZIP)
+        if (is_array($decoded) && array_is_list($decoded)) {
+            return $decoded;
+        }
+
+        // Caso B: objeto => puede ser combinado { "colA": [...], "colB": [...] }
+        if (is_array($decoded) && !array_is_list($decoded)) {
+            // Si viene ?collection=Nombre, toma solo esa
+            if ($collectionQueryParam && isset($decoded[$collectionQueryParam]) && is_array($decoded[$collectionQueryParam])) {
+                return $decoded[$collectionQueryParam];
+            }
+
+            // Si no hubo ?collection, interpretamos como combinado
+            $map = [];
+            foreach ($decoded as $col => $arr) {
+                if (is_array($arr)) {
+                    $map[$col] = $arr;
+                }
+            }
+            return ['__combined__' => $map];
+        }
+
+        return [];
     }
 
     protected function mongoClient(): MongoClient
@@ -296,6 +375,11 @@ class BackupController extends Controller
         $user = config('database.connections.mongodb.username');
         $pass = config('database.connections.mongodb.password');
         $authSource = config('database.connections.mongodb.options.database') ?? 'admin';
+        $dsn       = config('database.connections.mongodb.dsn');
+
+        if (!empty($dsn)) {
+            return new MongoClient($dsn);
+        }
 
         $uri = "mongodb://";
         if ($user) $uri .= urlencode($user).($pass ? ':' . urlencode($pass) : '') . '@';
@@ -319,11 +403,13 @@ class BackupController extends Controller
         if (!$fh) return [];
         $docs = [];
         $headers = fgetcsv($fh);
-        if (!$headers) return [];
+        if (!$headers) { fclose($fh); return []; }
 
         while (($row = fgetcsv($fh)) !== false) {
             $doc = [];
             foreach ($headers as $i => $h) {
+                $h = trim((string)$h);
+                if ($h === '') continue;
                 $val = $row[$i] ?? null;
                 if (is_string($val) && $this->looksLikeJson($val)) {
                     $decoded = json_decode($val, true);
@@ -337,11 +423,6 @@ class BackupController extends Controller
         return $docs;
     }
 
-    /**
-     * Inserta/actualiza en bulk.
-     * - mode=replace: elimina colección antes de insertar
-     * - mode=merge: upsert por _id si existe; sino inserta
-     */
     protected function bulkUpsert(string $collectionName, array $docs, string $mode = 'merge'): void
     {
         $client = $this->mongoClient();
@@ -354,15 +435,17 @@ class BackupController extends Controller
             return;
         }
 
-        // merge (upsert por _id si viene); si no hay _id, inserta
         $bulk = [];
         $insertBatch = [];
         foreach ($docs as $d) {
-            if (isset($d['_id']) && $d['_id']) {
-                $id = $d['_id'];
-                $filter = ['_id' => $id];
-                $update = ['$set' => $d];
-                $bulk[] = ['updateOne' => [$filter, $update, ['upsert' => true]]];
+            if (isset($d['_id']) && $d['_id'] !== null && $d['_id'] !== '') {
+                $bulk[] = [
+                    'updateOne' => [
+                        ['_id' => $d['_id']],
+                        ['$set' => $d],
+                        ['upsert' => true]
+                    ]
+                ];
             } else {
                 $insertBatch[] = $d;
             }
