@@ -1,12 +1,32 @@
-import { ref, reactive } from 'vue';
+// src/assets/js/useBitacorasCalendar.js
+import { ref, reactive, computed } from 'vue';
 import axios from 'axios';
 import Modal from 'bootstrap/js/dist/modal';
 import { apiBase, authHeaders, makeDebouncer, toast as baseToast, getId } from '@/assets/js/crudUtils';
 
-const API_BASE = process.env.VUE_APP_API_URL + '/bitacoras';
-const AUTH_PROFILE = apiBase('/auth/user-profile');
-const USERS_POINTS = (id) => API_BASE + `/users/${id}/points`;
-const USERS_EARN   = (id) => API_BASE + `/users/${id}/points/earn`;
+/* =========================
+   BASES de API (corregidas)
+========================= */
+const API_ROOT   = (process.env.VUE_APP_API_URL || '').replace(/\/+$/, ''); // ej. http://127.0.0.1:8000/api
+const API_BASE   = `${API_ROOT}/bitacoras`;           // ← Bitácoras
+const USERS_BASE = `${API_ROOT}/users`;               // ← Usuarios/Puntos
+const AUTH_PROFILE = `${API_ROOT}/auth/user-profile`;
+
+// Endpoints de puntos (definitivos)
+const USERS_POINTS = (id) => `${USERS_BASE}/${id}/points`;      // GET: puntos actuales
+const USERS_EARN   = (id) => `${USERS_BASE}/${id}/points/earn`; // POST: abonar puntos
+
+// Arma headers de auth (tolerante a cómo guardaste el token en Login.vue)
+function mergedAuthHeaders () {
+  const h = (typeof authHeaders === 'function' ? authHeaders() : {}) || {};
+  // fallback a lo que guardó Login.vue
+  const tokenType   = localStorage.getItem('token_type') || 'Bearer';
+  const accessToken = localStorage.getItem('token');
+  if (accessToken && !h.Authorization) {
+    h.Authorization = `${tokenType} ${accessToken}`;
+  }
+  return h;
+}
 
 export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
   const items = ref([]);
@@ -42,7 +62,9 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
     emoji: ''
   });
 
-  // ===== Utils
+  /* =========================
+     Utils
+  ========================= */
   function emojiFromTitle(t) {
     if (!t) return '';
     const m = String(t).trim().match(/^([\u{1F600}-\u{1FAFF}\u{1F300}-\u{1F64F}\u{1F680}-\u{1F6FF}])\s+/u);
@@ -78,28 +100,73 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
     };
   }
 
-  // ===== Usuario + puntos (con headers)
+  function todayISO() {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  function hasEntry(isoDate) {
+    return items.value.some(b => b.fecha === isoDate);
+  }
+  function getEntryByDate(isoDate) {
+    return items.value.find(b => b.fecha === isoDate) || null;
+  }
+
+  // Puntos motivacionales
+  function pointsForDate(isoDate) {
+    // 1–10: 2 puntos, 11–20: 1 punto, 21–31: 3 puntos
+    const day = Number(isoDate?.slice(8, 10) || '0');
+    if (day >= 1 && day <= 10) return 2;
+    if (day >= 11 && day <= 20) return 1;
+    return 3;
+  }
+
+  /* =========================
+     Usuario + Puntos
+  ========================= */
+  function getUserIdFromStorage() {
+    try {
+      const raw = localStorage.getItem('user');
+      if (!raw) return null;
+      const u = JSON.parse(raw);
+      return u?._id || u?.id || null;
+    } catch { return null; }
+  }
+
   async function loadUserAndPoints() {
     try {
-      const { data: profile } = await axios.get(AUTH_PROFILE, { headers: authHeaders() });
-      const uid = profile?.user?._id || profile?.user?.id || null;
+      // 1) Usa localStorage primero (tu Login.vue ya guarda ahí)
+      let uid = getUserIdFromStorage();
+
+      // 2) Fallback al perfil (por si se abrió en pestaña nueva y no hay user en LS)
+      if (!uid) {
+        const { data: profile } = await axios.get(AUTH_PROFILE, { headers: mergedAuthHeaders() });
+        uid = profile?.user?._id || profile?.user?.id || null;
+      }
       currentUserId.value = uid;
 
-      if (!uid) { puntos.value = 0; puntosCargados.value = true; return; }
+      if (!uid) {
+        puntos.value = 0;
+        puntosCargados.value = true;
+        return;
+      }
 
-      const { data: ptsRes } = await axios.get(USERS_POINTS(uid), { headers: authHeaders() });
+      const { data: ptsRes } = await axios.get(USERS_POINTS(uid), { headers: mergedAuthHeaders() });
       puntos.value = Number(ptsRes?.puntosCanjeo ?? 0);
       puntosCargados.value = true;
     } catch (e) {
       console.error('loadUserAndPoints error:', e?.response?.data || e);
-      puntos.value = 0; puntosCargados.value = true;en
+      puntos.value = 0;
+      puntosCargados.value = true; // ← (FIX) sin el typo que rompía
     }
   }
 
   async function refreshPoints() {
     if (!currentUserId.value) return;
     try {
-      const { data } = await axios.get(USERS_POINTS(currentUserId.value), { headers: authHeaders() });
+      const { data } = await axios.get(USERS_POINTS(currentUserId.value), { headers: mergedAuthHeaders() });
       puntos.value = Number(data?.puntosCanjeo ?? 0);
     } catch (e) {
       console.error('refreshPoints error:', e?.response?.data || e);
@@ -109,22 +176,29 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
   async function earnPoints(amount) {
     if (!currentUserId.value) return;
     try {
-      await axios.post(USERS_EARN(currentUserId.value), { puntos: amount }, { headers: authHeaders() });
+      const res = await axios.post(
+        USERS_EARN(currentUserId.value),
+        { puntos: amount },
+        { headers: mergedAuthHeaders() }
+      );
       await refreshPoints();
+      return res;
     } catch (e) {
       console.error('earnPoints error:', e?.response?.data || e);
       toast('No fue posible abonar puntos.', 'error');
     }
   }
 
-  // ===== Fetch por mes/año
+  /* =========================
+     Fetch por mes/año
+  ========================= */
   async function fetchMonth(m, y) {
     try {
       isLoading.value = true;
       month.value = m; year.value = y;
       const { data } = await axios.get(API_BASE, {
         params: { mes: m, anio: y },
-        headers: authHeaders()
+        headers: mergedAuthHeaders()
       });
       const list = Array.isArray(data?.bitacoras) ? data.bitacoras : [];
       items.value = list.map(normalize);
@@ -136,7 +210,9 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
     }
   }
 
-  // ===== Ver/Crear/Editar
+  /* =========================
+     Ver / Crear / Editar
+  ========================= */
   function openView(item) {
     selected.value = normalize(item);
     if (!viewModal && viewModalRef.value) viewModal = new Modal(viewModalRef.value, { backdrop: 'static' });
@@ -144,9 +220,18 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
   }
 
   function openCreate(isoDate) {
+    const d = isoDate || todayISO();
+    // Enforce: 1 bitácora por día
+    const existing = getEntryByDate(d);
+    if (existing) {
+      openView(existing);
+      toast('Ya registraste tu bitácora de este día. Puedes editarla.', 'warning');
+      return;
+    }
+
     isEditing.value = false;
     resetForm();
-    form.fecha = isoDate || todayISO();
+    form.fecha = d;
     if (!form.emoji) form.emoji = EMOJIS[0] || '🙂';
     if (!formModal && formModalRef.value) formModal = new Modal(formModalRef.value, { backdrop: 'static' });
     formModal?.show();
@@ -169,31 +254,21 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
     if (kind === 'view') viewModal?.hide();
   }
 
-  function todayISO() {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  }
-
-  // ===== Esquema motivacional
-  function pointsForDate(isoDate) {
-    // 1–10: doble (2), 11–20: simple (1), 21–31: triple (3)
-    const day = Number(isoDate?.slice(8, 10) || '0');
-    if (day >= 1 && day <= 10) return 2;
-    if (day >= 11 && day <= 20) return 1;
-    return 3;
-  }
-
-  // ===== Submit — con fallback local para "awarded"
+  /* =========================
+     Submit — abona puntos y fuerza re-pintado
+  ========================= */
   async function onSubmit() {
     if (!form.titulo?.trim()) { toast('El título es obligatorio.', 'error'); return; }
     if (!form.fecha) { toast('La fecha es inválida.', 'error'); return; }
     if (!form.emoji) { toast('Selecciona un emoji.', 'error'); return; }
 
-    // ¿ya había bitácora ese día? (para fallback si el back no manda awarded)
-    const existedBefore = items.value.some(b => b.fecha === form.fecha);
+    const existedBefore = hasEntry(form.fecha);
+    if (!isEditing.value && existedBefore) {
+      const existing = getEntryByDate(form.fecha);
+      toast('Solo puedes tener 1 bitácora por día. Edita la existente.', 'warning');
+      openEdit(existing);
+      return;
+    }
 
     saving.value = true;
     try {
@@ -204,17 +279,17 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
       };
 
       if (isEditing.value && form._id) {
-        const { data } = await axios.put(`${API_BASE}/${form._id}`, body, { headers: authHeaders() });
+        const { data } = await axios.put(`${API_BASE}/${form._id}`, body, { headers: mergedAuthHeaders() });
         const saved = normalize(data?.bitacora?.data ?? data?.bitacora ?? data);
         upsertLocal(saved);
         toast('Bitácora actualizada.');
       } else {
-        const { data } = await axios.post(API_BASE, body, { headers: authHeaders() });
+        const { data } = await axios.post(API_BASE, body, { headers: mergedAuthHeaders() });
         const saved = normalize(data?.bitacora?.data ?? data?.bitacora ?? data);
         upsertLocal(saved);
         toast('Bitácora guardada.');
 
-        // ← Abona puntos si: el back lo indica, o localmente era la primera del día
+        // Abonar puntos si es la primera del día (server flag o detección local)
         const mustAward = data?.awarded === true || existedBefore === false;
         if (mustAward) {
           const pts = pointsForDate(saved.fecha);
@@ -223,7 +298,16 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
         }
       }
 
+      // Forzar que el calendario se "repinte" y los días apliquen clase verde
+      try {
+        const api = window.__bitacoraCalendarApi?.();
+        api?.refetchEvents?.();  // actualiza eventos
+        api?.render?.();         // re-evalúa dayCellClassNames (verde/rojo)
+      } catch {}
+
       formModal?.hide();
+
+      // Re-cargar el mes visible para consistencia
       if (month.value && year.value) await fetchMonth(month.value, year.value);
     } catch (e) {
       console.error('onSubmit error:', e?.response?.data || e);
@@ -242,7 +326,9 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
     else items.value.push(saved);
   }
 
-  // ===== Eliminar
+  /* =========================
+     Eliminar
+  ========================= */
   async function confirmDelete(item) {
     if (puntos.value <= 0) { toast('No puedes eliminar con 0 puntos.', 'error'); return; }
 
@@ -264,10 +350,17 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
 
     try {
       const id = getId(item);
-      await axios.delete(`${API_BASE}/${id}`, { headers: authHeaders() });
+      await axios.delete(`${API_BASE}/${id}`, { headers: mergedAuthHeaders() });
       items.value = items.value.filter(x => getId(x) !== id);
       toast('Eliminado correctamente.');
       await refreshPoints();
+
+      // refrescar calendario en vivo
+      try {
+        const api = window.__bitacoraCalendarApi?.();
+        api?.refetchEvents?.();
+        api?.render?.();
+      } catch {}
     } catch (e) {
       console.error('confirmDelete error:', e?.response?.data || e);
       toast('No fue posible eliminar.', 'error');
@@ -300,7 +393,7 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
     // estado
     items, isLoading, month, year,
     // puntos
-    currentUserId, puntos, puntosCargados, loadUserAndPoints, refreshPoints,
+    currentUserId, puntos, puntosCargados, loadUserAndPoints, refreshPoints, earnPoints,
     // búsqueda
     searchQuery, onInstantSearch, clearSearch,
     // CRUD

@@ -1,6 +1,7 @@
+<!-- src/views/estudiante/BitacorasCalendar.vue -->
 <template>
   <main class="bitacoras-calendar-page">
-    <!-- ======= Header motivacional ======= -->
+    <!-- ======= Header ======= -->
     <div class="container-fluid py-3 header-hero">
       <div class="d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-3">
         <div class="d-flex align-items-center gap-3">
@@ -39,7 +40,6 @@
             </button>
           </div>
 
-          <!-- Chip de puntos -->
           <div class="points-chip shadow-sm">
             <i class="bi bi-trophy-fill me-1"></i>
             <span class="fw-semibold">{{ puntos }}</span>
@@ -49,7 +49,7 @@
       </div>
     </div>
 
-    <!-- ======= Toolbar secundaria ======= -->
+    <!-- ======= Toolbar ======= -->
     <div class="container-fluid px-3 px-lg-2 my-2">
       <div class="row g-2 align-items-center">
         <div class="col-12 col-lg-7 d-flex align-items-center gap-2">
@@ -63,13 +63,11 @@
             </button>
           </div>
 
-          <!-- Título de mes (fijado con currentDate, no leyendo directo del ref del calendario) -->
           <div class="ms-2 month-title">
             <i class="bi bi-calendar3 me-1"></i>
             {{ formatMonthLabel(currentDate) }}
           </div>
 
-          <!-- Leyenda de colores -->
           <div class="legend ms-3">
             <span class="legend-dot bg-success"></span> Registrada
             <span class="legend-dot bg-danger ms-3"></span> Falta registrar
@@ -78,6 +76,7 @@
 
         <div class="col-12 col-lg-5 d-flex justify-content-lg-end mt-2 mt-lg-0">
           <button class="btn btn-gradient fw-semibold shadow-sm rounded-pill btn-new px-3"
+                  :disabled="hasTodayEntry"
                   @click="openCreateForToday">
             <i class="bi bi-plus-lg me-1"></i> Nueva entrada
           </button>
@@ -219,30 +218,34 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { useBitacorasCalendar } from '@/assets/js/useBitacorasCalendar';
 
-// Emojis
 const EMOJIS = ['😀','😊','🙂','😌','😐','😕','😟','😢','😡','😴','😮','😬'];
 
-// Composable
 const {
   items, isLoading, month, year,
   puntos, puntosCargados, loadUserAndPoints,
   searchQuery, onInstantSearch, clearSearch,
   openCreate, openEdit, openView, hideModal,
-  onSubmit, confirmDelete, modifyFromView, deleteFromView,
+  onSubmit, confirmDelete,
   form, isEditing, saving, selected,
   fetchMonth,
   titleWithoutEmoji, withEmojiPrefix, emojiFromTitle, toast, formatMonthLabel,
   formModalRef, viewModalRef
 } = useBitacorasCalendar({ EMOJIS });
 
-// FullCalendar ref y fecha visible segura
 const calendarRef = ref(null);
-const currentDate = ref(new Date()); // ← usamos esto para el título de mes
+const currentDate = ref(new Date());
 
-// Fechas con entrada (para colorear)
+// Exponer API del calendario para que el composable fuerce repintado
+window.__bitacoraCalendarApi = () => calendarRef.value?.getApi?.();
+
 const datesWithEntry = computed(() => new Set(items.value.map(b => b.fecha)));
 
-// Opciones calendario
+const hasTodayEntry = computed(() => {
+  const t = new Date();
+  const iso = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+  return datesWithEntry.value.has(iso);
+});
+
 const calendarOptions = reactive({
   plugins: [dayGridPlugin, interactionPlugin],
   initialView: 'dayGridMonth',
@@ -260,46 +263,62 @@ const calendarOptions = reactive({
     if (item) openView(item);
   },
   eventClassNames: () => ['bitacora-event'],
+
+  // ==== FIX: render con DOM nodes + listeners in-situ (sin eventDidMount) ====
   eventContent: (arg) => {
-    const emoji = arg.event.extendedProps.emoji || '';
-    const title = arg.event.title || '';
-    const delDisabled = puntos.value <= 0 ? 'disabled aria-disabled="true" title="No puedes eliminar con 0 puntos"' : `title="Eliminar"`;
-    return {
-      html: `
-        <div class="d-flex align-items-center gap-1">
-          <span class="me-1">${emoji}</span>
-          <span class="fc-title-text flex-grow-1">${title}</span>
-          <button class="btn btn-xs btn-outline-primary btn-ev-edit" title="Modificar"><i class="bi bi-pencil"></i></button>
-          <button class="btn btn-xs btn-outline-danger btn-ev-del" ${delDisabled}><i class="bi bi-trash"></i></button>
-        </div>
-      `
-    };
+    const wrap = document.createElement('div');
+    wrap.className = 'd-flex align-items-center gap-1';
+
+    const emojiSpan = document.createElement('span');
+    emojiSpan.className = 'me-1';
+    emojiSpan.textContent = arg.event.extendedProps.emoji || '';
+
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'fc-title-text flex-grow-1';
+    titleSpan.textContent = arg.event.title || '';
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn btn-xs btn-outline-primary btn-ev-edit';
+    editBtn.title = 'Modificar';
+    editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-xs btn-outline-danger btn-ev-del';
+    delBtn.title = puntos.value <= 0 ? 'No puedes eliminar con 0 puntos' : 'Eliminar';
+    if (puntos.value <= 0) delBtn.setAttribute('disabled', 'true');
+    delBtn.innerHTML = '<i class="bi bi-trash"></i>';
+
+    wrap.appendChild(emojiSpan);
+    wrap.appendChild(titleSpan);
+    wrap.appendChild(editBtn);
+    wrap.appendChild(delBtn);
+
+    // Adjuntar listeners aquí mismo
+    editBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const id = arg.event.extendedProps._id;
+      const item = items.value.find(x => x.id === id || x._id === id);
+      if (item) openEdit(item);
+    });
+
+    delBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (puntos.value <= 0) return;
+      const id = arg.event.extendedProps._id;
+      const item = items.value.find(x => x.id === id || x._id === id);
+      if (item) await confirmDelete(item);
+    });
+
+    return { domNodes: [wrap] };
   },
-  eventDidMount: (info) => {
-    const editBtn = info.el.querySelector('.btn-ev-edit');
-    const delBtn  = info.el.querySelector('.btn-ev-del');
-    if (editBtn) {
-      editBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const id = info.event.extendedProps._id;
-        const item = items.value.find(x => x.id === id || x._id === id);
-        if (item) openEdit(item);
-      });
-    }
-    if (delBtn) {
-      delBtn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        if (puntos.value <= 0) return;
-        const id = info.event.extendedProps._id;
-        const item = items.value.find(x => x.id === id || x._id === id);
-        if (item) await confirmDelete(item);
-      });
-    }
-  },
+
   dayCellClassNames: (arg) => {
     const api = calendarRef.value?.getApi?.();
     const current = api?.getDate?.();
-    if (current) currentDate.value = current; // ← actualizamos el mes visible de forma segura
+    if (current) currentDate.value = current;
+
     const inMonth = current ? (arg.date.getMonth() === current.getMonth()) : true;
     const iso = arg.date.toISOString().slice(0,10);
     if (!inMonth) return [];
@@ -307,7 +326,6 @@ const calendarOptions = reactive({
   }
 });
 
-// Eventos
 const baseEvents = computed(() => {
   return items.value.map(b => ({
     id: b.id || b._id,
@@ -319,7 +337,6 @@ const baseEvents = computed(() => {
   }));
 });
 
-// Filtro búsqueda
 const filteredEvents = computed(() => {
   const q = (searchQuery.value || '').toLowerCase().trim();
   if (!q) return baseEvents.value;
@@ -330,12 +347,11 @@ const filteredEvents = computed(() => {
   });
 });
 
-// Navegación
 async function syncFetchToCalendar() {
   const api = calendarRef.value?.getApi?.();
   if (!api) return;
   const current = api.getDate();
-  currentDate.value = current;            // ← actualiza ref seguro
+  currentDate.value = current;
   const m = current.getMonth() + 1;
   const y = current.getFullYear();
   await fetchMonth(m, y);
@@ -344,14 +360,11 @@ function goPrev() { const api = calendarRef.value?.getApi?.(); api?.prev(); sync
 function goNext() { const api = calendarRef.value?.getApi?.(); api?.next(); syncFetchToCalendar(); }
 function goToday(){ const api = calendarRef.value?.getApi?.(); api?.today(); syncFetchToCalendar(); }
 function openCreateForToday() {
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth()+1).padStart(2, '0');
-  const dd = String(today.getDate()).padStart(2, '0');
-  openCreate(`${yyyy}-${mm}-${dd}`);
+  const t = new Date();
+  const iso = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+  openCreate(iso);
 }
 
-// Montaje
 onMounted(async () => {
   await nextTick();
   if (formModalRef.value) new Modal(formModalRef.value, { backdrop: 'static' });
@@ -361,10 +374,11 @@ onMounted(async () => {
   await syncFetchToCalendar();
 });
 
-// Refrescar eventos al cambiar items
 watch(items, () => {
   const api = calendarRef.value?.getApi?.();
-  api?.refetchEvents();
+  // refresca eventos y rejilla (colores)
+  api?.refetchEvents?.();
+  api?.rerenderDates?.();
 });
 </script>
 
@@ -401,7 +415,7 @@ watch(items, () => {
 
 /* Celdas coloreadas */
 :deep(.fc .fc-daygrid-day.has-entry){ background: rgba(25,135,84,.12); }
-:deep(.fc .fc-daygrid-day.missing-entry){ background: rgba(220,53,69,.10);}
+:deep(.fc .fc-daygrid-day.missing-entry){ background: rgba(220,53,69,.10); }
 :deep(.fc .fc-daygrid-day.fc-day-today){ outline: 2px dashed rgba(0,0,0,.2); }
 
 /* Evento chip */
