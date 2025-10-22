@@ -94,8 +94,9 @@
               <td><span class="badge rounded-pill" :class="badgeEstatus(u.estatus)">{{ asTitle(u.estatus) }}</span></td>
               <td class="d-none d-md-table-cell text-nowrap">{{ u.email || '—' }}</td>
               <td class="d-none d-xl-table-cell text-nowrap">{{ u.telefono || '—' }}</td>
-              <td class="d-none d-xl-table-cell text-nowrap">{{ u.carrera || '—' }}</td>
-              <td class="d-none d-lg-table-cell text-nowrap">{{ u.grupo || '—' }}</td>
+              <!-- Arrays o string mostrados de forma uniforme -->
+              <td class="d-none d-xl-table-cell text-nowrap">{{ arrOrStr(u.carrera) || '—' }}</td>
+              <td class="d-none d-lg-table-cell text-nowrap">{{ arrOrStr(u.grupo) || '—' }}</td>
               <td class="text-end">
                 <!-- SOLO ICONOS -->
                 <div class="btn-group btn-group-sm">
@@ -213,21 +214,98 @@
                       <label class="form-label">Matrícula <span class="text-danger">*</span></label>
                       <input v-model.trim="form.persona.matricula" type="text" class="form-control" required />
                     </div>
-                    <div class="col-12 col-md-4">
-                      <label class="form-label">Carrera <span class="text-danger" v-if="needsCareer">*</span></label>
-                      <input v-model.trim="form.persona.carrera" type="text" class="form-control" :required="needsCareer" placeholder="Ej. TIC, IA, Industrial" />
-                    </div>
-                    <div class="col-6 col-md-2">
-                      <label class="form-label">Cuatrimestre <span class="text-danger" v-if="needsCareer">*</span></label>
-                      <input v-model.trim="form.persona.cuatrimestre" type="text" class="form-control" :required="needsCareer" placeholder="Ej. 2" />
-                    </div>
-                    <div class="col-6 col-md-2">
-                      <label class="form-label">Grupo <span class="text-danger" v-if="needsCareer">*</span></label>
-                      <input v-model.trim="form.persona.grupo" type="text" class="form-control" :required="needsCareer" placeholder="Ej. A" />
-                    </div>
+
+                    <!-- PROFESOR: múltiples con chips -->
+                    <template v-if="isProfessor">
+                      <div class="col-12">
+                        <label class="form-label">Carreras</label>
+                        <div class="chips-input">
+                          <div class="chips">
+                            <span class="chip" v-for="(v,i) in form.persona.carreras" :key="'car-'+i">
+                              {{ v }}
+                              <button type="button" class="chip-x" @click="removeTag('carreras', i)" aria-label="Quitar">&times;</button>
+                            </span>
+                          </div>
+                          <div class="input-group">
+                            <input
+                              v-model.trim="tagInputs.carreras"
+                              type="text"
+                              class="form-control"
+                              placeholder="Agregar carrera (Enter)"
+                              @keydown.enter.prevent="addTag('carreras')"
+                            />
+                            <button class="btn btn-outline-secondary" type="button" @click="addTag('carreras')">Agregar</button>
+                          </div>
+                        </div>
+                        <small class="text-muted">Ej.: TIC, IA, Industrial…</small>
+                      </div>
+
+                      <div class="col-12">
+                        <label class="form-label">Cuatrimestres</label>
+                        <div class="chips-input">
+                          <div class="chips">
+                            <span class="chip" v-for="(v,i) in form.persona.cuatrimestres" :key="'cuat-'+i">
+                              {{ v }}
+                              <button type="button" class="chip-x" @click="removeTag('cuatrimestres', i)" aria-label="Quitar">&times;</button>
+                            </span>
+                          </div>
+                          <div class="input-group">
+                            <input
+                              v-model.trim="tagInputs.cuatrimestres"
+                              type="text"
+                              class="form-control"
+                              placeholder="Agregar cuatrimestre (Enter)"
+                              @keydown.enter.prevent="addTag('cuatrimestres')"
+                            />
+                            <button class="btn btn-outline-secondary" type="button" @click="addTag('cuatrimestres')">Agregar</button>
+                          </div>
+                        </div>
+                        <small class="text-muted">Ej.: 1, 2, 3…</small>
+                      </div>
+
+                      <div class="col-12">
+                        <label class="form-label">Grupos</label>
+                        <div class="chips-input">
+                          <div class="chips">
+                            <span class="chip" v-for="(v,i) in form.persona.grupos" :key="'grp-'+i">
+                              {{ v }}
+                              <button type="button" class="chip-x" @click="removeTag('grupos', i)" aria-label="Quitar">&times;</button>
+                            </span>
+                          </div>
+                          <div class="input-group">
+                            <input
+                              v-model.trim="tagInputs.grupos"
+                              type="text"
+                              class="form-control"
+                              placeholder="Agregar grupo (Enter)"
+                              @keydown.enter.prevent="addTag('grupos')"
+                            />
+                            <button class="btn btn-outline-secondary" type="button" @click="addTag('grupos')">Agregar</button>
+                          </div>
+                        </div>
+                        <small class="text-muted">Ej.: A, B, 3A, 5B…</small>
+                      </div>
+                    </template>
+
+                    <!-- ESTUDIANTE/ADMIN: simple -->
+                    <template v-else>
+                      <div class="col-12 col-md-4">
+                        <label class="form-label">Carrera <span class="text-danger" v-if="needsCareer">*</span></label>
+                        <input v-model.trim="form.persona.carrera" type="text" class="form-control" :required="needsCareer" placeholder="Ej. TIC, IA, Industrial" />
+                      </div>
+                      <div class="col-6 col-md-2">
+                        <label class="form-label">Cuatrimestre <span class="text-danger" v-if="needsCareer">*</span></label>
+                        <input v-model.trim="form.persona.cuatrimestre" type="text" class="form-control" :required="needsCareer" placeholder="Ej. 2" />
+                      </div>
+                      <div class="col-6 col-md-2">
+                        <label class="form-label">Grupo <span class="text-danger" v-if="needsCareer">*</span></label>
+                        <input v-model.trim="form.persona.grupo" type="text" class="form-control" :required="needsCareer" placeholder="Ej. A" />
+                      </div>
+                    </template>
                   </div>
+
                   <small class="text-muted d-block mt-1">
-                    Para <strong>Profesor</strong> o <strong>Estudiante</strong> indica carrera/cuatrimestre/grupo.
+                    Para <strong>Profesor</strong> puedes registrar múltiples carreras, cuatrimestres y grupos.
                   </small>
                 </div>
               </transition>
@@ -351,11 +429,11 @@
                   <dt>Teléfono</dt>
                   <dd>{{ selected.telefono || '—' }}</dd>
                   <dt>Carrera</dt>
-                  <dd>{{ selected.carrera || '—' }}</dd>
+                  <dd>{{ arrOrStr(selected.carrera) || '—' }}</dd>
                   <dt>Cuatrimestre</dt>
-                  <dd>{{ selected.cuatrimestre || '—' }}</dd>
+                  <dd>{{ arrOrStr(selected.cuatrimestre) || '—' }}</dd>
                   <dt>Grupo</dt>
-                  <dd>{{ selected.grupo || '—' }}</dd>
+                  <dd>{{ arrOrStr(selected.grupo) || '—' }}</dd>
                 </dl>
               </div>
             </div>
@@ -448,7 +526,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
 import axios from 'axios'
 import Modal from 'bootstrap/js/dist/modal'
 import 'animate.css'
@@ -475,7 +553,6 @@ function authHeaders () {
   return t ? { Authorization: `Bearer ${t}` } : {}
 }
 function toast (msg, type = 'success') {
-  // Usa tu propio componente si lo tienes; aquí dejamos un fallback
   if (type === 'error') console.error(msg); else console.log(msg)
 }
 function makeDebouncer (ms) {
@@ -527,10 +604,15 @@ const form = reactive({
     fechaNacimiento: '',
     telefono: '',
     sexo: '',
+    // estudiante/admin (simple)
     carrera: '',
-    matricula: '',
     cuatrimestre: '',
-    grupo: ''
+    grupo: '',
+    // profesor (múltiple)
+    carreras: [],
+    cuatrimestres: [],
+    grupos: [],
+    matricula: ''
   },
   user: {
     _id: null,
@@ -542,6 +624,9 @@ const form = reactive({
     urlFotoPerfil: ''
   }
 })
+
+/* Inputs temporales para chips */
+const tagInputs = reactive({ carreras: '', cuatrimestres: '', grupos: '' })
 
 /* Visualizar */
 const selected = ref(null)
@@ -562,9 +647,12 @@ function prettyField (f) {
     'persona.telefono': 'Teléfono',
     'persona.sexo': 'Sexo',
     'persona.carrera': 'Carrera',
+    'persona.carreras': 'Carreras',
     'persona.matricula': 'Matrícula',
     'persona.cuatrimestre': 'Cuatrimestre',
+    'persona.cuatrimestres': 'Cuatrimestres',
     'persona.grupo': 'Grupo',
+    'persona.grupos': 'Grupos',
     'user.email': 'Correo',
     'user.rol': 'Rol',
     'user.estatus': 'Estatus'
@@ -604,16 +692,28 @@ function cryptoRandom() {
   try { return crypto.getRandomValues(new Uint32Array(1))[0] } catch { return Math.floor(Math.random() * 1e9) }
 }
 
-/* Necesidad de datos escolares por rol */
-const needsCareer = computed(() => ['profesor', 'estudiante'].includes((form.user.rol || '').toLowerCase()))
+/* Rol flags */
+const isProfessor = computed(() => (form.user.rol || '').toLowerCase() === 'profesor')
+const isStudent   = computed(() => (form.user.rol || '').toLowerCase() === 'estudiante')
+const needsCareer = computed(() => isProfessor.value || isStudent.value)
 
 /* ===== Normalización ===== */
 function toNombreCompleto(p) {
   return [p?.nombre, p?.apellidoPaterno, p?.apellidoMaterno].filter(Boolean).join(' ').trim()
 }
+function arrOrStr(v) {
+  return Array.isArray(v) ? v.filter(Boolean).join(', ') : (v || '')
+}
+
 function normalizeUser(u) {
   const persona = u.persona || {}
   const nombreCompleto = u.name || toNombreCompleto(persona) || null
+
+  // Permite backends que devuelven singular o plural
+  const carrera      = persona?.carreras ?? persona?.carrera ?? ''
+  const cuatrimestre = persona?.cuatrimestres ?? persona?.cuatrimestre ?? ''
+  const grupo        = persona?.grupos ?? persona?.grupo ?? ''
+
   return {
     _uid: String(u._id ?? u.id ?? cryptoRandom()),
     user_id: String(u._id ?? u.id ?? ''),
@@ -622,9 +722,7 @@ function normalizeUser(u) {
     fechaNacimiento: persona?.fechaNacimiento ?? null,
     telefono: persona?.telefono ?? '',
     sexo: persona?.sexo ?? '',
-    carrera: persona?.carrera ?? '',
-    cuatrimestre: persona?.cuatrimestre ?? '',
-    grupo: persona?.grupo ?? '',
+    carrera, cuatrimestre, grupo, // pueden ser string o array
     matricula: persona?.matricula ?? '',
     rol: (u.rol || '').toLowerCase(),
     estatus: (u.estatus || '').toLowerCase(),
@@ -690,9 +788,13 @@ const filteredRows = computed(() => {
   return rows.value.filter(u => {
     const rolOk = filters.rol ? (u.rol === filters.rol) : true
     const estOk = filters.estatus ? (u.estatus === filters.estatus) : true
-    const qOk = !q || [
-      u.nombreCompleto, u.matricula, u.email, u.telefono, u.carrera, u.grupo
-    ].some(val => (val || '').toLowerCase().includes(q))
+
+    const bag = [
+      u.nombreCompleto, u.matricula, u.email, u.telefono,
+      arrOrStr(u.carrera), arrOrStr(u.cuatrimestre), arrOrStr(u.grupo)
+    ].join(' ').toLowerCase()
+
+    const qOk = !q || bag.includes(q)
     return rolOk && estOk && qOk
   })
 })
@@ -707,18 +809,36 @@ onMounted(async () => {
   bulkModal = new Modal(bulkModalRef.value)
 })
 
+/* ===== Chips helpers ===== */
+function addTag(field) {
+  const v = (tagInputs[field] || '').trim()
+  if (!v) return
+  const arr = form.persona[field]
+  if (Array.isArray(arr) && !arr.includes(v)) arr.push(v)
+  tagInputs[field] = ''
+}
+function removeTag(field, idx) {
+  const arr = form.persona[field]
+  if (Array.isArray(arr)) arr.splice(idx,1)
+}
+
 /* ===== Modal: Form ===== */
 function hideModal () { formModal.hide() }
 function resetForm () {
   Object.assign(form.persona, {
     _id: null, nombre: '', apellidoPaterno: '', apellidoMaterno: '',
     fechaNacimiento: '', telefono: '', sexo: '',
-    carrera: '', matricula: '', cuatrimestre: '', grupo: ''
+    carrera: '', cuatrimestre: '', grupo: '',
+    carreras: [], cuatrimestres: [], grupos: [],
+    matricula: ''
   })
   Object.assign(form.user, {
     _id: null, persona_id: null, name: '',
     email: '', rol: '', estatus: 'activo', urlFotoPerfil: ''
   })
+  tagInputs.carreras = ''
+  tagInputs.cuatrimestres = ''
+  tagInputs.grupos = ''
   photoFile.value = null
   photoPreview.value = ''
   clearErrors()
@@ -740,10 +860,23 @@ function openEdit (row) {
   form.persona.fechaNacimiento = toDateInputValue(new Date(p?.fechaNacimiento || '')) || ''
   form.persona.telefono = p?.telefono || ''
   form.persona.sexo = p?.sexo || ''
-  form.persona.carrera = p?.carrera || ''
   form.persona.matricula = p?.matricula || ''
-  form.persona.cuatrimestre = p?.cuatrimestre || ''
-  form.persona.grupo = p?.grupo || ''
+
+  // Simples (si vinieron arrays, toma el primero para no romper UI de estudiante)
+  form.persona.carrera      = Array.isArray(p.carrera) ? (p.carrera[0] || '') : (p.carrera || '')
+  form.persona.cuatrimestre = Array.isArray(p.cuatrimestre) ? (p.cuatrimestre[0] || '') : (p.cuatrimestre || '')
+  form.persona.grupo        = Array.isArray(p.grupo) ? (p.grupo[0] || '') : (p.grupo || '')
+
+  // Múltiples (acepta singular/plural desde backend)
+  form.persona.carreras      = Array.isArray(p.carreras) ? p.carreras.slice()
+                             : Array.isArray(p.carrera)  ? p.carrera.slice()
+                             : (p.carrera ? [String(p.carrera)] : [])
+  form.persona.cuatrimestres = Array.isArray(p.cuatrimestres) ? p.cuatrimestres.slice()
+                             : Array.isArray(p.cuatrimestre)  ? p.cuatrimestre.slice()
+                             : (p.cuatrimestre ? [String(p.cuatrimestre)] : [])
+  form.persona.grupos        = Array.isArray(p.grupos) ? p.grupos.slice()
+                             : Array.isArray(p.grupo)  ? p.grupo.slice()
+                             : (p.grupo ? [String(p.grupo)] : [])
 
   form.user._id = row.user_id || null
   form.user.persona_id = row.persona_id || null
@@ -790,15 +923,22 @@ function validateFront() {
   if (!isRequired(form.persona.telefono)) errs['persona.telefono'] = ['El teléfono es obligatorio.']
   if (!isRequired(form.persona.sexo)) errs['persona.sexo'] = ['El sexo es obligatorio.']
   if (!isRequired(form.persona.matricula)) errs['persona.matricula'] = ['La matrícula es obligatoria.']
+
   const rol = (form.user.rol || '').toLowerCase()
   if (!isRequired(form.user.rol)) errs['user.rol'] = ['El rol es obligatorio.']
   if (!isRequired(form.user.estatus)) errs['user.estatus'] = ['El estatus es obligatorio.']
   if (!isRequired(form.user.email)) errs['user.email'] = ['El correo es obligatorio.']
-  if (['profesor', 'estudiante'].includes(rol)) {
-    if (!isRequired(form.persona.carrera)) errs['persona.carrera'] = ['La carrera es obligatoria.']
+
+  if (rol === 'profesor') {
+    if (!form.persona.carreras.length)      errs['persona.carreras'] = ['Agrega al menos una carrera.']
+    if (!form.persona.cuatrimestres.length) errs['persona.cuatrimestres'] = ['Agrega al menos un cuatrimestre.']
+    if (!form.persona.grupos.length)        errs['persona.grupos'] = ['Agrega al menos un grupo.']
+  } else if (rol === 'estudiante') {
+    if (!isRequired(form.persona.carrera))      errs['persona.carrera'] = ['La carrera es obligatoria.']
     if (!isRequired(form.persona.cuatrimestre)) errs['persona.cuatrimestre'] = ['El cuatrimestre es obligatorio.']
-    if (!isRequired(form.persona.grupo)) errs['persona.grupo'] = ['El grupo es obligatorio.']
+    if (!isRequired(form.persona.grupo))        errs['persona.grupo'] = ['El grupo es obligatorio.']
   }
+
   if (Object.keys(errs).length) { Object.assign(errors, errs); return false }
   return true
 }
@@ -813,8 +953,38 @@ async function onSubmit () {
     const uploadedUrl = await uploadPhotoIfAny()
     if (uploadedUrl) form.user.urlFotoPerfil = uploadedUrl
 
-    // 1) Persona
-    const personaPayload = { ...form.persona }
+    // 1) Persona: payload dinámico
+    let personaPayload
+    if (isProfessor.value) {
+      personaPayload = {
+        nombre: form.persona.nombre,
+        apellidoPaterno: form.persona.apellidoPaterno,
+        apellidoMaterno: form.persona.apellidoMaterno,
+        fechaNacimiento: form.persona.fechaNacimiento,
+        telefono: form.persona.telefono,
+        sexo: form.persona.sexo,
+        matricula: form.persona.matricula,
+        // múltiples (arrays)
+        carrera: form.persona.carreras.slice(),
+        cuatrimestre: form.persona.cuatrimestres.slice(),
+        grupo: form.persona.grupos.slice(),
+      }
+    } else {
+      personaPayload = {
+        nombre: form.persona.nombre,
+        apellidoPaterno: form.persona.apellidoPaterno,
+        apellidoMaterno: form.persona.apellidoMaterno,
+        fechaNacimiento: form.persona.fechaNacimiento,
+        telefono: form.persona.telefono,
+        sexo: form.persona.sexo,
+        matricula: form.persona.matricula,
+        // simples (strings)
+        carrera: form.persona.carrera || null,
+        cuatrimestre: form.persona.cuatrimestre || null,
+        grupo: form.persona.grupo || null,
+      }
+    }
+
     let personaId = form.persona._id
     if (personaId) {
       await axios.put(`${PERSONAS_URL}/${personaId}`, personaPayload, { headers: authHeaders() })
@@ -957,12 +1127,25 @@ async function startBulk() {
 
   for (const raw of bulk.preview) {
     try {
+      // Soporta "carrera" / "carreras" y similares con coma
+      const toArr = (v) => Array.isArray(v)
+        ? v
+        : (typeof v === 'string' && v.includes(',')) ? v.split(',').map(s => s.trim()).filter(Boolean) : v
+
       const persona = {
-        nombre: raw.nombre ?? '', apellidoPaterno: raw.apellidoPaterno ?? '',
-        apellidoMaterno: raw.apellidoMaterno ?? '', fechaNacimiento: raw.fechaNacimiento ?? '',
-        telefono: raw.telefono ?? '', sexo: raw.sexo ?? '', carrera: raw.carrera ?? '',
-        cuatrimestre: raw.cuatrimestre ?? '', grupo: raw.grupo ?? '', matricula: raw.matricula ?? ''
+        nombre: raw.nombre ?? '',
+        apellidoPaterno: raw.apellidoPaterno ?? '',
+        apellidoMaterno: raw.apellidoMaterno ?? '',
+        fechaNacimiento: raw.fechaNacimiento ?? '',
+        telefono: raw.telefono ?? '',
+        sexo: raw.sexo ?? '',
+        // admite arrays o string
+        carrera: toArr(raw.carreras ?? raw.carrera ?? ''),
+        cuatrimestre: toArr(raw.cuatrimestres ?? raw.cuatrimestre ?? ''),
+        grupo: toArr(raw.grupos ?? raw.grupo ?? ''),
+        matricula: raw.matricula ?? ''
       }
+
       // 1) Persona
       const { data: presp } = await axios.post(PERSONAS_URL, persona, { headers: authHeaders() })
       const personaId = String(presp?.persona?._id ?? presp?.persona?.id ?? presp?._id ?? '')
@@ -991,3 +1174,11 @@ async function startBulk() {
 
 <!-- Importa tu CSS desde assets -->
 <style scoped src="@/assets/css/Usuarios.css"></style>
+
+<!-- Ajustes mínimos de estilo para chips (puedes moverlos a tu Usuarios.css) -->
+<style scoped>
+.chips-input .chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .5rem; }
+.chip { background: #eef2ff; color: #3730a3; border-radius: 999px; padding: .25rem .6rem; display: inline-flex; align-items: center; gap: .4rem; font-weight: 600; }
+.chip .chip-x { background: transparent; border: 0; line-height: 1; cursor: pointer; color: #4f46e5; }
+.input-group > .form-control { min-width: 200px; }
+</style>

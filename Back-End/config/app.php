@@ -85,6 +85,8 @@ return [
 
     'locale' => 'en',
 
+    'frontend_url' => env('APP_FRONTEND_URL'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Fallback Locale
