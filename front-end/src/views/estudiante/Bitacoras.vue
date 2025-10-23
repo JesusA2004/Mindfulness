@@ -110,7 +110,7 @@ import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
 import { useBitacorasCalendar } from '@/assets/js/useBitacorasCalendar';
 
-/* ===== Imágenes (src/assets/images) ===== */
+/* ===== Imágenes ===== */
 import bienvenidaImg from '@/assets/images/bienvenidaBitacora.png';
 import qTitleImg     from '@/assets/images/q1Bitacora.png';
 import qMoodImg      from '@/assets/images/q2Bitacora.png';
@@ -174,28 +174,53 @@ const filteredEvents = computed(() => {
   });
 });
 
-/* ==========
-   SweetAlert mixin (tema verde difuminado + separación de botones)
-========== */
+/* ==== Textos de navegación ==== */
+const BACK_TXT = 'Atrás';
+const NEXT_TXT = 'Siguiente';
+const WELCOME_TXT = 'Comenzar';
+
+/* ========== SweetAlert mixin base (tema + X + separación) ========== */
 const mindoraSwal = Swal.mixin({
   allowOutsideClick: false,
   buttonsStyling: false,
   heightAuto: false,
   focusConfirm: true,
+  showCloseButton: true,
   customClass: {
     popup: 'swal2-responsive swal2-mindora rounded-4',
-    actions: 'swal2-actions-spaced',
+    actions: 'swal2-actions-spaced flow-back-first',
     confirmButton: 'btn btn-gradient',
-    cancelButton: 'btn btn-outline-secondary',
+    cancelButton: 'btn btn-secondary',          // gris
     denyButton: 'btn btn-outline-primary'
   },
   backdrop: 'rgba(2,6,12,.35)'
 });
-const NEXT_ICON = '<i class="bi bi-arrow-right"></i>';
 
-/* ==========
-   Detalle / Edición
-========== */
+/* ===== Helper para asegurar blur SIEMPRE y fusionar clases ===== */
+const DEFAULT_SWAL_CLASSES = {
+  popup: 'swal2-responsive swal2-mindora rounded-4',
+  actions: 'swal2-actions-spaced flow-back-first',
+  confirmButton: 'btn btn-gradient',
+  cancelButton: 'btn btn-secondary',
+  denyButton: 'btn btn-outline-primary'
+};
+function fireBlur(opts = {}) {
+  const merged = {
+    ...opts,
+    customClass: { ...(DEFAULT_SWAL_CLASSES), ...(opts.customClass || {}) },
+    didOpen: () => {
+      document.body.classList.add('mindora-blur-open');
+      if (typeof opts.didOpen === 'function') opts.didOpen();
+    },
+    willClose: () => {
+      document.body.classList.remove('mindora-blur-open');
+      if (typeof opts.willClose === 'function') opts.willClose();
+    }
+  };
+  return mindoraSwal.fire(merged);
+}
+
+/* ===== Detalle / Edición ===== */
 async function viewEntrySwal(item){
   const body = `
     <div class="text-start">
@@ -206,19 +231,30 @@ async function viewEntrySwal(item){
 
   const showEdit = isToday(item.fecha);
   const showDel  = isToday(item.fecha) && puntos.value > 0;
-  const onlyClose = !showEdit && !showDel;
 
-  const res = await mindoraSwal.fire({
+  const res = await fireBlur({
     title: 'Detalle de tu bitácora',
     html: body,
     imageUrl: qTitleImg,
     imageWidth: 120,
-    showDenyButton: showEdit,
-    showCancelButton: onlyClose ? false : true,
-    confirmButtonText: showDel ? 'Eliminar' : 'Cerrar',
-    denyButtonText: 'Editar',
-    cancelButtonText: onlyClose ? undefined : 'Cerrar',
-    reverseButtons: !onlyClose
+
+    // Botones visibles
+    showCancelButton: true,          // Cancelar (gris)
+    showDenyButton: showEdit,        // Modificar (azul)
+    showConfirmButton: showDel,      // Eliminar (rojo)
+
+    // Textos
+    cancelButtonText: 'Cancelar',
+    denyButtonText: 'Modificar',
+    confirmButtonText: 'Eliminar',
+
+    // Orden en consulta: Cancelar → Modificar → Eliminar (vía clase)
+    customClass: {
+      actions: 'swal2-actions-spaced flow-consulta',
+      cancelButton: 'btn btn-secondary',
+      denyButton: 'btn btn-primary',
+      confirmButton: 'btn btn-danger'
+    }
   });
 
   if (res.isConfirmed && showDel) {
@@ -250,7 +286,7 @@ async function editEntrySwal(item){
       <small class="text-muted">Fecha: ${item.fecha} (sólo hoy se puede editar)</small>
     </div>`;
 
-  await mindoraSwal.fire({
+  await fireBlur({
     title: 'Editar entrada',
     html,
     imageUrl: qTitleImg,
@@ -290,9 +326,7 @@ async function editEntrySwal(item){
   });
 }
 
-/* ==========
-   Wizard de creación
-========== */
+/* ===== Wizard creación con blur garantizado y botones (Atrás ← / Siguiente →) ===== */
 async function createWizardSwal(dateStr){
   if (datesWithEntry.value.has(dateStr)) {
     const ex = items.value.find(b => b.fecha === dateStr);
@@ -300,131 +334,237 @@ async function createWizardSwal(dateStr){
     return;
   }
 
-  // Bienvenida con imagen solicitada
-  const welcome = `
-    <div class="text-center">
-      <div class="mb-3">
-        <img src="${bienvenidaImg}" alt="Bienvenida" style="max-width:140px;border-radius:16px;box-shadow:0 10px 24px rgba(16,50,36,.12)" />
-      </div>
-      <h3 class="fw-bolder mb-2">¡Hola, ${studentName.value}!</h3>
-      <p class="mb-0">Haremos unas preguntas rápidas para ayudarte a expresar cómo te sientes hoy.</p>
-    </div>`;
-  const w1 = await mindoraSwal.fire({
-    html: welcome,
-    showConfirmButton: true,
-    confirmButtonText: NEXT_ICON
-  });
-  if (!w1.isConfirmed) return;
+  let step = 0; let title = ''; let moodKey = 'calm'; let a1 = '', a2 = '', a3 = '';
 
-  // 1) Título del día
-  const rTitle = await mindoraSwal.fire({
-    title: '¿Cómo resumirías tu día de hoy en una oración?',
-    input: 'text',
-    inputAttributes: { maxlength:'150' },
-    inputPlaceholder: 'Ej. Hoy me sentí en calma después de respirar profundo',
-    imageUrl: qTitleImg,
-    imageWidth: 120,
-    showCancelButton: true,
-    confirmButtonText: NEXT_ICON,
-    cancelButtonText: 'Cancelar',
-    reverseButtons: true,
-    preConfirm: (v)=>{ if(!String(v||'').trim()) { Swal.showValidationMessage('Escribe una oración.'); return false; } return v.trim(); }
-  });
-  if (!rTitle.isConfirmed) return;
-  const title = rTitle.value;
-
-  // 2) Emoción
   const MOODS = [
-    { key:'joy',       label:'Alegría',    colors:['#d7f7cc','#8edb6b'] },
-    { key:'calm',      label:'Calma',      colors:['#c9f3de','#7cd39b'] },
-    { key:'anxiety',   label:'Ansiedad',   colors:['#ffe0e0','#ff8b8b'] },
-    { key:'distracted',label:'Distraído/a',colors:['#e7e6ff','#c1b8ff'] },
-    { key:'surprised', label:'Sorpresa',   colors:['#fff5c7','#ffe07a'] },
-    { key:'tired',     label:'Cansancio',  colors:['#e0e7ff','#a5b4fc'] },
+    { key:'joy',       label:'Alegría',    colors:['#d7f7cc','#8edb6b'], face:'smile' },
+    { key:'calm',      label:'Calma',      colors:['#c9f3de','#7cd39b'], face:'soft'  },
+    { key:'anxiety',   label:'Ansiedad',   colors:['#ffe0e0','#ff8b8b'], face:'frown' },
+    { key:'distracted',label:'Distraído/a',colors:['#e7e6ff','#c1b8ff'], face:'wavy'  },
+    { key:'surprised', label:'Sorpresa',   colors:['#fff5c7','#ffe07a'], face:'wow'   },
+    { key:'tired',     label:'Cansancio',  colors:['#e0e7ff','#a5b4fc'], face:'flat'  },
   ];
-  function moodSvg(colors){ const [c1='#d9fbe2']=colors||[]; return `
-    <svg viewBox="0 0 120 120" width="92" height="92" class="shadow-sm" style="filter:drop-shadow(0 10px 24px rgba(0,0,0,.12))">
-      <circle cx="60" cy="60" r="48" fill="${c1}"></circle>
-      <g fill="none" stroke="#1b4332" stroke-linecap="round" stroke-width="4">
-        <path d="M42 70 Q60 82 78 70"/>
-        <path d="M40 50 q4 -6 8 0"/>
-        <path d="M72 50 q4 -6 8 0"/>
-      </g>
-    </svg>`; }
-
-  const moodHtml = `
-    <div class="d-flex align-items-center justify-content-between mb-3">
-      <div class="d-none d-sm-block">${moodSvg(MOODS[1].colors)}</div>
-      <div class="ms-0 ms-sm-3 flex-grow-1">
-        <div class="d-flex flex-wrap gap-2 justify-content-center" id="mood-chips">
-          ${MOODS.map(m=>`<button type="button" class="btn chip ${m.key==='calm'?'active':''}" data-key="${m.key}">${m.label}</button>`).join('')}
-        </div>
-      </div>
-    </div>`;
-  let moodKey = 'calm';
-
-  const rMood = await mindoraSwal.fire({
-    title: '¿Qué emoción representa mejor tu día?',
-    html: moodHtml,
-    imageUrl: qMoodImg,
-    imageWidth: 120,
-    showCancelButton: true,
-    confirmButtonText: NEXT_ICON,
-    cancelButtonText: 'Cancelar',
-    didOpen: () => {
-      const cont = document.getElementById('mood-chips');
-      const svg  = Swal.getHtmlContainer().querySelector('svg circle');
-      cont.querySelectorAll('.chip').forEach(btn=>{
-        btn.addEventListener('click', ()=>{
-          cont.querySelectorAll('.chip').forEach(b=>b.classList.remove('active'));
-          btn.classList.add('active');
-          moodKey = btn.dataset.key;
-          const col = MOODS.find(m=>m.key===moodKey)?.colors?.[0] || '#d9fbe2';
-          if (svg) svg.setAttribute('fill', col);
-        });
-      });
-    }
-  });
-  if (!rMood.isConfirmed) return;
-
-  // helper para preguntas con imagen superior
-  const ask = async (label, ph='', img, alt='Pregunta', isLast=false) => {
-    const r = await mindoraSwal.fire({
-      title: label,
-      input: 'textarea',
-      inputPlaceholder: ph,
-      inputAttributes: { rows: 3 },
-      imageUrl: img,
-      imageWidth: 120,
-      imageAlt: alt,
-      showCancelButton: true,
-      confirmButtonText: isLast ? 'Guardar' : NEXT_ICON,
-      cancelButtonText: 'Cancelar',
-      reverseButtons: true
-    });
-    if (!r.isConfirmed) return null;
-    return r.value?.trim() || '';
+  const facePaths = {
+    smile:  { mouth:'M42 70 Q60 84 78 70', eyes:['M40 50 q4 -6 8 0','M72 50 q4 -6 8 0'] },
+    soft:   { mouth:'M44 70 Q60 78 76 70', eyes:['M42 52 q3 -4 6 0','M74 52 q3 -4 6 0'] },
+    frown:  { mouth:'M42 74 Q60 60 78 74', eyes:['M40 52 q8 -6 12 0','M72 52 q8 -6 12 0'] },
+    wavy:   { mouth:'M42 70 q8 6 16 0 q8 -6 16 0', eyes:['M44 50 l6 4','M74 50 l6 4'] },
+    wow:    { mouth:'M58 66 a8 8 0 1 0 4 0 a8 8 0 1 0 -4 0', eyes:['M48 48 a4 4 0 1 0 0 .1','M76 48 a4 4 0 1 0 0 .1'] },
+    flat:   { mouth:'M44 70 L76 70', eyes:['M44 52 L50 52','M76 52 L82 52'] },
   };
+  function moodSVG(colors, face='soft'){
+    const [c1='#d9fbe2']=colors||[]; const f = facePaths[face] || facePaths.soft;
+    return `<svg viewBox="0 0 120 120" width="92" height="92" class="shadow-sm mood-face"
+              style="filter:drop-shadow(0 10px 24px rgba(0,0,0,.12))">
+              <circle cx="60" cy="60" r="48" fill="${c1}"></circle>
+              <g class="mface" fill="none" stroke="#1b4332" stroke-linecap="round" stroke-width="4">
+                <path class="mouth" d="${f.mouth}"/><path class="eyeL" d="${f.eyes[0]}"/><path class="eyeR" d="${f.eyes[1]}"/>
+              </g>
+            </svg>`;
+  }
+  function setFace(key){
+    const face = MOODS.find(m=>m.key===key)?.face || 'soft';
+    const color = MOODS.find(m=>m.key===key)?.colors?.[0] || '#d9fbe2';
+    const root = Swal.getHtmlContainer();
+    const circle = root?.querySelector('.mood-face circle');
+    const mouth  = root?.querySelector('.mface .mouth');
+    const eyeL   = root?.querySelector('.mface .eyeL');
+    const eyeR   = root?.querySelector('.mface .eyeR');
+    const f = facePaths[face] || facePaths.soft;
+    if (circle) circle.setAttribute('fill', color);
+    if (mouth)  mouth.setAttribute('d', f.mouth);
+    if (eyeL)   eyeL.setAttribute('d', f.eyes[0]);
+    if (eyeR)   eyeR.setAttribute('d', f.eyes[1]);
+  }
 
-  const a1 = await ask('¿Qué salió bien hoy?', 'Reconoce tus logros, aunque sean pequeños…', qGoodImg, '¿Qué salió bien?'); if (a1===null) return;
-  const a2 = await ask('¿Qué te preocupó hoy?', 'Escribe aquello que te inquieta…', qWorryImg, '¿Qué te preocupó?');        if (a2===null) return;
-  const a3 = await ask('¿Qué harás para que mañana sea un buen día?', '1–2 acciones concretas…', qActionImg, 'Acciones para mañana', true); if (a3===null) return;
+  while (true) {
+    if (step === 0) {
+      const welcome = `
+        <div class="text-center">
+          <div class="mb-3">
+            <img src="${bienvenidaImg}" alt="Bienvenida" style="max-width:140px;border-radius:16px;box-shadow:0 10px 24px rgba(16,50,36,.12)" />
+          </div>
+          <h3 class="fw-bolder mb-2">¡Hola, ${studentName.value}!</h3>
+          <p class="mb-0">Haremos unas preguntas rápidas para ayudarte a expresar cómo te sientes hoy.</p>
+        </div>`;
+      const r = await fireBlur({
+        html: welcome,
+        showCancelButton: false,
+        showDenyButton: false,
+        confirmButtonText: WELCOME_TXT,
+        customClass: { confirmButton: 'btn btn-ghost-green btn-welcome-arrow' },
+        didOpen: () => {
+          const c = Swal.getConfirmButton();
+          if (c) c.innerHTML = `<i class="bi bi-arrow-right"></i> ${WELCOME_TXT}`;
+        }
+      });
+      if (!r.isConfirmed) return;
+      step++; continue;
+    }
 
-  const moodLabel = MOODS.find(m=>m.key===moodKey)?.label || '';
-  const parts = [
-    `Emoción del día: ${moodLabel}`,
-    a1 ? `¿Qué salió bien hoy?: ${a1}` : '',
-    a2 ? `¿Qué me preocupa?: ${a2}` : '',
-    a3 ? `¿Qué puedo hacer para que mañana sea un buen día?: ${a3}` : ''
-  ].filter(Boolean);
+    if (step === 1) {
+      const r = await fireBlur({
+        title: '¿Cómo resumirías tu día de hoy en una oración?',
+        input: 'text',
+        inputAttributes: { maxlength:'150' },
+        inputValue: title,
+        inputPlaceholder: 'Ej. Hoy me sentí en calma después de respirar profundo',
+        imageUrl: qTitleImg,
+        imageWidth: 120,
+        showCancelButton: false,
+        showDenyButton: true,
+        denyButtonText: BACK_TXT,
+        confirmButtonText: NEXT_TXT,
+        reverseButtons: false,
+        didOpen: () => {
+          const denyBtn = Swal.getDenyButton();
+          const confBtn = Swal.getConfirmButton();
+          if (denyBtn) denyBtn.innerHTML = `<i class="bi bi-arrow-left"></i> ${BACK_TXT}`;
+          if (confBtn) confBtn.innerHTML = `${NEXT_TXT} <i class="bi bi-arrow-right"></i>`;
+        },
+        preConfirm: (v)=>{ if(!String(v||'').trim()) { Swal.showValidationMessage('Escribe una oración.'); return false; } return v.trim(); }
+      });
+      if (r.isDenied) { step = Math.max(0, step-1); continue; }
+      if (!r.isConfirmed) return;
+      title = r.value; step++; continue;
+    }
 
-  isEditing.value = false;
-  form._id   = null;
-  form.fecha = dateStr;
-  form.titulo = title;
-  form.emoji  = '';
-  form.descripcion = parts.join('\n\n');
-  await onSubmit();
+    if (step === 2) {
+      const moodHtml = `
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <div class="d-none d-sm-block">${moodSVG(MOODS.find(m=>m.key===moodKey)?.colors, MOODS.find(m=>m.key===moodKey)?.face)}</div>
+          <div class="ms-0 ms-sm-3 flex-grow-1">
+            <div class="d-flex flex-wrap gap-2 justify-content-center" id="mood-chips">
+              ${MOODS.map(m=>`<button type="button" class="btn chip ${m.key===moodKey?'active':''}" data-key="${m.key}">${m.label}</button>`).join('')}
+            </div>
+          </div>
+        </div>`;
+      const r = await fireBlur({
+        title: '¿Qué emoción representa mejor tu día?',
+        html: moodHtml,
+        imageUrl: qMoodImg,
+        imageWidth: 120,
+        showCancelButton: false,
+        showDenyButton: true,
+        denyButtonText: BACK_TXT,
+        confirmButtonText: NEXT_TXT,
+        reverseButtons: false,
+        didOpen: () => {
+          const cont = document.getElementById('mood-chips');
+          cont?.querySelectorAll('.chip').forEach(btn=>{
+            btn.addEventListener('click', ()=>{
+              cont.querySelectorAll('.chip').forEach(b=>b.classList.remove('active'));
+              btn.classList.add('active');
+              moodKey = btn.dataset.key;
+              setFace(moodKey);
+            });
+          });
+          const denyBtn = Swal.getDenyButton();
+          const confBtn = Swal.getConfirmButton();
+          if (denyBtn) denyBtn.innerHTML = `<i class="bi bi-arrow-left"></i> ${BACK_TXT}`;
+          if (confBtn) confBtn.innerHTML = `${NEXT_TXT} <i class="bi bi-arrow-right"></i>`;
+        }
+      });
+      if (r.isDenied) { step--; continue; }
+      if (!r.isConfirmed) return;
+      step++; continue;
+    }
+
+    if (step === 3) {
+      const r = await fireBlur({
+        title: '¿Qué salió bien hoy?',
+        input: 'textarea',
+        inputValue: a1,
+        inputPlaceholder: 'Reconoce tus logros, aunque sean pequeños…',
+        inputAttributes: { rows: 3 },
+        imageUrl: qGoodImg,
+        imageWidth: 120,
+        showCancelButton: false,
+        showDenyButton: true,
+        denyButtonText: BACK_TXT,
+        confirmButtonText: NEXT_TXT,
+        reverseButtons: false,
+        didOpen: () => {
+          const denyBtn = Swal.getDenyButton();
+          const confBtn = Swal.getConfirmButton();
+          if (denyBtn) denyBtn.innerHTML = `<i class="bi bi-arrow-left"></i> ${BACK_TXT}`;
+          if (confBtn) confBtn.innerHTML = `${NEXT_TXT} <i class="bi bi-arrow-right"></i>`;
+        }
+      });
+      if (r.isDenied) { step--; continue; }
+      if (!r.isConfirmed) return;
+      a1 = (r.value||'').trim();
+      step++; continue;
+    }
+
+    if (step === 4) {
+      const r = await fireBlur({
+        title: '¿Qué te preocupó hoy?',
+        input: 'textarea',
+        inputValue: a2,
+        inputPlaceholder: 'Escribe aquello que te inquieta…',
+        inputAttributes: { rows: 3 },
+        imageUrl: qWorryImg,
+        imageWidth: 120,
+        showCancelButton: false,
+        showDenyButton: true,
+        denyButtonText: BACK_TXT,
+        confirmButtonText: NEXT_TXT,
+        reverseButtons: false,
+        didOpen: () => {
+          const denyBtn = Swal.getDenyButton();
+          const confBtn = Swal.getConfirmButton();
+          if (denyBtn) denyBtn.innerHTML = `<i class="bi bi-arrow-left"></i> ${BACK_TXT}`;
+          if (confBtn) confBtn.innerHTML = `${NEXT_TXT} <i class="bi bi-arrow-right"></i>`;
+        }
+      });
+      if (r.isDenied) { step--; continue; }
+      if (!r.isConfirmed) return;
+      a2 = (r.value||'').trim();
+      step++; continue;
+    }
+
+    if (step === 5) {
+      const r = await fireBlur({
+        title: '¿Qué harás para que mañana sea un buen día?',
+        input: 'textarea',
+        inputValue: a3,
+        inputPlaceholder: '1–2 acciones concretas…',
+        inputAttributes: { rows: 3 },
+        imageUrl: qActionImg,
+        imageWidth: 120,
+        showCancelButton: false,
+        showDenyButton: true,
+        denyButtonText: BACK_TXT,
+        confirmButtonText: 'Guardar',
+        reverseButtons: false,
+        didOpen: () => {
+          const denyBtn = Swal.getDenyButton();
+          if (denyBtn) denyBtn.innerHTML = `<i class="bi bi-arrow-left"></i> ${BACK_TXT}`;
+        }
+      });
+      if (r.isDenied) { step--; continue; }
+      if (!r.isConfirmed) return;
+      a3 = (r.value||'').trim();
+
+      const moodLabel = MOODS.find(m=>m.key===moodKey)?.label || '';
+      const parts = [
+        `Emoción del día: ${moodLabel}`,
+        a1 ? `¿Qué salió bien hoy?: ${a1}` : '',
+        a2 ? `¿Qué me preocupa?: ${a2}` : '',
+        a3 ? `¿Qué haré para que mañana sea un buen día?: ${a3}` : ''
+      ].filter(Boolean);
+
+      isEditing.value = false;
+      form._id   = null;
+      form.fecha = dateStr;
+      form.titulo = title;
+      form.emoji  = '';
+      form.descripcion = parts.join('\n\n');
+      await onSubmit();
+      break;
+    }
+  }
 }
 
 function openCreateForToday(){
@@ -560,125 +700,6 @@ watch(searchQuery, () => { fcKey.value = `fc-${Date.now()}`; forceCalendarRefres
 watch(items, () => { forceCalendarRefresh(); });
 </script>
 
-<style scoped>
-@import '@/assets/css/Crud.css';
-
-/* ===== Fondo de la página (verde difuminado suave) ===== */
-.bitacoras-calendar-page{
-  background:
-    radial-gradient(120% 100% at 10% 0%, #e8f9ef 0%, #e8f9ef80 40%, transparent 60%),
-    linear-gradient(180deg, #f5fff9 0%, #eafbf2 100%);
-  min-height: 100vh;
-}
-
-/* ===== Header ===== */
-.header-hero{
-  background: linear-gradient(90deg, #5563de, #5fbb97);
-  color: #fff;
-  border-bottom-left-radius: 1rem;
-  border-bottom-right-radius: 1rem;
-}
-.hero-emoji{ font-size: 2.2rem; line-height: 1; }
-.points-chip{
-  background: rgba(255,255,255,.15);
-  color: #fff;
-  padding: .5rem .9rem;
-  border-radius: 999px;
-  display: inline-flex; align-items:center; gap:.25rem;
-}
-
-/* ===== Toolbar ===== */
-.month-title{ font-weight: 700; }
-.legend{ font-size: .9rem; display:flex; align-items:center; gap:.2rem; flex-wrap: wrap; }
-.legend-dot{ display:inline-block; width:.8rem; height:.8rem; border-radius:50%; }
-
-/* ===== Search glow ===== */
-.search-group.searching{
-  box-shadow: 0 0 0 4px rgba(255,255,255,.2), 0 10px 30px rgba(0,0,0,.18) !important;
-  animation: pulseGlow 1s ease-in-out infinite alternate;
-}
-@keyframes pulseGlow { from { transform:translateZ(0); } to { transform:translateZ(0) scale(1.01); } }
-
-/* ===== Calendar ===== */
-.calendar-wrapper { min-height: calc(100vh - var(--navbar-h, 56px) - 220px); }
-:deep(.fc){ font-size: clamp(.88rem, 1.4vw, .95rem); }
-:deep(.fc .fc-daygrid-day-number){ font-weight: 600; }
-:deep(.fc .fc-daygrid-event .fc-event-main){ pointer-events: auto; }
-:deep(.fc .fc-event){ cursor: default; }
-
-/* Colores de celdas */
-:deep(.fc .fc-daygrid-day.has-entry){ background: rgba(25,135,84,.12); }
-:deep(.fc .fc-daygrid-day.missing-entry){ background: rgba(220,53,69,.10); }
-:deep(.fc .fc-daygrid-day.fc-day-today){ outline: 2px dashed rgba(0,0,0,.2); }
-:deep(.fc .fc-daygrid-day.search-hit){
-  position: relative; animation: hitBlink .9s ease-in-out infinite alternate;
-}
-@keyframes hitBlink {
-  from { box-shadow: inset 0 0 0 2px rgba(255,193,7,.0), 0 0 0 0 rgba(255,193,7,.0); }
-  to   { box-shadow: inset 0 0 0 2px rgba(255,193,7,.75), 0 6px 24px rgba(255,193,7,.25); }
-}
-
-/* Evento */
-:deep(.fc .bitacora-event){
-  border:0; background: rgba(13,110,253,.12); padding:2px 6px; border-radius:10px;
-}
-:deep(.fc .bitacora-event .fc-title-text){
-  white-space:nowrap; text-overflow:ellipsis; overflow:hidden; display:inline-block; max-width:110px;
-}
-@media (min-width: 992px){ :deep(.fc .bitacora-event .fc-title-text){ max-width:180px; } }
-:deep(.fc .bitacora-event .match){ filter:saturate(1.15); }
-
-/* Botones mini */
-:deep(.btn-ev-edit), :deep(.btn-ev-del){
-  --bs-btn-padding-y: .05rem; --bs-btn-padding-x: .25rem; --bs-btn-font-size: .75rem; border-radius: .35rem;
-}
-
-/* ===== SweetAlert theme (verde difuminado) ===== */
-:deep(.swal2-popup.swal2-responsive){ width:min(720px, 95vw); }
-:deep(.swal2-mindora){
-  background:
-    radial-gradient(120% 120% at 10% 10%, #dbf7e6 0%, rgba(219,247,230,.85) 40%, rgba(219,247,230,.7) 60%),
-    linear-gradient(180deg, #c8f1dc 0%, #eafbef 100%);
-  border: 0;
-  border-radius: 24px;
-  box-shadow: 0 18px 48px rgba(16,50,36,.18);
-  padding: clamp(1rem, 3vw, 1.5rem);
-}
-:deep(.swal2-mindora .swal2-title){
-  font-weight: 800; color:#0f3d2e; line-height:1.2; font-size: clamp(1.15rem, 2.2vw, 1.45rem);
-}
-:deep(.swal2-mindora .swal2-image){
-  margin-bottom: .5rem; border-radius: 16px;
-  box-shadow: 0 10px 24px rgba(16,50,36,.08);
-}
-:deep(.swal2-mindora .swal2-input),
-:deep(.swal2-mindora .swal2-textarea){
-  border-radius: 14px !important; border:1px solid #cfe9da; background:#ffffffcf;
-}
-/* — SEPARACIÓN ENTRE BOTONES — */
-:deep(.swal2-actions.swal2-actions-spaced){
-  gap: 0.9rem !important;
-  display:flex; flex-wrap:wrap; justify-content:center;
-}
-:deep(.swal2-actions.swal2-actions-spaced .btn){ padding-inline: 1rem; }
-
-/* Chips */
-.chip{
-  border:1px solid #d1e7dd; border-radius:999px; padding:.4rem .8rem; background:#fff; font-weight:600;
-  transition:transform .15s, box-shadow .15s, background .15s;
-}
-.chip:hover{ transform:translateY(-1px); box-shadow:0 6px 18px rgba(0,0,0,.08); }
-.chip.active{ background:#e6ffe6; border-color:#86efac; }
-
-/* Botón degradado */
-.btn-gradient{ background: linear-gradient(90deg, #16a34a, #2563eb); color:#fff; border:0; }
-.btn-gradient:hover{ filter: brightness(0.95); }
-.circle-btn{ border-radius:999px; }
-
-/* Responsive */
-@media (max-width: 576px){
-  .header-hero { border-bottom-left-radius: .75rem; border-bottom-right-radius: .75rem; }
-  .legend { font-size: .85rem; }
-  .points-chip{ align-self: stretch; justify-content:center; }
-}
+<style>
+  @import url('@/assets/css/Bitacora.css');
 </style>

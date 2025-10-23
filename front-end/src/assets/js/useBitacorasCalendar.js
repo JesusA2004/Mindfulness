@@ -239,10 +239,13 @@ export function useBitacorasCalendar({ EMOJIS = [] } = {}) {
       customClass: {
         popup: 'swal2-responsive swal2-mindora rounded-4',
         actions: 'swal2-actions-spaced',
-        confirmButton: 'btn btn-danger',
-        cancelButton: 'btn btn-outline-secondary'
+        confirmButton: 'btn btn-danger',     // rojo
+        cancelButton: 'btn btn-secondary'    // gris
       },
-      backdrop: 'rgba(2,6,12,.35)'
+      backdrop: 'rgba(2,6,12,.35)',
+      // Asegurar blur
+      didOpen: () => document.body.classList.add('mindora-blur-open'),
+      willClose: () => document.body.classList.remove('mindora-blur-open')
     }).fire({
       title: '¿Eliminar bitácora?',
       text: 'Se restarán los puntos asignados a esta bitácora. Esta acción no se puede deshacer.',
