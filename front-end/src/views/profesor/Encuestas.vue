@@ -1,5 +1,444 @@
+<!-- src/views/encuestas/CrudPanel.vue -->
 <template>
-    <div>
-        
+  <main class="panel-wrapper">
+    <!-- ======= Toolbar: Búsqueda (solo texto) ======= -->
+    <div class="container-fluid toolbar px-3 px-lg-2">
+      <div class="row g-2 align-items-center">
+        <div class="col-12 col-lg-8">
+          <div
+            class="input-group input-group-lg search-group shadow-sm rounded-pill"
+            role="search"
+            aria-label="Buscador de encuestas"
+          >
+            <span class="input-group-text rounded-start-pill">
+              <i class="bi bi-search"></i>
+            </span>
+
+            <input
+              v-model.trim="searchQuery"
+              type="search"
+              class="form-control search-input"
+              placeholder="Buscar encuesta por título o duración…"
+              @input="onInstantSearch"
+              aria-label="Buscar por título o duración"
+            />
+
+            <button
+              v-if="searchQuery"
+              class="btn btn-link text-secondary px-3 d-none d-md-inline"
+              @click="clearSearch"
+              aria-label="Limpiar búsqueda"
+            >
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+
+          <!-- Botón limpiar móvil -->
+          <div class="d-flex d-md-none justify-content-end mt-2" v-if="searchQuery">
+            <button
+              class="btn btn-sm btn-outline-secondary rounded-pill"
+              @click="clearSearch"
+              aria-label="Limpiar búsqueda móvil"
+            >
+              <i class="bi bi-x-lg me-1"></i> Limpiar
+            </button>
+          </div>
+        </div>
+
+        <!-- Col derecha vacía (sin Nuevo para docente) -->
+        <div class="col-12 col-lg-4 mt-2 mt-lg-0"></div>
+      </div>
     </div>
+
+    <!-- ======= Grid de Cards ======= -->
+    <div class="container-fluid px-3 px-lg-2">
+      <div class="row g-3 row-cols-1 row-cols-sm-2 row-cols-lg-3">
+        <div v-for="item in filteredItems" :key="getId(item)" class="col">
+          <div class="card h-100 item-card shadow-sm hover-raise">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h5 class="card-title mb-0 text-truncate fw-bold" :title="item.titulo">
+                  {{ item.titulo }}
+                </h5>
+                <span class="badge rounded-pill bg-status bg-success">Encuesta</span>
+              </div>
+
+              <p class="card-text clamp-3 mb-2" v-if="item.descripcion">{{ item.descripcion }}</p>
+
+              <div class="small text-muted">
+                <i class="bi bi-clock-history me-1"></i>
+                {{ item.duracion_estimada ? item.duracion_estimada + ' min' : '—' }}
+              </div>
+              <div class="small text-muted mt-1">
+                <i class="bi bi-calendar-event me-1"></i>
+                {{ formatDateRange(item.fechaAsignacion, item.fechaFinalizacion) }}
+              </div>
+              <div class="small text-muted mt-1">
+                <i class="bi bi-list-check me-1"></i>
+                {{ (item.cuestionario?.length || 0) }} pregunta(s)
+              </div>
+            </div>
+
+            <div class="card-footer bg-transparent border-0 pt-0 pb-3 px-3">
+              <button
+                class="btn btn-outline-secondary btn-sm w-100 btn-with-label"
+                @click="openView(item)"
+                data-bs-toggle="tooltip"
+                title="Consultar"
+              >
+                <i class="bi bi-eye me-1"></i>
+                <span>Consultar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vacío -->
+        <div v-if="!isLoading && filteredItems.length === 0" class="col-12">
+          <div class="alert alert-light border d-flex align-items-center gap-2">
+            <i class="bi bi-inbox text-secondary fs-4"></i>
+            <div>
+              <strong>Sin resultados.</strong>
+              Ajusta tu búsqueda por texto.
+            </div>
+          </div>
+        </div>
+
+        <!-- Skeletons -->
+        <div v-if="isLoading" class="col" v-for="n in 6" :key="'sk'+n">
+          <div class="card h-100 shadow-sm">
+            <div class="card-body">
+              <div class="placeholder-glow">
+                <span class="placeholder col-8"></span>
+                <p class="mt-2 mb-0">
+                  <span class="placeholder col-12"></span>
+                  <span class="placeholder col-11"></span>
+                  <span class="placeholder col-9"></span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Paginación simple -->
+      <div class="d-flex justify-content-center my-4" v-if="!isLoading && hasMore">
+        <button class="btn btn-outline-secondary btn-lg" @click="loadMore">
+          Cargar más
+        </button>
+      </div>
+    </div>
+
+    <!-- ======= Modal: Consulta Vistosa (solo lectura) ======= -->
+    <div class="modal fade" ref="viewModalRef" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-xl modal-fit">
+        <div class="modal-content modal-flex border-0 shadow-lg">
+          <div class="modal-header border-0 sticky-top bg-white">
+            <div class="d-flex align-items-center gap-3">
+              <div class="avatar-pill">
+                <i class="bi bi-clipboard-check"></i>
+              </div>
+              <div>
+                <h5 class="modal-title fw-bold mb-0">{{ selected?.titulo || 'Detalle de la encuesta' }}</h5>
+                <div class="small text-muted">
+                  {{ (selected?.cuestionario?.length || 0) }} pregunta(s) •
+                  {{ selected?.duracion_estimada ? selected?.duracion_estimada + ' min' : 'Duración no definida' }}
+                </div>
+              </div>
+            </div>
+            <button type="button" class="btn-close" @click="hideModal('view')" aria-label="Cerrar"></button>
+          </div>
+
+          <div class="modal-body modal-body-safe">
+            <!-- Meta chips bonitos -->
+            <div class="meta-wrap">
+              <div class="meta-chip">
+                <i class="bi bi-calendar-event me-1"></i>
+                {{ formatDateRange(selected?.fechaAsignacion, selected?.fechaFinalizacion) }}
+              </div>
+              <div class="meta-chip">
+                <i class="bi bi-clock-history me-1"></i>
+                {{ selected?.duracion_estimada ? selected?.duracion_estimada + ' min' : '—' }}
+              </div>
+              <div class="meta-chip" v-if="selected?.descripcion">
+                <i class="bi bi-info-circle me-1"></i> {{ selected?.descripcion }}
+              </div>
+            </div>
+
+            <!-- Controles locales del visor -->
+            <div class="viewer-toolbar">
+              <div class="input-group input-group-sm viewer-search">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input
+                  v-model.trim="qSearch"
+                  type="search"
+                  class="form-control"
+                  placeholder="Buscar dentro del cuestionario…"
+                  aria-label="Buscar en preguntas"
+                />
+                <button
+                  v-if="qSearch"
+                  class="btn btn-outline-secondary"
+                  @click="qSearch=''"
+                  aria-label="Limpiar búsqueda de preguntas"
+                >
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
+
+              <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary btn-sm" @click="expandAll">
+                  <i class="bi bi-arrows-expand me-1"></i> Expandir todo
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" @click="collapseAll">
+                  <i class="bi bi-arrows-collapse me-1"></i> Contraer todo
+                </button>
+              </div>
+            </div>
+
+            <!-- Progreso visible/total -->
+            <div class="progress-wrap mb-3" v-if="totalQuestions > 0">
+              <div class="d-flex justify-content-between small text-muted mb-1">
+                <span>Mostrando {{ visibleQuestions }} de {{ totalQuestions }} preguntas</span>
+                <span>{{ Math.round((visibleQuestions/totalQuestions)*100) }}%</span>
+              </div>
+              <div class="progress" role="progressbar" :aria-valuenow="(visibleQuestions/totalQuestions)*100" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-bar" :style="{ width: (visibleQuestions/totalQuestions)*100 + '%' }"></div>
+              </div>
+            </div>
+
+            <!-- Preguntas en tarjetas -->
+            <div class="row g-3">
+              <div v-for="(q, i) in filteredQuestions" :key="q._id || i" class="col-12">
+                <div class="q-card shadow-sm">
+                  <div class="q-head" @click="toggleViewQuestion(iMapped(i))" :aria-expanded="viewToggle.qOpen[iMapped(i)]">
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="q-index">#{{ i + 1 }}</span>
+                      <span class="q-title text-truncate" :title="q.pregunta || '—'">
+                        {{ q.pregunta || '—' }}
+                      </span>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="badge rounded-pill q-type" :class="tipoBadgeClass(q.tipo)">
+                        <i :class="tipoIcon(q.tipo)" class="me-1"></i>{{ labelTipo(q.tipo) }}
+                      </span>
+                      <i class="bi ms-2" :class="viewToggle.qOpen[iMapped(i)] ? 'bi-chevron-up rotate' : 'bi-chevron-down'"></i>
+                    </div>
+                  </div>
+
+                  <transition name="fade">
+                    <div v-show="viewToggle.qOpen[iMapped(i)]" class="q-body">
+                      <template v-if="(q.opciones?.length || 0) > 0">
+                        <div class="small text-muted mb-2">Opciones:</div>
+                        <div class="q-chips">
+                          <span v-for="(op, k) in q.opciones" :key="k" class="chip">
+                            <i class="bi bi-dot me-1"></i>{{ op }}
+                          </span>
+                        </div>
+                      </template>
+                      <template v-else>
+                        <div class="text-muted fst-italic small">Respuesta abierta</div>
+                      </template>
+                    </div>
+                  </transition>
+                </div>
+              </div>
+
+              <div v-if="filteredQuestions.length === 0" class="col-12">
+                <div class="alert alert-light border d-flex align-items-center gap-2">
+                  <i class="bi bi-emoji-neutral text-secondary fs-5"></i>
+                  <div>
+                    <strong>Sin coincidencias.</strong> Ajusta tu búsqueda interna.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="safe-bottom-space" aria-hidden="true"></div>
+          </div>
+
+          <div class="modal-footer modal-footer-sticky">
+            <button class="btn btn-secondary ms-md-auto" @click="hideModal('view')">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
 </template>
+
+<script setup>
+import { ref, computed } from 'vue';
+import { useEncuestasCrud } from '@/assets/js/useEncuestasCrud';
+
+/**
+ * Vista DOCENTE (solo lectura):
+ * - Búsqueda texto (título/duración)
+ * - Listado + paginación
+ * - Consultar (modal vistoso)
+ */
+const {
+  items, isLoading, hasMore, filteredItems,
+  searchQuery, onInstantSearch, clearSearch,
+  getId, formatDateRange, labelTipo,
+  viewModalRef, hideModal, loadMore,
+  selected, viewToggle, openView, toggleViewQuestion
+} = useEncuestasCrud({ readOnly: true }); // si tu composable admite flag; si no, se ignora.
+
+/* ====== Búsqueda local dentro del cuestionario del seleccionado ====== */
+const qSearch = ref('');
+const questions = computed(() => selected?.value?.cuestionario || []);
+const totalQuestions = computed(() => questions.value.length);
+
+const filteredQuestions = computed(() => {
+  if (!qSearch.value) return questions.value;
+  const q = qSearch.value.toLowerCase();
+  return questions.value.filter(p =>
+    (p?.pregunta || '').toLowerCase().includes(q) ||
+    (p?.opciones || []).some(op => (op || '').toLowerCase().includes(q))
+  );
+});
+const visibleQuestions = computed(() => filteredQuestions.value.length);
+
+/* Mapeo índice visible -> índice real (para viewToggle.qOpen) */
+const iMapped = (visibleIndex) => {
+  if (!qSearch.value) return visibleIndex;
+  const q = filteredQuestions.value[visibleIndex];
+  return questions.value.indexOf(q);
+};
+
+/* Expandir / Contraer todo (sobre el universo visible) */
+const ensureQOpenSize = () => {
+  if (!Array.isArray(viewToggle.qOpen)) viewToggle.qOpen = [];
+  const need = Math.max(viewToggle.qOpen.length, questions.value.length);
+  for (let i = 0; i < need; i++) {
+    if (typeof viewToggle.qOpen[i] !== 'boolean') viewToggle.qOpen[i] = false;
+  }
+};
+const expandAll = () => {
+  ensureQOpenSize();
+  filteredQuestions.value.forEach((_, i) => viewToggle.qOpen[iMapped(i)] = true);
+};
+const collapseAll = () => {
+  ensureQOpenSize();
+  filteredQuestions.value.forEach((_, i) => viewToggle.qOpen[iMapped(i)] = false);
+};
+
+/* Icono y badge por tipo de pregunta */
+const tipoIcon = (tipo) => {
+  switch (tipo) {
+    case 'seleccion_multiple': return 'bi bi-ui-checks';   // multiple
+    case 'respuesta_abierta':  return 'bi bi-chat-text';   // abierta
+    default:                   return 'bi bi-question-circle';
+  }
+};
+const tipoBadgeClass = (tipo) => {
+  switch (tipo) {
+    case 'seleccion_multiple': return 'bg-type-multi';
+    case 'respuesta_abierta':  return 'bg-type-open';
+    default:                   return 'bg-secondary-subtle text-secondary';
+  }
+};
+</script>
+
+<style scoped>
+@import '@/assets/css/Crud.css';
+
+/* Elevar sutilmente al hover */
+.hover-raise {
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.hover-raise:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0,0,0,.08);
+}
+
+/* Modal header avatar */
+.avatar-pill{
+  width: 44px; height: 44px;
+  display: grid; place-items: center;
+  border-radius: 999px;
+  background: var(--chip, #eef6ff);
+  color: var(--ink-2, #2c4c86);
+  box-shadow: inset 0 0 0 1px rgba(27,59,111,.08);
+  font-size: 1.25rem;
+}
+
+/* Chips superiores */
+.meta-wrap{
+  display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem;
+}
+.meta-chip{
+  background: var(--chip, #eef6ff);
+  color: var(--ink-2, #2c4c86);
+  border: 1px solid var(--stroke, #e6eefc);
+  padding: .35rem .65rem; border-radius: 999px;
+  font-size: .85rem;
+}
+
+/* Toolbar del visor */
+.viewer-toolbar{
+  display: flex; gap: .75rem; align-items: center; justify-content: space-between;
+  margin-bottom: .75rem; flex-wrap: wrap;
+}
+.viewer-search{ max-width: 420px; }
+
+/* Progreso */
+.progress-wrap .progress{ height: .6rem; }
+.progress-wrap .progress-bar{
+  background: linear-gradient(90deg, #7cb8ff, #2c4c86);
+}
+
+/* Tarjetas de preguntas */
+.q-card{
+  border: 1px solid var(--stroke, #e6eefc);
+  border-radius: 16px;
+  background: var(--card-b, #f8fbff);
+}
+.q-head{
+  padding: .9rem 1rem;
+  display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+  cursor: pointer; user-select: none;
+}
+.q-head:hover{ background: #f1f6ff; }
+.q-index{
+  width: 32px; height: 32px; border-radius: 8px;
+  display: grid; place-items: center; font-weight: 700;
+  background: white; color: var(--ink, #1b3b6f); border: 1px solid var(--stroke, #e6eefc);
+}
+.q-title{ font-weight: 600; }
+.q-type{ font-weight: 600; }
+
+.q-body{
+  padding: .5rem 1rem 1rem 1rem;
+}
+.q-chips{
+  display: flex; flex-wrap: wrap; gap: .5rem;
+}
+.chip{
+  display: inline-flex; align-items: center; gap: .25rem;
+  background: white; border: 1px solid var(--stroke,#e6eefc);
+  padding: .35rem .6rem; border-radius: 999px; font-size: .9rem;
+}
+
+/* Badges de tipo */
+.bg-type-multi{
+  background: #e7f7ef;
+  color: #0f7a47;
+  border: 1px solid #bce8d1;
+}
+.bg-type-open{
+  background: #fff4e5;
+  color: #8a4b00;
+  border: 1px solid #ffe0b8;
+}
+
+/* Animaciones suaves */
+.rotate{ transform: rotate(180deg); transition: transform .2s ease; }
+.fade-enter-active, .fade-leave-active{ transition: opacity .18s ease; }
+.fade-enter-from, .fade-leave-to{ opacity: 0; }
+
+/* Ajustes menores */
+.modal-fit .modal-content{ border-radius: 20px; }
+.btn-with-label i{ vertical-align: -1px; }
+</style>

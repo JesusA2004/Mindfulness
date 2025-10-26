@@ -213,7 +213,20 @@
                 <div class="resource-grid">
                   <div v-for="(r, i) in (selected?.recursos || [])" :key="r._id || i" class="resource-card">
                     <div class="resource-thumb">
-                      <template v-if="isImage(r.url)">
+                      <!-- Embed soportado -->
+                      <template v-if="isEmbeddable(r.url)">
+                        <iframe
+                          :src="toEmbedUrl(r.url)"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowfullscreen
+                          loading="lazy"
+                          referrerpolicy="no-referrer-when-downgrade"
+                          style="width:100%;height:100%;border:0"
+                        ></iframe>
+                      </template>
+
+                      <!-- Si no es embed, usar elementos nativos -->
+                      <template v-else-if="isImage(r.url)">
                         <img :src="r.url" alt="" />
                       </template>
                       <template v-else-if="isVideo(r.url)">
@@ -223,7 +236,7 @@
                         <audio controls :src="r.url"></audio>
                       </template>
                       <template v-else>
-                        <div class="text-muted small">Archivo</div>
+                        <a :href="r.url" target="_blank" rel="noopener" class="small">Abrir recurso</a>
                       </template>
                     </div>
                     <div class="small text-muted">{{ (r.tipo || autoType(r.url)) }} • {{ r.fecha || '—' }}</div>
@@ -349,7 +362,7 @@
                 Recursos ({{ form.recursos.length }})
                 <i class="bi bi-info-circle ms-1 text-primary"
                    data-bs-toggle="tooltip"
-                   title="Adjunta imágenes, videos o audios (el tipo y la fecha se guardan automáticamente)."></i>
+                   title="Pega el enlace de tu imagen, video o audio. El tipo y la fecha se calculan automáticamente."></i>
               </h6>
               <div class="d-flex align-items-center gap-2">
                 <button type="button" class="btn btn-sm btn-outline-success" @click="addRecurso">
@@ -384,18 +397,22 @@
                         <div class="row g-3 align-items-start">
                           <div class="col-12 col-lg-6">
                             <label class="form-label">
-                              Archivo (imagen, video o audio)
+                              Link del recurso (imagen, video o audio)
                               <i class="bi bi-info-circle ms-1 text-primary"
                                  data-bs-toggle="tooltip"
-                                 title="Se aceptan imágenes (jpg/png), videos (mp4) y audios (mp3)."></i>
+                                 title="Ejemplos: imagen (.jpg/.png), video (.mp4) o YouTube, audio (.mp3) o SoundCloud/Spotify."></i>
                             </label>
                             <input
-                              type="file"
+                              v-model.trim="r.url"
+                              @input="onUrlChange(r)"
+                              type="url"
                               class="form-control"
-                              accept="image/*,video/*,audio/*"
-                              @change="onPickFile($event, r)"
+                              placeholder="https://..."
+                              required
                             />
-                            <div class="form-text">Si ya hay archivo, seleccionar uno nuevo lo reemplaza.</div>
+                            <div class="form-text">
+                              Se detectará automáticamente el tipo (Imagen/Video/Audio) y se mostrará la vista previa.
+                            </div>
                           </div>
 
                           <div class="col-12 col-lg-6">
@@ -408,29 +425,29 @@
                             <input v-model.trim="r.descripcion" type="text" class="form-control" maxlength="200" />
                           </div>
 
-                          <!-- Vista previa con “X” sobrepuesta para limpiar solo el archivo -->
+                          <!-- Vista previa -->
                           <div class="col-12">
                             <div class="resource-preview position-relative">
-                              <button
-                                v-if="r._previewUrl || r.url"
-                                type="button"
-                                class="btn btn-sm btn-danger resource-clear-btn"
-                                title="Quitar archivo (mantener tarjeta)"
-                                @click="clearResourceFile(r)"
-                              >
-                                <i class="bi bi-x-lg"></i>
-                              </button>
-
-                              <template v-if="r._previewUrl || r.url">
-                                <img v-if="isImage(r._previewUrl || r.url)" :src="r._previewUrl || r.url" alt="" />
-                                <video v-else-if="isVideo(r._previewUrl || r.url)" controls :src="r._previewUrl || r.url"></video>
-                                <audio v-else-if="isAudio(r._previewUrl || r.url)" controls :src="r._previewUrl || r.url"></audio>
-                                <div v-else class="text-muted small p-2">Archivo adjunto</div>
+                              <template v-if="r.url">
+                                <template v-if="isEmbeddable(r.url)">
+                                  <iframe
+                                    :src="toEmbedUrl(r.url)"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowfullscreen
+                                    loading="lazy"
+                                    referrerpolicy="no-referrer-when-downgrade"
+                                    style="width:100%;height:280px;border:0"
+                                  ></iframe>
+                                </template>
+                                <img v-else-if="isImage(r.url)" :src="r.url" alt="" />
+                                <video v-else-if="isVideo(r.url)" controls :src="r.url"></video>
+                                <audio v-else-if="isAudio(r.url)" controls :src="r.url"></audio>
+                                <a v-else :href="r.url" target="_blank" rel="noopener" class="small">Abrir recurso</a>
                               </template>
                               <div v-else class="text-muted small">Sin vista previa.</div>
                             </div>
                             <div class="form-text">
-                              Tipo y fecha se guardan automáticamente al adjuntar.
+                              Tipo y fecha se guardan automáticamente al registrar/actualizar.
                             </div>
                           </div>
                         </div>
@@ -461,23 +478,15 @@
 import { useTecnicasCrud } from '@/assets/js/useTecnicasCrud';
 
 const {
-  // estado y listas
   items, isLoading, hasMore, filteredItems,
-  // búsqueda
   searchQuery, onInstantSearch, clearSearch,
-  // utilidad
   getId, isImage, isVideo, isAudio, autoType,
-  // modales y refs
+  isEmbeddable, toEmbedUrl,
   viewModalRef, formModalRef, hideModal,
-  // acciones de lista/paginación
   loadMore,
-  // selección y UI
   selected, ui, viewToggle, isEditing, saving, form, categorias,
-  // abrir/editar/ver
   openView, openCreate, openEdit,
-  // recursos
-  addRecurso, removeRecurso, toggleRecurso, onPickFile, clearResourceFile,
-  // submit/eliminar
+  addRecurso, removeRecurso, toggleRecurso, onUrlChange,
   onSubmit, confirmDelete, modifyFromView, deleteFromView,
 } = useTecnicasCrud();
 </script>
@@ -505,7 +514,7 @@ const {
   display:flex; align-items:center; justify-content:center;
   margin-bottom:.4rem;
 }
-.resource-thumb img, .resource-thumb video{
+.resource-thumb img, .resource-thumb video, .resource-thumb iframe{
   width:100%; height:100%; object-fit:cover;
 }
 .resource-preview{
@@ -521,11 +530,5 @@ const {
 }
 .resource-preview audio{ width:100%; }
 
-/* Botón flotante para limpiar SOLO el archivo del recurso */
-.resource-clear-btn{
-  position:absolute; top:.4rem; right:.4rem;
-  border-radius:9999px;
-  padding:.25rem .45rem;
-  line-height:1;
-}
+/* Botón flotante eliminado (no hay archivos locales que limpiar) */
 </style>

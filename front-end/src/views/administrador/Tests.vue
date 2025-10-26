@@ -1,3 +1,4 @@
+<!-- src/views/administrador/TestsEmocionales.vue -->
 <template>
   <main class="panel-wrapper">
     <!-- ======= Toolbar: Búsqueda + Nuevo ======= -->
@@ -62,7 +63,7 @@
     <div class="container-fluid px-3 px-lg-2">
       <div class="row g-3 row-cols-1 row-cols-sm-2 row-cols-lg-3">
         <div v-for="item in filteredItems" :key="getId(item)" class="col">
-          <div class="card h-100 item-card shadow-sm">
+          <div class="card h-100 item-card shadow-sm hover-raise">
             <div class="card-body">
               <div class="d-flex justify-content-between align-items-start mb-2">
                 <h5 class="card-title mb-0 text-truncate fw-bold" :title="item.nombre">
@@ -166,68 +167,134 @@
 
     <!-- ======= Modales ======= -->
 
-    <!-- Modal: Consulta -->
+    <!-- Modal: Consulta (vistosa como Docente, pero con acciones de Admin en footer) -->
     <div class="modal fade" ref="viewModalRef" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-xl modal-fit">
         <div class="modal-content modal-flex border-0 shadow-lg">
           <div class="modal-header border-0 sticky-top bg-white">
-            <h5 class="modal-title fw-bold">Detalle del test</h5>
+            <div class="d-flex align-items-center gap-3">
+              <div class="avatar-pill">
+                <i class="bi bi-journal-check"></i>
+              </div>
+              <div>
+                <h5 class="modal-title fw-bold mb-0">{{ selected?.nombre || 'Detalle del test' }}</h5>
+                <div class="small text-muted">
+                  {{ (selected?.cuestionario?.length || 0) }} pregunta(s) •
+                  {{ selected?.duracion_estimada ? selected?.duracion_estimada + ' min' : 'Duración no definida' }}
+                </div>
+              </div>
+            </div>
             <button type="button" class="btn-close" @click="hideModal('view')" aria-label="Cerrar"></button>
           </div>
 
           <div class="modal-body modal-body-safe">
-            <!-- Sección: Título + toggle resto -->
-            <div class="section-header" @click="viewToggle.meta = !viewToggle.meta">
-              <div class="d-flex align-items-center gap-2">
-                <strong class="fs-5">{{ selected?.nombre || '—' }}</strong>
+            <!-- Meta info -->
+            <div class="meta-wrap">
+              <div class="meta-chip">
+                <i class="bi bi-calendar-event me-1"></i> {{ formatDate(selected?.fechaAplicacion) }}
               </div>
-              <i class="bi" :class="viewToggle.meta ? 'bi-chevron-up rotate' : 'bi-chevron-down'"></i>
+              <div class="meta-chip">
+                <i class="bi bi-clock-history me-1"></i>
+                {{ selected?.duracion_estimada ? selected?.duracion_estimada + ' min' : '—' }}
+              </div>
+              <div class="meta-chip" v-if="selected?.descripcion">
+                <i class="bi bi-info-circle me-1"></i> {{ selected?.descripcion }}
+              </div>
             </div>
-            <transition name="fade">
-              <div v-show="viewToggle.meta" class="section-body">
-                <dl class="row gy-2 mb-0">
-                  <dt class="col-sm-3">Descripción</dt>
-                  <dd class="col-sm-9">{{ selected?.descripcion || '—' }}</dd>
 
-                  <dt class="col-sm-3">Fecha de aplicación</dt>
-                  <dd class="col-sm-9">{{ formatDate(selected?.fechaAplicacion) }}</dd>
-
-                  <dt class="col-sm-3">Duración estimada</dt>
-                  <dd class="col-sm-9">{{ selected?.duracion_estimada ? selected?.duracion_estimada + ' min' : '—' }}</dd>
-                </dl>
+            <!-- Controles locales -->
+            <div class="viewer-toolbar">
+              <div class="input-group input-group-sm viewer-search">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input
+                  v-model.trim="qSearch"
+                  type="search"
+                  class="form-control"
+                  placeholder="Buscar dentro del cuestionario…"
+                  aria-label="Buscar en preguntas"
+                />
+                <button
+                  v-if="qSearch"
+                  class="btn btn-outline-secondary"
+                  @click="qSearch=''"
+                  aria-label="Limpiar búsqueda de preguntas"
+                >
+                  <i class="bi bi-x-lg"></i>
+                </button>
               </div>
-            </transition>
 
-            <!-- Sección: Cuestionario -->
-            <div class="section-header mt-3" @click="viewToggle.cuestionario = !viewToggle.cuestionario">
-              <div class="d-flex align-items-center gap-2">
-                <strong>Cuestionario ({{ (selected?.cuestionario?.length || 0) }})</strong>
+              <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary btn-sm" @click="expandAll">
+                  <i class="bi bi-arrows-expand me-1"></i> Expandir todo
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" @click="collapseAll">
+                  <i class="bi bi-arrows-collapse me-1"></i> Contraer todo
+                </button>
               </div>
-              <i class="bi" :class="viewToggle.cuestionario ? 'bi-chevron-up rotate' : 'bi-chevron-down'"></i>
             </div>
-            <transition name="fade">
-              <div v-show="viewToggle.cuestionario" class="section-body">
-                <div v-if="(selected?.cuestionario?.length || 0) === 0" class="text-muted">—</div>
-                <div v-for="(q, i) in (selected?.cuestionario || [])" :key="q._id" class="q-accordion">
-                  <div class="q-header" @click="toggleViewQuestion(i)">
-                    <div class="fw-semibold">Pregunta #{{ i + 1 }}</div>
-                    <div class="text-truncate small">{{ q.pregunta || '—' }}</div>
-                    <i class="bi ms-auto" :class="viewToggle.qOpen[i] ? 'bi-chevron-up rotate' : 'bi-chevron-down'"></i>
+
+            <!-- Progreso (cantidad visible vs total) -->
+            <div class="progress-wrap mb-3" v-if="totalQuestions > 0">
+              <div class="d-flex justify-content-between small text-muted mb-1">
+                <span>Mostrando {{ visibleQuestions }} de {{ totalQuestions }} preguntas</span>
+                <span>{{ Math.round((visibleQuestions/totalQuestions)*100) }}%</span>
+              </div>
+              <div class="progress" role="progressbar" :aria-valuenow="(visibleQuestions/totalQuestions)*100" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-bar" :style="{ width: (visibleQuestions/totalQuestions)*100 + '%' }"></div>
+              </div>
+            </div>
+
+            <!-- Preguntas en tarjetas -->
+            <div class="row g-3">
+              <div
+                v-for="(q, i) in filteredQuestions"
+                :key="q._id || i"
+                class="col-12"
+              >
+                <div class="q-card shadow-sm">
+                  <div class="q-head" @click="toggleViewQuestion(iMapped(i))" :aria-expanded="viewToggle.qOpen[iMapped(i)]">
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="q-index">#{{ i + 1 }}</span>
+                      <span class="q-title text-truncate" :title="q.pregunta || '—'">
+                        {{ q.pregunta || '—' }}
+                      </span>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="badge rounded-pill q-type" :class="tipoBadgeClass(q.tipo)">
+                        <i :class="tipoIcon(q.tipo)" class="me-1"></i>{{ labelTipo(q.tipo) }}
+                      </span>
+                      <i class="bi ms-2" :class="viewToggle.qOpen[iMapped(i)] ? 'bi-chevron-up rotate' : 'bi-chevron-down'"></i>
+                    </div>
                   </div>
+
                   <transition name="fade">
-                    <div v-show="viewToggle.qOpen[i]" class="q-body">
-                      <div class="text-muted small mb-1">Tipo: {{ labelTipo(q.tipo) }}</div>
-                      <div v-if="(q.opciones?.length || 0) > 0">
-                        <div class="small text-muted">Opciones:</div>
-                        <ul class="small mb-0">
-                          <li v-for="(op, k) in q.opciones" :key="k">{{ op }}</li>
-                        </ul>
-                      </div>
+                    <div v-show="viewToggle.qOpen[iMapped(i)]" class="q-body">
+                      <template v-if="(q.opciones?.length || 0) > 0">
+                        <div class="small text-muted mb-2">Opciones:</div>
+                        <div class="q-chips">
+                          <span v-for="(op, k) in q.opciones" :key="k" class="chip">
+                            <i class="bi bi-dot me-1"></i>{{ op }}
+                          </span>
+                        </div>
+                      </template>
+                      <template v-else>
+                        <div class="text-muted fst-italic small">Respuesta abierta</div>
+                      </template>
                     </div>
                   </transition>
                 </div>
               </div>
-            </transition>
+
+              <div v-if="filteredQuestions.length === 0" class="col-12">
+                <div class="alert alert-light border d-flex align-items-center gap-2">
+                  <i class="bi bi-emoji-neutral text-secondary fs-5"></i>
+                  <div>
+                    <strong>Sin coincidencias.</strong> Ajusta tu búsqueda interna.
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <div class="safe-bottom-space" aria-hidden="true"></div>
           </div>
@@ -379,6 +446,7 @@
 </template>
 
 <script setup>
+import { computed, ref } from 'vue';
 import { useTestsCrud } from '@/assets/js/useTestsCrud';
 
 const {
@@ -392,8 +460,169 @@ const {
   addPregunta, removePregunta, toggleQuestion, needsOptions, addOpcion, removeOpcion, onChangeTipo, toggleViewQuestion,
   onSubmit, confirmDelete, modifyFromView, deleteFromView,
 } = useTestsCrud();
+
+/* ==========
+   Controles del visor (consulta vistosa)
+=========== */
+const qSearch = ref('');
+
+/* Preguntas del test seleccionado + filtro local */
+const questions = computed(() => selected?.value?.cuestionario || []);
+const totalQuestions = computed(() => questions.value.length);
+
+const filteredQuestions = computed(() => {
+  if (!qSearch.value) return questions.value;
+  const q = qSearch.value.toLowerCase();
+  return questions.value.filter(p =>
+    (p?.pregunta || '').toLowerCase().includes(q) ||
+    (p?.opciones || []).some(op => (op || '').toLowerCase().includes(q))
+  );
+});
+
+/* Cantidad visible */
+const visibleQuestions = computed(() => filteredQuestions.value.length);
+
+/* Map índice visible -> índice real (para usar viewToggle.qOpen) */
+const iMapped = (visibleIndex) => {
+  if (!qSearch.value) return visibleIndex;
+  const q = filteredQuestions.value[visibleIndex];
+  return questions.value.indexOf(q);
+};
+
+/* Expandir / Contraer */
+const expandAll = () => {
+  ensureQOpenSize();
+  filteredQuestions.value.forEach((_, i) => viewToggle.qOpen[iMapped(i)] = true);
+};
+const collapseAll = () => {
+  ensureQOpenSize();
+  filteredQuestions.value.forEach((_, i) => viewToggle.qOpen[iMapped(i)] = false);
+};
+
+/* Asegurar tamaño de qOpen */
+function ensureQOpenSize () {
+  if (!Array.isArray(viewToggle.qOpen)) viewToggle.qOpen = [];
+  const need = Math.max(viewToggle.qOpen.length, questions.value.length);
+  for (let i = 0; i < need; i++) {
+    if (typeof viewToggle.qOpen[i] !== 'boolean') viewToggle.qOpen[i] = false;
+  }
+}
+
+/* Iconos y clases por tipo */
+const tipoIcon = (tipo) => {
+  switch (tipo) {
+    case 'seleccion_multiple': return 'bi bi-ui-radios';
+    case 'respuesta_abierta':  return 'bi bi-chat-text';
+    default:                   return 'bi bi-question-circle';
+  }
+};
+const tipoBadgeClass = (tipo) => {
+  switch (tipo) {
+    case 'seleccion_multiple': return 'bg-type-multi';
+    case 'respuesta_abierta':  return 'bg-type-open';
+    default:                   return 'bg-secondary-subtle text-secondary';
+  }
+};
 </script>
 
 <style scoped>
 @import '@/assets/css/Crud.css';
+
+/* Elevar sutilmente al hover */
+.hover-raise {
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.hover-raise:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0,0,0,.08);
+}
+
+/* Modal header avatar */
+.avatar-pill{
+  width: 44px; height: 44px;
+  display: grid; place-items: center;
+  border-radius: 999px;
+  background: var(--chip, #eef6ff);
+  color: var(--ink-2, #2c4c86);
+  box-shadow: inset 0 0 0 1px rgba(27,59,111,.08);
+  font-size: 1.25rem;
+}
+
+/* Chips superiores */
+.meta-wrap{
+  display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem;
+}
+.meta-chip{
+  background: var(--chip, #eef6ff);
+  color: var(--ink-2, #2c4c86);
+  border: 1px solid var(--stroke, #e6eefc);
+  padding: .35rem .65rem; border-radius: 999px;
+  font-size: .85rem;
+}
+
+/* Toolbar del visor */
+.viewer-toolbar{
+  display: flex; gap: .75rem; align-items: center; justify-content: space-between;
+  margin-bottom: .75rem; flex-wrap: wrap;
+}
+.viewer-search{ max-width: 420px; }
+
+/* Progreso */
+.progress-wrap .progress{ height: .6rem; }
+.progress-wrap .progress-bar{
+  background: linear-gradient(90deg, #7cb8ff, #2c4c86);
+}
+
+/* Tarjetas de preguntas */
+.q-card{
+  border: 1px solid var(--stroke, #e6eefc);
+  border-radius: 16px;
+  background: var(--card-b, #f8fbff);
+}
+.q-head{
+  padding: .9rem 1rem;
+  display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+  cursor: pointer; user-select: none;
+}
+.q-head:hover{ background: #f1f6ff; }
+.q-index{
+  width: 32px; height: 32px; border-radius: 8px;
+  display: grid; place-items: center; font-weight: 700;
+  background: white; color: var(--ink, #1b3b6f); border: 1px solid var(--stroke, #e6eefc);
+}
+.q-title{ font-weight: 600; }
+.q-type{ font-weight: 600; }
+
+.q-body{
+  padding: .5rem 1rem 1rem 1rem;
+}
+.q-chips{
+  display: flex; flex-wrap: wrap; gap: .5rem;
+}
+.chip{
+  display: inline-flex; align-items: center; gap: .25rem;
+  background: white; border: 1px solid var(--stroke,#e6eefc);
+  padding: .35rem .6rem; border-radius: 999px; font-size: .9rem;
+}
+
+/* Badges de tipo */
+.bg-type-multi{
+  background: #e7f7ef;
+  color: #0f7a47;
+  border: 1px solid #bce8d1;
+}
+.bg-type-open{
+  background: #fff4e5;
+  color: #8a4b00;
+  border: 1px solid #ffe0b8;
+}
+
+/* Animaciones suaves */
+.rotate{ transform: rotate(180deg); transition: transform .2s ease; }
+.fade-enter-active, .fade-leave-active{ transition: opacity .18s ease; }
+.fade-enter-from, .fade-leave-to{ opacity: 0; }
+
+/* Ajustes menores */
+.modal-fit .modal-content{ border-radius: 20px; }
+.btn-with-label i{ vertical-align: -1px; }
 </style>

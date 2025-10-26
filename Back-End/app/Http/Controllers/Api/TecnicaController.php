@@ -38,32 +38,27 @@ class TecnicaController extends Controller
     {
         $datos = $request->validated();
 
-        // Crear solo campos base (sin arrays embebidos)
+        // Crear campos base (sin arrays embebidos)
         $base = Arr::except($datos, ['calificaciones', 'recursos']);
         $tecnica = Tecnica::create($base);
 
-        // Si vienen calificaciones, las colocamos como array embebido
+        // Calificaciones (opcional)
         if (!empty($datos['calificaciones']) && is_array($datos['calificaciones'])) {
             $califs = array_map(function ($c) {
-                // Útil para futuras ediciones/borrados por _id interno del subdoc
-                if (!isset($c['_id'])) {
-                    $c['_id'] = (string) new ObjectId();
-                }
+                $c['_id'] = $c['_id'] ?? (string) new ObjectId();
                 return $c;
             }, $datos['calificaciones']);
-
             $tecnica->calificaciones = $califs;
         }
 
-        // Si vienen recursos, los colocamos como array embebido
+        // Recursos (opcional) - normalizar tipo y _id
         if (!empty($datos['recursos']) && is_array($datos['recursos'])) {
             $recursos = array_map(function ($r) {
-                if (!isset($r['_id'])) {
-                    $r['_id'] = (string) new ObjectId();
-                }
+                $r['_id'] = $r['_id'] ?? (string) new ObjectId();
+                $r['tipo'] = $r['tipo'] ?? $this->guessTipoPorUrl($r['url'] ?? '');
+                $r['fecha'] = $r['fecha'] ?? date('Y-m-d');
                 return $r;
             }, $datos['recursos']);
-
             $tecnica->recursos = $recursos;
         }
 
@@ -92,11 +87,11 @@ class TecnicaController extends Controller
     {
         $datos = $request->validated();
 
-        // Actualiza campos base
+        // Campos base
         $base = Arr::except($datos, ['calificaciones', 'recursos']);
         $tecnica->fill($base);
 
-        // Si el payload incluye 'calificaciones', se reemplaza el array completo
+        // Calificaciones (si viene la clave, se reemplaza)
         if (array_key_exists('calificaciones', $datos)) {
             $califs = $datos['calificaciones'] ?? [];
             if (is_array($califs)) {
@@ -108,12 +103,14 @@ class TecnicaController extends Controller
             $tecnica->calificaciones = $califs;
         }
 
-        // Si el payload incluye 'recursos', se reemplaza el array completo
+        // Recursos (si viene la clave, se reemplaza)
         if (array_key_exists('recursos', $datos)) {
             $recursos = $datos['recursos'] ?? [];
             if (is_array($recursos)) {
                 $recursos = array_map(function ($r) {
                     $r['_id'] = $r['_id'] ?? (string) new ObjectId();
+                    $r['tipo'] = $r['tipo'] ?? $this->guessTipoPorUrl($r['url'] ?? '');
+                    $r['fecha'] = $r['fecha'] ?? date('Y-m-d');
                     return $r;
                 }, $recursos);
             }
@@ -138,5 +135,26 @@ class TecnicaController extends Controller
         return response()->json([
             'mensaje' => 'Técnica eliminada correctamente.',
         ], 200);
+    }
+
+    /**
+     * Inferir tipo (Imagen|Video|Audio|Documento) según URL o proveedor.
+     */
+    private function guessTipoPorUrl(string $url): string
+    {
+        $s = strtolower($url);
+
+        // Proveedores embebibles
+        if (preg_match('#(youtube\.com/watch\?v=|youtu\.be/)#', $s)) return 'Video';
+        if (preg_match('#vimeo\.com/\d+#', $s)) return 'Video';
+        if (preg_match('#soundcloud\.com/#', $s)) return 'Audio';
+        if (preg_match('#open\.spotify\.com/#', $s)) return 'Audio';
+
+        // Extensiones
+        if (preg_match('#\.(png|jpe?g|gif|webp|avif|svg)(\?.*)?$#', $s)) return 'Imagen';
+        if (preg_match('#\.(mp4|webm|ogg|mov|m4v)(\?.*)?$#', $s))     return 'Video';
+        if (preg_match('#\.(mp3|wav|ogg|m4a)(\?.*)?$#', $s))           return 'Audio';
+
+        return 'Documento';
     }
 }

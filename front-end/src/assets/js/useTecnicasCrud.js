@@ -8,10 +8,9 @@ import {
   fetchPaginated, randomKey, isRequired
 } from '@/assets/js/crudUtils';
 
-const API_BASE   = apiBase('/tecnicas');
-const UPLOAD_URL = apiBase('/uploads'); // ajusta si tu backend usa otra ruta
+const API_BASE = apiBase('/tecnicas');
 
-// Categorías predeterminadas basadas en tus actividades/ejercicios
+// Categorías predeterminadas
 const DEFAULT_CATEGORIES = [
   'Respiración',
   'Concentración/Atención Plena',
@@ -26,6 +25,63 @@ const DEFAULT_CATEGORIES = [
   'Atención a los sentidos',
   'Relajación en el aula',
 ];
+
+// ====== Helpers de tipos/extensiones/embeds ======
+function isImage(url)  { return /\.(png|jpe?g|gif|webp|avif|svg)(\?.*)?$/i.test(url || ''); }
+function isVideo(url)  { return /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url || ''); }
+function isAudio(url)  { return /\.(mp3|wav|ogg|m4a)(\?.*)?$/i.test(url || ''); }
+
+function isYouTube(url)  { return /(?:youtube\.com\/watch\?v=|youtu\.be\/)/i.test(url || ''); }
+function isVimeo(url)    { return /vimeo\.com\/\d+/i.test(url || ''); }
+function isSoundCloud(u) { return /soundcloud\.com\//i.test(u || ''); }
+function isSpotify(u)    { return /open\.spotify\.com\//i.test(u || ''); }
+
+function isEmbeddable(u) { return isYouTube(u) || isVimeo(u) || isSoundCloud(u) || isSpotify(u); }
+
+function toEmbedUrl(u) {
+  if (!u) return '';
+  // YouTube
+  if (isYouTube(u)) {
+    const idMatch = u.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
+    const id = idMatch ? idMatch[1] : '';
+    return id ? `https://www.youtube.com/embed/${id}` : u;
+  }
+  // Vimeo
+  if (isVimeo(u)) {
+    const idMatch = u.match(/vimeo\.com\/(\d+)/);
+    const id = idMatch ? idMatch[1] : '';
+    return id ? `https://player.vimeo.com/video/${id}` : u;
+  }
+  // SoundCloud: usar widget o-url
+  if (isSoundCloud(u)) {
+    const o = encodeURIComponent(u);
+    return `https://w.soundcloud.com/player/?url=${o}&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&visual=true`;
+  }
+  // Spotify (tracks/albums/playlists)
+  if (isSpotify(u)) {
+    // convierte open.spotify.com/{type}/{id} -> embed/{type}/{id}
+    return u.replace('open.spotify.com/', 'open.spotify.com/embed/');
+  }
+  return u;
+}
+
+function autoType(nameOrUrl) {
+  const s = (nameOrUrl || '').toLowerCase();
+  if (isImage(s)) return 'Imagen';
+  if (isVideo(s)) return 'Video';
+  if (isAudio(s)) return 'Audio';
+  if (isEmbeddable(s)) {
+    // mapear por proveedor
+    if (isYouTube(s) || isVimeo(s)) return 'Video';
+    if (isSoundCloud(s) || isSpotify(s)) return 'Audio';
+  }
+  return 'Documento';
+}
+
+function todayISO() {
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
 
 export function useTecnicasCrud() {
   /** === Estado raíz === */
@@ -66,7 +122,7 @@ export function useTecnicasCrud() {
     duracion: null,
     categoria: '',
     categoria_custom: '',
-    recursos: [], // [{ _id, url, descripcion, tipo(auto), fecha(auto), __file?, _previewUrl? }]
+    recursos: [], // [{ _id, url, descripcion, tipo(auto), fecha(auto), __key }]
   });
 
   /** === Refs de modales === */
@@ -176,31 +232,25 @@ export function useTecnicasCrud() {
       _id: r._id || undefined,
       url: r.url || '',
       descripcion: r.descripcion || '',
-      // tipo/fecha visibles pero recalculadas si cambia el archivo
       tipo: r.tipo || autoType(r.url),
       fecha: r.fecha || todayISO(),
-      __file: null,
-      _previewUrl: null,
     }));
   }
 
-  /** === Recursos: edición local === */
+  /** === Recursos (links) === */
   function addRecurso() {
     form.recursos.push({
       __key: randomKey(),
       _id: undefined,
       url: '',
       descripcion: '',
-      tipo: 'Imagen',      // valor inicial, se ajusta al adjuntar
-      fecha: todayISO(),   // auto
-      __file: null,
-      _previewUrl: null,
+      tipo: 'Documento',     // valor inicial, se ajusta al escribir URL
+      fecha: todayISO(),     // auto
     });
     const idx = form.recursos.length - 1;
     ui.rOpen[idx] = true;
   }
 
-  // Confirmar quitar TARJETA de recurso
   async function removeRecurso(index) {
     const Swal = (await import('sweetalert2')).default;
     await import('sweetalert2/dist/sweetalert2.min.css');
@@ -228,63 +278,10 @@ export function useTecnicasCrud() {
 
   function toggleRecurso(idx) { ui.rOpen[idx] = !ui.rOpen[idx]; }
 
-  // Confirmar limpiar SOLO el archivo del recurso (botón X sobre la vista)
-  async function clearResourceFile(r) {
-    const Swal = (await import('sweetalert2')).default;
-    await import('sweetalert2/dist/sweetalert2.min.css');
-
-    const result = await Swal.fire({
-      title: '¿Quitar el archivo?',
-      text: 'Se eliminará el archivo seleccionado para este recurso, pero podrás adjuntar otro antes de guardar.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, quitar archivo',
-      cancelButtonText: 'Cancelar',
-      reverseButtons: true,
-      confirmButtonColor: '#dc3545',
-      cancelButtonColor: '#6c757d',
-    });
-
-    if (!result.isConfirmed) return;
-
-    r.__file = null;
-    r._previewUrl = null;
-    r.url = '';
-    r.tipo = 'Imagen';
-    r.fecha = todayISO();
-    toast('Archivo retirado del recurso.');
-  }
-
-  function onPickFile(e, r) {
-    const file = e?.target?.files?.[0];
-    if (!file) return;
-    r.__file = file;
-    r._previewUrl = URL.createObjectURL(file);
-    r.tipo = typeFromMime(file.type) || autoType(file.name);
-    r.fecha = todayISO();
-  }
-
-  /** === Utilidades de tipo/preview === */
-  function isImage(url)  { return /\.(png|jpe?g|gif|webp|avif|svg)$/i.test(url || ''); }
-  function isVideo(url)  { return /\.(mp4|webm|ogg|mov|m4v)$/i.test(url || ''); }
-  function isAudio(url)  { return /\.(mp3|wav|ogg|m4a)$/i.test(url || ''); }
-  function autoType(nameOrUrl) {
-    const s = (nameOrUrl || '').toLowerCase();
-    if (isImage(s)) return 'Imagen';
-    if (isVideo(s)) return 'Video';
-    if (isAudio(s)) return 'Audio';
-    return 'Archivo';
-  }
-  function typeFromMime(mime) {
-    if (!mime) return null;
-    if (mime.startsWith('image/')) return 'Imagen';
-    if (mime.startsWith('video/')) return 'Video';
-    if (mime.startsWith('audio/')) return 'Audio';
-    return null;
-  }
-  function todayISO() {
-    const d = new Date();
-    return d.toISOString().slice(0,10);
+  function onUrlChange(r) {
+    // Recalcula tipo/fecha al cambiar URL
+    r.tipo = autoType(r.url);
+    if (!r.fecha) r.fecha = todayISO();
   }
 
   /** === Validaciones === */
@@ -293,25 +290,17 @@ export function useTecnicasCrud() {
     if (form.duracion != null && String(form.duracion).trim() !== '' && Number(form.duracion) <= 0) {
       toast('La duración debe ser un entero positivo.', 'error'); return false;
     }
-    return true;
-  }
-
-  /** === Subida de archivos === */
-  async function uploadResource(file) {
-    const isImg  = file.type.startsWith('image/');
-    const dest   = isImg ? 'assets/images/Recursos' : 'assets/media/Recursos'; // audios y videos -> media
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('dest', dest);
-    try {
-      const { data } = await axios.post(UPLOAD_URL, fd, {
-        headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' }
-      });
-      return data?.url; // p.ej. https://.../assets/media/Recursos/nombre.ext
-    } catch (e) {
-      console.error(e);
-      throw new Error('No se pudo subir el archivo.');
+    // Validación ligera de URL si hay recursos
+    for (const r of form.recursos) {
+      if (!r.url) continue;
+      try {
+        new URL(r.url);
+      } catch {
+        toast('Hay un recurso con URL inválida.', 'error');
+        return false;
+      }
     }
+    return true;
   }
 
   /** === Submit (POST/PUT) === */
@@ -320,33 +309,17 @@ export function useTecnicasCrud() {
 
     saving.value = true;
     try {
-      // 1) Subir archivos nuevos y sustituir url + asegurar tipo & fecha
-      for (const r of form.recursos) {
-        if (r.__file) {
-          const url = await uploadResource(r.__file);
-          r.url = url;
-          r.tipo = autoType(url);
-          r.fecha = todayISO();
-          r.__file = null;
-          r._previewUrl = null;
-        } else if (r.url) {
-          r.tipo = autoType(r.url);
-          if (!r.fecha) r.fecha = todayISO();
-        }
-      }
-
-      // 2) Armar payload (tipo/fecha automáticos)
       const body = payload();
 
       if (isEditing.value && form._id) {
         const { data } = await axios.put(`${API_BASE}/${form._id}`, body, { headers: authHeaders() });
-        const saved = normalizeTecnica(data?.data ?? data);
+        const saved = normalizeTecnica(data?.data ?? data?.tecnica ?? data);
         upsertLocal(saved);
         hideModal('form'); await refreshList();
         toast('Técnica actualizada.');
       } else {
         const { data } = await axios.post(API_BASE, body, { headers: authHeaders() });
-        const saved = normalizeTecnica(data?.data ?? data);
+        const saved = normalizeTecnica(data?.data ?? data?.tecnica ?? data);
         prependLocal(saved);
         hideModal('form'); await refreshList();
         toast('Técnica registrada.');
@@ -360,19 +333,20 @@ export function useTecnicasCrud() {
   }
 
   function payload() {
-    // Resolver categoría final (select + “Otro”)
+    // Resolver categoría final
     const categoriaFinal = form.categoria === 'Otro'
       ? (form.categoria_custom || '').trim()
       : (form.categoria || '').trim();
 
     const recursos = form.recursos
-      .filter(r => r.url) // solo los que realmente tienen archivo
+      .filter(r => (r.url || '').trim() !== '') // solo si hay URL
       .map(r => ({
         _id: r._id, // opcional para PUT
-        url: r.url,
+        url: r.url.trim(),
         descripcion: r.descripcion || '',
-        tipo: r.tipo || autoType(r.url),  // auto
-        fecha: r.fecha || todayISO(),     // auto
+        // enviamos tipo/fecha por conveniencia; backend también los recalcula por seguridad
+        tipo: r.tipo || autoType(r.url),
+        fecha: r.fecha || todayISO(),
       }));
 
     return {
@@ -382,7 +356,6 @@ export function useTecnicasCrud() {
       duracion: form.duracion ?? null,
       categoria: categoriaFinal,
       recursos,
-      // calificaciones fuera de este flujo
     };
   }
 
@@ -436,14 +409,23 @@ export function useTecnicasCrud() {
 
   /** === API del composable === */
   return {
+    // estado y listas
     items, isLoading, hasMore, filteredItems,
+    // búsqueda
     searchQuery, onInstantSearch, clearSearch,
-    getId, isImage, isVideo, isAudio, autoType,
+    // utilidad
+    getId, isImage, isVideo, isAudio, autoType, isEmbeddable, toEmbedUrl,
+    // modales y refs
     viewModalRef, formModalRef, hideModal,
+    // selección y UI
     selected, ui, viewToggle, isEditing, saving, form, categorias,
+    // acciones de lista/paginación
     loadMore,
+    // abrir/editar/ver
     openView, openCreate, openEdit,
-    addRecurso, removeRecurso, toggleRecurso, onPickFile, clearResourceFile,
+    // recursos (links)
+    addRecurso, removeRecurso, toggleRecurso, onUrlChange,
+    // submit/eliminar
     onSubmit, confirmDelete, modifyFromView, deleteFromView,
   };
 }

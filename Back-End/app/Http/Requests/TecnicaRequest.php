@@ -14,11 +14,9 @@ class TecnicaRequest extends FormRequest
 
     public function rules(): array
     {
-        // Detecta el id del recurso en la ruta (sea binding de modelo o string)
         $routeParam = $this->route('tecnica');
-        $id = $routeParam instanceof \App\Models\Tecnica ? $routeParam->getKey() : $routeParam; // _id en Mongo
+        $id = $routeParam instanceof \App\Models\Tecnica ? $routeParam->getKey() : $routeParam;
 
-        // Reglas base
         $rules = [
             'descripcion' => 'required|string',
             'dificultad'  => 'required|string|in:Bajo,Medio,Alto',
@@ -31,28 +29,22 @@ class TecnicaRequest extends FormRequest
             'calificaciones.*.comentario'  => 'nullable|string',
             'calificaciones.*.fecha'       => 'required_with:calificaciones|date_format:Y-m-d',
 
-            'recursos'                     => 'sometimes|array',
-            'recursos.*.tipo'              => 'required_with:recursos|string|in:Video,Audio,Documento',
-            'recursos.*.url'               => 'required_with:recursos|url',
-            'recursos.*.descripcion'       => 'nullable|string',
-            'recursos.*.fecha'             => 'required_with:recursos|date_format:Y-m-d',
+            'recursos'               => 'sometimes|array',
+            'recursos.*.tipo'        => 'required_with:recursos|string|in:Imagen,Video,Audio,Documento',
+            'recursos.*.url'         => 'required_with:recursos|url',
+            'recursos.*.descripcion' => 'nullable|string',
+            'recursos.*.fecha'       => 'required_with:recursos|date_format:Y-m-d',
         ];
 
-        // Regla unique de 'nombre'
         if ($this->isMethod('post')) {
-            // CREATE
             $rules['nombre'] = [
                 'required','string','max:150',
-                // Si tu conexión Mongo se llama "mongodb", puedes usar "mongodb.tecnicas"
                 Rule::unique('tecnicas', 'nombre'),
-                // Rule::unique('mongodb.tecnicas', 'nombre'), // opcional si manejas varias conexiones
             ];
         } else {
-            // UPDATE
             $rules['nombre'] = [
                 'required','string','max:150',
                 Rule::unique('tecnicas', 'nombre')->ignore($id, '_id'),
-                // Rule::unique('mongodb.tecnicas', 'nombre')->ignore($id, '_id'), // opcional
             ];
         }
 

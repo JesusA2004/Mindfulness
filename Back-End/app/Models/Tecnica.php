@@ -23,5 +23,4 @@ class Tecnica extends Model
         'calificaciones' => 'array',
         'recursos'       => 'array',
     ];
-    
 }
