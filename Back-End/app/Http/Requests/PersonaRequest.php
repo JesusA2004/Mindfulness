@@ -2,22 +2,14 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Validator;
 use App\Models\Persona;
+use Illuminate\Validation\Validator;
+use Illuminate\Foundation\Http\FormRequest;
 
 class PersonaRequest extends FormRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
+    public function authorize(): bool { return true; }
 
-    /**
-     * Reglas de validación base.
-     * NOTA: Para carrera / cuatrimestre / grupo aceptamos string o array
-     * con una regla de cierre (closure) que valida ambos casos.
-     */
     public function rules(): array
     {
         return [
@@ -27,79 +19,97 @@ class PersonaRequest extends FormRequest
             'fechaNacimiento'  => 'required|date_format:Y-m-d',
             'telefono'         => 'nullable|string|max:20',
             'sexo'             => 'nullable|string|in:Masculino,Femenino,Otro,Prefiero no decir',
-
-            // matricula: unicidad en Mongo se valida en withValidator()
             'matricula'        => 'required|string|max:50',
 
-            // String O array (se valida con closures)
-            'carrera'          => ['nullable', $this->stringOrStringArrayRule(100)],
-            'cuatrimestre'     => ['nullable', $this->stringOrStringArrayRule(20)],
-            'grupo'            => ['nullable', $this->stringOrStringArrayRule(20)],
+            // NUEVO: "cohorte" puede ser string o array de strings tipo "ITI 10 A"
+            'cohorte'          => ['nullable', $this->cohorteStringOrArrayRule()],
         ];
     }
 
     /**
-     * Normaliza inputs ANTES de validar:
-     * - trim de strings
-     * - convierte "a, b, c" en ['a','b','c'] si corresponde
-     * - permite que string simple se quede como string (estudiante)
+     * Normalización:
+     * - Back-compat: si llegan 'carrera', 'cuatrimestre', 'grupo', construye "cohorte".
+     * - Acepta también 'cohorte' ya armado (string o "a, b" -> array).
      */
     protected function prepareForValidation(): void
     {
         $in = $this->all();
 
-        // Helper para trim seguro
-        $trimStr = static function ($v) {
-            return is_string($v) ? trim($v) : $v;
-        };
-
-        // Campos simples (trim)
+        $trim = static fn($v) => is_string($v) ? trim($v) : $v;
         foreach (['nombre','apellidoPaterno','apellidoMaterno','telefono','sexo','matricula'] as $k) {
             if (array_key_exists($k, $in)) {
-                $in[$k] = $trimStr($in[$k]);
+                $in[$k] = $trim($in[$k]);
                 if ($in[$k] === '') $in[$k] = null;
             }
         }
 
-        // fechaNacimiento ya viene en Y-m-d desde el front
+        // Si viene "cohorte" como "a, b" -> array
+        if (array_key_exists('cohorte', $in)) {
+            $in['cohorte'] = $this->toArrayIfCsv($in['cohorte']);
+        } else {
+            // Construir "cohorte" desde legacy si existen
+            $carrera = $in['carrera'] ?? null;         // puede venir solo para estudiante (front)
+            $cuat    = $in['cuatrimestre'] ?? null;
+            $grupo   = $in['grupo'] ?? null;
 
-        // Para carrera / cuatrimestre / grupo:
-        // - Si viene string con comas → array
-        // - Si viene string simple → lo dejamos como string
-        // - Si viene array → limpiamos (trim + quitamos vacíos)
-        foreach (['carrera' => 100, 'cuatrimestre' => 20, 'grupo' => 20] as $field => $max) {
-            if (!array_key_exists($field, $in)) continue;
+            // profesor podría mandar arrays de cada cosa -> combinamos
+            $toArr = function ($v) {
+                if (is_array($v)) {
+                    $v = array_values(array_filter(array_map(fn($x) => is_string($x) ? trim($x) : $x, $v), fn($x) => $x !== '' && $x !== null));
+                    return $v ?: null;
+                }
+                if (is_string($v)) {
+                    $v = trim($v);
+                    if ($v === '') return null;
+                    if (strpos($v, ',') !== false) {
+                        $parts = array_values(array_filter(array_map('trim', explode(',', $v)), fn($x) => $x !== ''));
+                        return $parts ?: null;
+                    }
+                    return [$v];
+                }
+                return null;
+            };
 
-            $val = $in[$field];
+            $arrCar  = $toArr($carrera);
+            $arrCuat = $toArr($cuat);
+            $arrGrp  = $toArr($grupo);
 
-            // Si es string y contiene comas, lo partimos a array
-            if (is_string($val) && strpos($val, ',') !== false) {
-                $parts = array_map('trim', explode(',', $val));
-                $parts = array_values(array_filter($parts, fn($v) => $v !== '' && $v !== null));
-                $in[$field] = $parts ?: null;
-                continue;
+            $cohortes = null;
+
+            if ($arrCar && $arrCuat && $arrGrp) {
+                $tmp = [];
+                foreach ($arrCar as $car) {
+                    foreach ($arrCuat as $c) {
+                        foreach ($arrGrp as $g) {
+                            $tmp[] = $this->buildCohorte($car, $c, $g);
+                        }
+                    }
+                }
+                $cohortes = $tmp ?: null;
+            } elseif ($arrCar && $arrCuat) {
+                $tmp = [];
+                foreach ($arrCar as $car) foreach ($arrCuat as $c) $tmp[] = $this->buildCohorte($car, $c, '');
+                $cohortes = $tmp ?: null;
+            } elseif ($arrCar && $arrGrp) {
+                $tmp = [];
+                foreach ($arrCar as $car) foreach ($arrGrp as $g) $tmp[] = $this->buildCohorte($car, '', $g);
+                $cohortes = $tmp ?: null;
+            } elseif ($arrCar) {
+                $cohortes = $arrCar;
             }
 
-            // Si es array, limpiamos
-            if (is_array($val)) {
-                $val = array_map(static fn($v) => is_string($v) ? trim($v) : $v, $val);
-                $val = array_values(array_filter($val, fn($v) => is_string($v) ? $v !== '' : $v !== null));
-                $in[$field] = $val ?: null;
-                continue;
-            }
-
-            // Si es string vacío → null
-            if (is_string($val) && trim($val) === '') {
-                $in[$field] = null;
+            if (!empty($cohortes)) {
+                // Si hay solo 1, se acepta string; si >1, array (profesor)
+                $in['cohorte'] = count($cohortes) === 1 ? $cohortes[0] : $cohortes;
             }
         }
 
-        // Sexo: normaliza capitalización si viene en otra forma
+        // Sexo: capitalización
         if (!empty($in['sexo']) && is_string($in['sexo'])) {
             $map = [
                 'masculino' => 'Masculino',
-                'femenino' => 'Femenino',
-                'otro' => 'Otro',
+                'femenino'  => 'Femenino',
+                'otro'      => 'Otro',
                 'prefiero no decir' => 'Prefiero no decir',
             ];
             $key = mb_strtolower(trim($in['sexo']));
@@ -109,19 +119,11 @@ class PersonaRequest extends FormRequest
         $this->replace($in);
     }
 
-    /**
-     * Validaciones adicionales DESPUÉS de las reglas:
-     * - Unicidad de 'matricula' en Mongo (ignorando el propio _id si es update)
-     * - Longitud de cada item si los campos son arrays (ya se valida en el closure,
-     *   esto es redundante/defensivo)
-     */
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $v) {
-            // Unicidad de matrícula (Mongo)
             $matricula = $this->input('matricula');
             if ($matricula) {
-                // Determinar el _id actual (si hay model binding, viene objeto)
                 $routeParam = $this->route('persona');
                 $currentId  = is_object($routeParam) ? ($routeParam->_id ?? $routeParam->id ?? null) : $routeParam;
 
@@ -129,70 +131,77 @@ class PersonaRequest extends FormRequest
                     ->when($currentId, fn($q) => $q->where('_id', '!=', $currentId))
                     ->exists();
 
-                if ($exists) {
-                    $v->errors()->add('matricula', 'La matrícula ya está registrada.');
-                }
+                if ($exists) $v->errors()->add('matricula', 'La matrícula ya está registrada.');
             }
         });
     }
 
-    /**
-     * Después de validar, pulimos el payload:
-     * - si arrays quedaron vacíos → null
-     */
     protected function passedValidation(): void
     {
         $out = $this->validated();
-
-        foreach (['carrera','cuatrimestre','grupo'] as $k) {
-            if (array_key_exists($k, $out)) {
-                if (is_array($out[$k]) && count($out[$k]) === 0) {
-                    $out[$k] = null;
-                }
-            }
-        }
-
-        // Sobrescribe inputs limpios para el controlador
+        // no-op; cohorte puede ser string o array
         $this->replace($out);
     }
 
-    /**
-     * Regla reusable: acepta string O array de strings con longitud máxima $max.
-     */
-    protected function stringOrStringArrayRule(int $max): \Closure
+    /** Reglas reutilizables **/
+    protected function cohorteStringOrArrayRule(): \Closure
     {
-        return function (string $attribute, $value, \Closure $fail) use ($max) {
-            // string simple
+        return function (string $attribute, $value, \Closure $fail) {
+            $ok = function ($s) {
+                if (!is_string($s)) return false;
+                $s = trim($s);
+                if ($s === '') return false;
+                // Acepta letras/números/espacios (p.ej. "ITI 10 A", "IA 7 C")
+                return (bool) preg_match('/^[\p{L}\p{N} ]+$/u', $s);
+            };
+
+            if (is_null($value)) return;
+
             if (is_string($value)) {
-                if (mb_strlen($value) > $max) {
-                    $fail("El campo :attribute no debe exceder de {$max} caracteres.");
-                }
+                if (!$ok($value)) $fail('Formato de cohorte inválido. Usa p.ej. "ITI 10 A".');
                 return;
             }
 
-            // array de strings
             if (is_array($value)) {
                 foreach ($value as $idx => $item) {
-                    if (!is_string($item)) {
-                        $fail("Cada elemento de :attribute debe ser texto.");
-                        return;
-                    }
-                    if (mb_strlen($item) > $max) {
-                        $fail("El elemento #".($idx+1)." de :attribute excede {$max} caracteres.");
+                    if (!is_string($item) || !$ok($item)) {
+                        $fail('Formato de cohorte inválido en el elemento #'.($idx+1).'. Usa p.ej. "ITI 10 A".');
                         return;
                     }
                 }
                 return;
             }
 
-            // otro tipo → error
-            $fail('El campo :attribute debe ser texto o una lista de textos.');
+            $fail('El campo :attribute debe ser texto o lista de textos.');
         };
     }
 
-    /**
-     * Etiquetas legibles para mensajes.
-     */
+    /** Helpers **/
+    protected function toArrayIfCsv($v): ?array
+    {
+        if (is_array($v)) {
+            $v = array_values(array_filter(array_map(fn($x) => is_string($x) ? trim($x) : $x, $v), fn($x) => $x !== '' && $x !== null));
+            return $v ?: null;
+        }
+        if (is_string($v)) {
+            $v = trim($v);
+            if ($v === '') return null;
+            if (strpos($v, ',') !== false) {
+                $parts = array_values(array_filter(array_map('trim', explode(',', $v)), fn($x) => $x !== ''));
+                return $parts ?: null;
+            }
+            // string simple -> lo dejaremos como string en passedValidation
+            return [$v]; // devolvemos array para validarlo; luego puedes guardarlo como string si tiene 1
+        }
+        return null;
+    }
+
+    protected function buildCohorte($carrera, $cuatrimestre, $grupo): string
+    {
+        $parts = array_filter([trim((string)$carrera), trim((string)$cuatrimestre), trim((string)$grupo)], fn($x) => $x !== '');
+        return implode(' ', $parts); // "ITI 10 A"
+    }
+
     public function attributes(): array
     {
         return [
@@ -203,25 +212,20 @@ class PersonaRequest extends FormRequest
             'telefono'         => 'teléfono',
             'sexo'             => 'sexo',
             'matricula'        => 'matrícula',
-            'carrera'          => 'carrera(s)',
-            'cuatrimestre'     => 'cuatrimestre(s)',
-            'grupo'            => 'grupo(s)',
+            'cohorte'          => 'cohorte(s)',
         ];
     }
 
-    /**
-     * Mensajes personalizados clave.
-     */
     public function messages(): array
     {
         return [
-            'nombre.required'           => 'El nombre es obligatorio.',
-            'apellidoPaterno.required'  => 'El apellido paterno es obligatorio.',
-            'fechaNacimiento.required'  => 'La fecha de nacimiento es obligatoria.',
-            'fechaNacimiento.date_format' => 'La fecha de nacimiento debe tener el formato YYYY-MM-DD.',
-            'matricula.required'        => 'La matrícula es obligatoria.',
-            'matricula.max'             => 'La matrícula no debe exceder de :max caracteres.',
-            'sexo.in'                   => 'El sexo seleccionado no es válido.',
+            'nombre.required'            => 'El nombre es obligatorio.',
+            'apellidoPaterno.required'   => 'El apellido paterno es obligatorio.',
+            'fechaNacimiento.required'   => 'La fecha de nacimiento es obligatoria.',
+            'fechaNacimiento.date_format'=> 'La fecha de nacimiento debe tener el formato YYYY-MM-DD.',
+            'matricula.required'         => 'La matrícula es obligatoria.',
+            'matricula.max'              => 'La matrícula no debe exceder de :max caracteres.',
+            'sexo.in'                    => 'El sexo seleccionado no es válido.',
         ];
     }
 }

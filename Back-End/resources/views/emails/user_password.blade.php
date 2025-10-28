@@ -1,33 +1,28 @@
-@php
-    // URL del login (ajústala a tu front)
-    $loginUrl = $loginUrl ?? (config('app.frontend_url') ?: rtrim(config('app.url'), '/').'/login');
-    $appName  = config('app.name', 'Mindora');
-@endphp
-
 @component('mail::message')
-{{-- Encabezado --}}
-# ¡Hola {{ $name }}!
+@if(!empty($logoCid))
+<p style="text-align:center;margin:0 0 16px;">
+  <img src="{{ $logoCid }}" alt="Mindora" style="height:42px;">
+</p>
+@endif
 
-Tu cuenta en **{{ $appName }}** ha sido creada o actualizada. Aquí tienes tus credenciales temporales:
+# ¡Bienvenido(a), {{ $name }}!
+
+Tu cuenta en **Mindora** fue creada o actualizada. Aquí tienes tus credenciales temporales:
 
 @component('mail::panel')
-**Usuario:** <a href="mailto:{{ $emailPlain }}">{{ $emailPlain }}</a>  
-**Contraseña temporal:** `{{ $passwordPlain }}`
+**Usuario:** {{ $emailPlain }}  
+**Contraseña temporal:** <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;">{{ $passwordPlain }}</span>
 @endcomponent
+
+> Por seguridad, inicia sesión y **cambia tu contraseña**.
 
 @component('mail::button', ['url' => $loginUrl])
-Ir a {{ $appName }}
+Ir a Mindora
 @endcomponent
 
-> **Por seguridad:** cambia tu contraseña.
-
-Si no solicitaste este acceso, ignora este mensaje o contáctanos.
-
-Saludos,  
-**Equipo de {{ $appName }}**
-
-@slot('subcopy')
 Si el botón no funciona, copia y pega este enlace en tu navegador:  
 {{ $loginUrl }}
-@endslot
+
+Gracias,<br>
+**Equipo de Mindora**
 @endcomponent
