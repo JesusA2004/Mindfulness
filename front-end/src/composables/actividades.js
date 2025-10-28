@@ -1,143 +1,96 @@
 // src/composables/actividades.js
 import axios from "axios";
 
-/** ===========================
- *  CONFIG AXIOS
- *  =========================== */
-const RAW_BASE = process.env.VUE_APP_API_BASE || "/api";
-// Normaliza baseURL (quita doble slash y asegura 1 slash final)
-const baseURL = (RAW_BASE || "")
-  .replace(/\/+$/, ""); // sin trailing slash (lo agregamos en llamadas)
+/** ========= Base URL priorizando VUE_APP_API_URL ========= */
+const RAW_API_URL =
+  process.env.VUE_APP_API_URL ||
+  (process.env.VUE_APP_API_BASE
+    ? String(process.env.VUE_APP_API_BASE).replace(/\/+$/, "") + "/api"
+    : "/api");
 
-const api = axios.create({
-  baseURL, // p.ej. http://localhost:8000/api
-  headers: { "Content-Type": "application/json", Accept: "application/json" },
-});
+// Normaliza: sin slash final
+const baseURL = String(RAW_API_URL).replace(/\/+$/, "");
 
-let baseURLLogged = false;
-function logBaseOnce() {
-  if (!baseURLLogged) {
-    // Ayuda visual en consola para depurar 404
-    console.info("[API] baseURL:", baseURL);
-    baseURLLogged = true;
+/** ========= Token ========= */
+function readToken() {
+  const keys = ["token", "auth_token", "jwt", "access_token"];
+  for (const k of keys) {
+    const v = localStorage.getItem(k);
+    if (v) return v.replace(/^"|"$/g, "");
   }
-}
-logBaseOnce();
-
-/** ===========================
- *  HELPERS
- *  =========================== */
-/**
- * Intenta varias rutas hasta encontrar una que no retorne 404.
- * Útil cuando el backend quedó con 'actividads' en vez de 'actividades'.
- */
-async function tryGet(paths = [], params = {}) {
-  let lastErr;
-  for (const p of paths) {
-    try {
-      const { data } = await api.get(p, { params });
-      return data;
-    } catch (e) {
-      lastErr = e;
-      if (e?.response?.status !== 404) throw e; // si no es 404, re-lanza
-    }
-  }
-  throw lastErr; // todos fallaron
-}
-
-async function tryPost(paths = [], payload = {}) {
-  let lastErr;
-  for (const p of paths) {
-    try {
-      const { data } = await api.post(p, payload);
-      return data;
-    } catch (e) {
-      lastErr = e;
-      if (e?.response?.status !== 404) throw e;
-    }
-  }
-  throw lastErr;
-}
-
-async function tryPut(paths = [], payload = {}) {
-  let lastErr;
-  for (const p of paths) {
-    try {
-      const { data } = await api.put(p, payload);
-      return data;
-    } catch (e) {
-      lastErr = e;
-      if (e?.response?.status !== 404) throw e;
-    }
-  }
-  throw lastErr;
-}
-
-async function tryDelete(paths = []) {
-  let lastErr;
-  for (const p of paths) {
-    try {
-      const { data } = await api.delete(p);
-      return data;
-    } catch (e) {
-      lastErr = e;
-      if (e?.response?.status !== 404) throw e;
-    }
-  }
-  throw lastErr;
-}
-
-/** ===========================
- *  AUTH/USER
- *  =========================== */
-export async function getCurrentUser() {
-  const endpoints = ["/auth/me", "/users/me"];
-  for (const ep of endpoints) {
-    try {
-      const { data } = await api.get(ep);
-      return data?.user || data || null;
-    } catch {
-      /* sigue intentando */
-    }
-  }
-  // fallback opcional: si guardas algo en localStorage, podrías leerlo aquí.
   return null;
 }
 
-/** ===========================
- *  ACTIVIDADES (con fallbacks)
- *  =========================== */
-// Conjunto de posibles rutas según cómo esté tu backend
-const ACT_LIST = ["/actividades", "/actividads", "/actividad"];
-const ACT_ONE  = (id) => [`/actividades/${id}`, `/actividads/${id}`, `/actividad/${id}`];
+function authHeaders() {
+  const t = readToken();
+  return t ? { Authorization: `Bearer ${t}` } : {};
+}
+
+/** ========= Axios ========= */
+const api = axios.create({
+  baseURL,
+  headers: { "Content-Type": "application/json", Accept: "application/json" },
+});
+
+api.interceptors.request.use((config) => {
+  config.headers = { ...(config.headers || {}), ...authHeaders() };
+  if (!window.__API_BASE_LOGGED__) {
+    console.info("[API] baseURL =", baseURL);
+    window.__API_BASE_LOGGED__ = true;
+  }
+  const full = `${config.baseURL?.replace(/\/+$/, "") || ""}/${String(
+    config.url
+  ).replace(/^\/+/, "")}`;
+  console.info("[API REQ]", config.method?.toUpperCase(), full, {
+    params: config.params,
+    body: config.data,
+  });
+  return config;
+});
+
+/** ========= AUTH / USER ========= */
+export async function getCurrentUser() {
+  try {
+    const { data } = await api.get("/auth/user-profile");
+    return data?.user || data || null;
+  } catch (e) {
+    console.warn("No se pudo obtener el usuario actual:", e?.response?.status || e?.message);
+    return null;
+  }
+}
+
+/** ========= ACTIVIDADES ========= */
+const ACT_LIST = "/actividades";
+const ACT_ONE = (id) => `/actividades/${id}`;
 
 export async function fetchActividades(params = {}) {
-  // Nota: api.get usa baseURL ya normalizada; agregamos el path sin doble slash
-  return await tryGet(ACT_LIST, params);
+  const { data } = await api.get(ACT_LIST, { params });
+  return data; // { registros, enlaces }
 }
 
 export async function createActividad(payload) {
-  return await tryPost(ACT_LIST, payload);
+  const { data } = await api.post(ACT_LIST, payload);
+  return data; // { mensaje, actividad }
 }
 
 export async function updateActividad(id, payload) {
-  return await tryPut(ACT_ONE(id), payload);
+  const { data } = await api.put(ACT_ONE(id), payload);
+  return data;
 }
 
 export async function deleteActividad(id) {
-  return await tryDelete(ACT_ONE(id));
+  const { data } = await api.delete(ACT_ONE(id));
+  return data;
 }
 
-/** ===========================
- *  TÉCNICAS / USUARIOS (alumnos)
- *  =========================== */
+/** ========= TÉCNICAS / ALUMNOS / DOCENTES ========= */
 export async function fetchTecnicas(params = {}) {
   try {
     const { data } = await api.get("/tecnicas", { params });
     const registros = data?.registros || data?.data || data || [];
     return Array.isArray(registros) ? registros : [];
-  } catch (error) {
-    console.error("Error al cargar técnicas:", error);
+  } catch (e) {
+    console.error("Error al cargar técnicas:", e?.response?.status || e?.message);
     return [];
   }
 }
@@ -148,30 +101,25 @@ export async function fetchAlumnos(params = {}) {
     const { data } = await api.get("/users", { params: query });
     const registros = data?.data || data?.registros || [];
     return Array.isArray(registros) ? registros : [];
-  } catch (error) {
-    console.error("Error al cargar alumnos:", error);
+  } catch (e) {
+    console.error("Error al cargar alumnos:", e?.response?.status || e?.message);
     return [];
   }
 }
 
-export async function fetchCohortesAlumnos() {
-  const alumnos = await fetchAlumnos();
-  const set = new Set();
-  for (const u of alumnos) {
-    const c = u?.persona?.cohorte;
-    if (Array.isArray(c)) c.forEach((v) => v && set.add(String(v)));
-    else if (c) set.add(String(c));
+export async function fetchDocentes(params = {}) {
+  try {
+    const query = { ...params, rol: "profesor" };
+    const { data } = await api.get("/users", { params: query });
+    const registros = data?.data || data?.registros || [];
+    return Array.isArray(registros) ? registros : [];
+  } catch (e) {
+    console.error("Error al cargar docentes:", e?.response?.status || e?.message);
+    return [];
   }
-  return Array.from(set).sort();
 }
 
-/** ===========================
- *  PAGINACIÓN
- *  =========================== */
-/**
- * Extrae ?page=## de una URL tipo Laravel (links de paginación).
- * Devuelve { page: 2 } o {} si no encuentra.
- */
+/** ========= Paginación helper ========= */
 export function paramsFromPaginationUrl(url) {
   if (!url) return {};
   try {
@@ -179,7 +127,6 @@ export function paramsFromPaginationUrl(url) {
     const page = u.searchParams.get("page");
     return page ? { page: Number(page) } : {};
   } catch {
-    // Si el backend devuelve URL absoluta de otro dominio, igual se parsea bien con base.
     return {};
   }
 }
@@ -192,6 +139,6 @@ export default {
   deleteActividad,
   fetchTecnicas,
   fetchAlumnos,
-  fetchCohortesAlumnos,
+  fetchDocentes,
   paramsFromPaginationUrl,
 };
