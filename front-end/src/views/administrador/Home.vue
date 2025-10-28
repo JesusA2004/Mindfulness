@@ -4,7 +4,7 @@
     <!-- ====== Encabezado ====== -->
     <header class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
       <div class="d-flex align-items-baseline gap-3">
-        <h1 class="title my-0">Panel de Administrador</h1>
+        <h1 class="title my-0">Dashboard Administrador</h1>
       </div>
       <small v-if="overview.hoy" class="badge bg-light text-muted border fade-in-quick">
         Hoy: {{ overview.hoy }}

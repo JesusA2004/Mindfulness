@@ -1,0 +1,243 @@
+/* ======= Paleta (tomada y alineada con tus vars) ======= */
+:root{
+  --ink:#1b3b6f; --ink-2:#2c4c86; --muted:#6b7280;
+  --surface:#ffffff; --bg:#f5f7fb;
+
+  --violet:#8164ff; --violet-2:#a08dff; --violet-3:#dcd6ff;
+
+  --primary:#3b82f6; --success:#22c55e; --info:#06b6d4;
+  --warning:#f59e0b; --warning-soft:#fff3d4;
+}
+
+/* ======= Layout ======= */
+.estudiante-dashboard{
+  padding: 1.25rem;
+  background: var(--bg);
+  min-height: calc(100vh - 70px);
+}
+
+.estudiante-dashboard .title{
+  font-weight: 800;
+  color: var(--ink);
+  font-size: clamp(1.25rem, 1.1rem + 1.2vw, 1.9rem);
+  margin: 0 0 .25rem 0;
+}
+
+/* ======= KPI Cards ======= */
+.kpi-grid{ row-gap: 1rem; }
+.kpi-card{
+  background: var(--surface);
+  border: 1px solid rgba(17,24,39,.05);
+  border-radius: 18px;
+  padding: .95rem 1.05rem;
+  display:flex; align-items:center; gap:.9rem;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.kpi-card:hover{ transform: translateY(-3px); box-shadow: 0 12px 28px rgba(31,38,135,.09); border-color: rgba(17,24,39,.08); }
+
+.kpi-icon{
+  width:46px; height:46px; min-width:46px;
+  border-radius: 14px; display:grid; place-items:center;
+  font-size:1.25rem;
+}
+.bg-violet-subtle{ background: var(--violet-3); }
+.text-violet{ color: var(--violet); }
+.bg-info-subtle{ background:#e6fbff; } .text-info{ color:#0891b2; }
+.bg-success-subtle{ background:#e7f7ee; } .text-success{ color:#16a34a; }
+
+.kpi-body{ line-height:1.1; }
+.kpi-value{ margin:0; font-weight: 800; color:#111827; font-size:1.6rem; }
+.kpi-label{ margin:0; color:var(--muted); font-size:.95rem; }
+
+/* ======= Cards ======= */
+.card-elev{
+  background: var(--surface);
+  border: 1px solid rgba(17,24,39,.05);
+  border-radius: 18px;
+  overflow: hidden;
+}
+.card-elev .card-header{
+  background: linear-gradient(180deg, #fff, #fafbff);
+  border-bottom: 1px solid rgba(17,24,39,.06);
+  font-weight: 700; color: var(--ink);
+}
+.card-elev .card-body{ padding: 1rem; }
+
+/* ======= Gráfica ======= */
+.chart-holder{
+  position: relative;
+  height: 340px;
+}
+
+/* ======= Tabla ======= */
+.table-card .table thead th{
+  background:#f7f8ff; color:#374151; font-weight:700; border-bottom: 1px solid rgba(17,24,39,.06);
+}
+.badge-soft{
+  background:#eef2ff; color:#4f46e5; border-radius: 999px; font-weight:600;
+}
+.badge-soft.success{ background:#e7f7ee; color:#16a34a; }
+.badge-soft.warning{ background:#fff3d4; color:#a16207; }
+.badge-soft.muted{ background:#eef1f6; color:#6b7280; }
+
+/* Micro animaciones */
+.fade-in{ animation: fadeIn .28s ease both; }
+@keyframes fadeIn{ from{opacity:0; transform: translateY(4px);} to{opacity:1; transform: none;} }
+
+/* Utilidades */
+.text-muted-sm{ color: var(--muted); font-size:.93rem; }
+
+/* ===== Cards elevadas / gráficas ===== */
+.card-elev, .chart-card, .table-card {
+  background: var(--surface);
+  border: 1px solid rgba(17,24,39,.06);
+  border-radius: 18px;
+  overflow: hidden;
+  transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease;
+  will-change: transform;
+}
+.card-elev:hover, .chart-card:hover, .table-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(31,38,135,.10);
+  border-color: rgba(17,24,39,.10);
+}
+
+.chart-card .card-header,
+.table-card .card-header{
+  display:flex; align-items:center; justify-content:space-between;
+  background: linear-gradient(180deg, #fff, #fafbff);
+  border-bottom: 1px solid rgba(17,24,39,.06);
+  font-weight: 700; color: var(--ink);
+  padding: .85rem 1rem;
+}
+
+/* Contenedor de la gráfica: evita “salto” y clipping */
+.chart-card .card-body{
+  position: relative;
+  height: 360px;               /* alto consistente */
+  padding: .75rem .5rem 1rem;
+}
+.chart-card canvas{
+  display:block;
+  width:100% !important;
+  height:100% !important;      /* ocupa el alto del contenedor */
+}
+
+/* KPI: suaviza el hover y el icono */
+.kpi-card{
+  background: var(--surface);
+  border: 1px solid rgba(17,24,39,.05);
+  border-radius: 18px;
+  padding: .95rem 1.05rem;
+  display:flex; align-items:center; gap:.9rem;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+}
+.kpi-card:hover{
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(31,38,135,.09);
+  border-color: rgba(17,24,39,.08);
+  background: linear-gradient(180deg, #ffffff, #fafbff);
+}
+.kpi-icon{
+  width:46px; height:46px; min-width:46px;
+  border-radius: 14px; display:grid; place-items:center;
+  font-size:1.25rem;
+  transition: transform .18s ease, filter .18s ease;
+}
+.kpi-card:hover .kpi-icon{ transform: scale(1.04); filter: saturate(1.05); }
+
+/* Tip al pie de tabla/gráfica */
+.card-tip{
+  color: var(--muted);
+  background: #f6f8ff;
+  border-radius: 12px;
+  padding: .6rem .8rem;
+  border: 1px dashed rgba(17,24,39,.08);
+}
+
+/* Fix de scroll en tablas altas */
+.table-card .card-body{
+  max-height: 420px;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+/* Micro animación de entrada */
+.fade-in { animation: fadeIn .25s ease both; }
+@keyframes fadeIn { from{ opacity:0; transform: translateY(4px);} to{ opacity:1; transform:none; } }
+
+/* Tarjetas KPI - sombra y lift */
+.kpi-card{
+  background: var(--surface);
+  border: 1px solid rgba(17,24,39,.06);
+  border-radius: 18px;
+  padding: 1rem 1.15rem;
+  display:flex; align-items:center; gap:.9rem;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+  will-change: transform;
+}
+.kpi-card:hover{
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px rgba(31,38,135,.10);
+  border-color: rgba(17,24,39,.10);
+  background: linear-gradient(180deg, #fff, #fafbff);
+}
+
+.kpi-icon{
+  width: 46px; height: 46px; min-width: 46px;
+  border-radius: 14px; display:grid; place-items:center;
+  font-size: 1.25rem;
+}
+
+/* Contenedores de gráfica: evitar “colapsos” y clipping */
+.card-elev{
+  background: var(--surface);
+  border: 1px solid rgba(17,24,39,.06);
+  border-radius: 18px;
+  overflow: hidden;
+  transition: box-shadow .18s ease, border-color .18s ease;
+}
+.card-elev:hover{
+  box-shadow: 0 16px 34px rgba(31,38,135,.12);
+  border-color: rgba(17,24,39,.10);
+}
+.card-elev .card-header{
+  background: linear-gradient(180deg, #fff, #f7f9ff);
+  border-bottom: 1px solid rgba(17,24,39,.08);
+  font-weight: 700; color: var(--ink);
+}
+
+.chart-holder{
+  position: relative;
+  height: 360px;          /* asegura alto consistente */
+  padding: .5rem .25rem;
+}
+.chart-holder canvas{
+  display:block;
+  width:100% !important;
+  height:100% !important; /* evita barras “aplastadas” */
+}
+
+/* Tabla */
+.table-card .table thead th{
+  background:#f7f8ff; color:#374151; font-weight:700;
+  border-bottom: 1px solid rgba(17,24,39,.08);
+}
+.table-card .table tbody tr{
+  transition: background .15s ease;
+}
+.table-card .table tbody tr:hover{
+  background:#fafbff;
+}
+
+/* Badges suaves */
+.badge-soft{
+  background:#eef2ff; color:#4f46e5; border-radius: 999px; font-weight:600;
+}
+.badge-soft.success{ background:#e7f7ee; color:#16a34a; }
+.badge-soft.warning{ background:#fff3d4; color:#a16207; }
+.badge-soft.muted{ background:#eef1f6; color:#6b7280; }
+
+/* Micro animación */
+.fade-in{ animation: fadeIn .24s ease both; }
+@keyframes fadeIn{ from{opacity:0; transform: translateY(3px);} to{opacity:1; transform:none;} }
