@@ -20,7 +20,7 @@ class Recompensa extends Model
     protected $casts = [
         'puntos_necesarios' => 'integer',
         'stock'             => 'integer',
-        'canjeo'            => 'array',     // 👈 Para guardar/leer como arreglo
+        'canjeo'            => 'array', 
     ];
 
 }

@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\TecnicaController;
 use App\Http\Controllers\Api\TestController;
 use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\UserPointsController;
+use App\Http\Controllers\Api\DashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -55,6 +56,7 @@ Route::middleware(['auth:api'])->group(function () {
     Route::apiResource('users', UserController::class);
     Route::apiResource('actividads', ActividadController::class);
     Route::apiResource('bitacoras', BitacoraController::class);
+    Route::post('/bitacoras/remind-today', [BitacoraController::class, 'remindToday']);
     Route::apiResource('citas', CitaController::class);
     Route::apiResource('encuestas', EncuestaController::class);
     Route::apiResource('recompensas', RecompensaController::class);
@@ -85,5 +87,10 @@ Route::middleware(['auth:api'])->group(function () {
             return response()->json(['url' => asset($url)], 200);
         }
         return response()->json(['error' => 'No se recibió archivo'], 400);
+    });
+
+    Route::prefix('admin/dashboard')->group(function () {
+        Route::get('/overview', [DashboardController::class, 'overview']);                  // Tarjetas KPI
+        Route::get('/bitacoras-por-mes', [DashboardController::class, 'bitacorasPorMes']); // Gráfica barras
     });
 });

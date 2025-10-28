@@ -1,4 +1,4 @@
-<template>
+<template> 
   <!-- Shell -->
   <div :class="['app-shell', (isPinned || isHovering || mobileOpen) ? 'rail-expanded' : 'rail-collapsed']">
     <!-- NAVBAR -->
@@ -6,7 +6,6 @@
       <div class="container-fluid px-3">
         <!-- Brand / Hamburguesa -->
         <div class="d-flex align-items-center gap-2">
-          <!-- Hamburguesa solo en móviles -->
           <button
             class="btn d-lg-none me-2"
             type="button"
@@ -27,8 +26,8 @@
             <button
               class="btn btn-light border-0 mf-icon-btn position-relative"
               @click="bellOpen = !bellOpen"
-              aria-label="Notificaciones de citas"
-              title="Notificaciones de citas"
+              aria-label="Notificaciones"
+              title="Notificaciones"
             >
               <i class="bi bi-bell fs-5"></i>
               <span
@@ -46,7 +45,7 @@
             >
               <div class="p-2 border-bottom d-flex align-items-center gap-2">
                 <i class="bi bi-bell me-1"></i>
-                <strong>Notificaciones de Citas</strong>
+                <strong>Notificaciones</strong>
                 <span class="ms-auto badge bg-secondary">{{ notifCount }}</span>
               </div>
 
@@ -55,9 +54,9 @@
                   v-for="(n, i) in visibleNotifications"
                   :key="i"
                   class="list-group-item list-group-item-action d-flex gap-3 align-items-start text-start"
-                  @click="ack(i)"
+                  @click="onNotifClick(i)"
                 >
-                  <i class="bi bi-calendar-check fs-4"></i>
+                  <i :class="['bi', n.icon || 'bi-bell', 'fs-4']"></i>
                   <div class="flex-grow-1">
                     <div class="fw-semibold">{{ n.title }}</div>
                     <div class="small text-muted">{{ n.time }}</div>
@@ -70,7 +69,6 @@
                 </div>
               </div>
 
-              <!-- Acciones -->
               <div class="d-flex justify-content-between align-items-center p-2 border-top">
                 <button
                   class="btn btn-sm btn-outline-secondary rounded-circle action-btn"
@@ -104,7 +102,7 @@
           </div>
           <!-- ====== /CAMPANA ====== -->
 
-          <!-- Usuario (dropdown personalizado) -->
+          <!-- Usuario -->
           <div class="dropdown">
             <button
               class="btn d-flex align-items-center gap-2 mf-user-btn"
@@ -154,7 +152,7 @@
       </div>
     </nav>
 
-    <!-- SIDEBAR (rail) -->
+    <!-- SIDEBAR -->
     <aside
       class="app-sidebar"
       :class="{ 'mobile-open': mobileOpen }"
@@ -212,7 +210,7 @@
       </div>
     </aside>
 
-    <!-- ===== CONTENIDO (empujado por rail + navbar) ===== -->
+    <!-- CONTENIDO -->
     <section class="app-content">
       <slot />
     </section>
@@ -240,18 +238,21 @@ import axios from 'axios'
 import { useRouter } from 'vue-router'
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
-import Swal from 'sweetalert2'
 window.Pusher = Pusher
 
-defineOptions({ name: 'SidebarShell' })
+defineOptions({ name: 'Sidebar' })
 const router = useRouter()
 
-/* ==== Ajuste dinámico de altura del navbar (quita hueco gris) ==== */
+/* ==== Ajuste dinámico de altura del navbar ==== */
 function applyNavbarHeight() {
-  const el = document.querySelector('.mf-navbar') || document.querySelector('.navbar.fixed-top')
-  if (!el) return
-  const h = Math.ceil(el.getBoundingClientRect().height)
-  document.documentElement.style.setProperty('--navbar-h', `${h}px`)
+  try {
+    const el = document.querySelector('.mf-navbar') || document.querySelector('.navbar.fixed-top')
+    if (!el) return
+    const h = Math.ceil(el.getBoundingClientRect().height)
+    document.documentElement.style.setProperty('--navbar-h', `${h}px`)
+  } catch (e) {
+    console.error('[Sidebar] applyNavbarHeight error:', e)
+  }
 }
 onMounted(() => {
   applyNavbarHeight()
@@ -264,9 +265,14 @@ onBeforeUnmount(() => {
 /* Usuario */
 const user = ref({})
 onMounted(() => {
-  const u = localStorage.getItem('user')
-  if (u) user.value = JSON.parse(u)
+  try {
+    const u = localStorage.getItem('user')
+    if (u) user.value = JSON.parse(u)
+  } catch (e) {
+    console.error('[Sidebar] parse user error:', e)
+  }
 })
+const isAlumno = computed(() => (user.value?.rol || '').toLowerCase() === 'estudiante') // ✅ SOLO alumno verá recordatorio + recompensas
 
 /* Logout */
 const showLogoutModal = ref(false)
@@ -278,9 +284,9 @@ async function confirmLogout () {
     const token = localStorage.getItem('token')
     if (token) await axios.post(url, {}, { headers: { Authorization: `Bearer ${token}` } })
   } catch (e) {
-    console.error(e)
+    console.error('[Sidebar] logout error:', e)
   } finally {
-    localStorage.clear()
+    try { localStorage.clear() } catch {}
     destroyEcho()
     router.push('/login')
   }
@@ -326,20 +332,18 @@ const navItems = computed(() => menusPorRol[user.value?.rol] || [])
 const isPinned = ref(JSON.parse(localStorage.getItem('sidebarPinned') || 'false'))
 const isHovering = ref(false)
 const mobileOpen = ref(false)
-
 function onMouseEnter () { if (!isPinned.value) isHovering.value = true }
 function onMouseLeave () { if (!isPinned.value) isHovering.value = false }
 function togglePin (val) {
   isPinned.value = !!val
-  localStorage.setItem('sidebarPinned', JSON.stringify(isPinned.value))
+  try { localStorage.setItem('sidebarPinned', JSON.stringify(isPinned.value)) } catch {}
 }
-/* Clic en item del menú: autocierre si NO está fijado (desktop hover) o si es móvil */
 function onNavItemClick () {
   if (mobileOpen.value) mobileOpen.value = false
   if (!isPinned.value) isHovering.value = false
 }
 
-/* Cerrar overlays al cambiar de ruta; si no está fijado, colapsar */
+/* Cerrar overlays al cambiar de ruta */
 onMounted(() => {
   router.afterEach(() => {
     bellOpen.value = false
@@ -351,13 +355,12 @@ onMounted(() => {
 /* Logo */
 const logoSrc = '/img/logoDark.png'
 
-/* ===== Notificaciones Citas (Echo) ===== */
+/* ===== Notificaciones (Echo) ===== */
 const bellOpen = ref(false)
 const notifCount = ref(0)
 const notifications = ref([])
 const showAll = ref(false)
 const SHOW_LIMIT = 5
-
 const visibleNotifications = computed(() =>
   showAll.value ? notifications.value : notifications.value.slice(0, SHOW_LIMIT)
 )
@@ -370,27 +373,29 @@ const citasRoute = computed(() => {
 })
 
 let echo = null
-let channel = null
+let userChannel = null
+let roleChannel = null // 🔔 Recompensas (solo alumno)
 let bound = false
+let subscribedReady = false
+let pingRetried = false
 
 function initEcho () {
   try {
     const jwt = localStorage.getItem('token')
     const uStr = localStorage.getItem('user')
-    if (!jwt || !uStr) return
+    if (!jwt || !uStr) { console.warn('[Echo] faltan credenciales'); return }
 
-    const u = JSON.parse(uStr) || {}
+    const u = JSON.parse(uStr || '{}')
     const uid = String(u.id || u._id || '')
-    if (!uid) return
-    if (echo) return
+    if (!uid) { console.warn('[Echo] user id vacío'); return }
+    if (echo) { console.log('[Echo] ya inicializado'); return }
 
     echo = new Echo({
       broadcaster: 'pusher',
       key: process.env.VUE_APP_PUSHER_APP_KEY,
       cluster: process.env.VUE_APP_PUSHER_APP_CLUSTER || 'mt1',
-      // Usa TLS solo si la app está en https (evita errores en 127.0.0.1 http)
       forceTLS: window.location.protocol === 'https:',
-      authEndpoint: process.env.VUE_APP_API_BASE + '/broadcasting/auth',
+      authEndpoint: (process.env.VUE_APP_API_BASE || '') + '/broadcasting/auth',
       auth: {
         headers: {
           Authorization: `Bearer ${jwt}`,
@@ -399,76 +404,186 @@ function initEcho () {
       }
     })
 
-    const p = echo.connector?.pusher
-    p?.connection?.bind('state_change', s => console.log('[Echo]', s.previous, '=>', s.current))
-    p?.connection?.bind('error', e => console.error('[Echo] error', e))
-    p?.connection?.bind('connected', () => console.log('[Echo] connected'))
+    const p = echo.connector && echo.connector.pusher
+    if (p && p.connection) {
+      p.connection.bind('state_change', s => console.log('[Echo]', s.previous, '=>', s.current))
+      p.connection.bind('error', e => console.error('[Echo] error', e))
+      p.connection.bind('connected', () => console.log('[Echo] connected'))
+    } else {
+      console.warn('[Echo] pusher connection no disponible aún')
+    }
 
-    channel = echo.private(`user.${uid}`)
+    // Canal privado por usuario
+    userChannel = echo.private(`user.${uid}`)
 
     if (!bound) {
       bound = true
-      channel.subscribed(() => console.log('[Echo] subscription_succeeded user.' + uid))
-      channel.error((status) => console.error('[Echo] subscription_error', status))
 
-      // Notificaciones de Cita
-      channel.listen('.CitaEstadoCambiado', (data) => {
-        notifCount.value++
-        notifications.value.unshift({
-          title: `Cita ${data?.estado ?? ''}`.trim(),
-          body: data?.mensaje || 'Se actualizó el estado de tu cita.',
-          time: new Date().toLocaleString(),
-          raw: data
-        })
+      userChannel.subscribed(() => {
+        subscribedReady = true
+        console.log('[Echo] subscription_succeeded user.' + uid)
+        // 🔔 SOLO alumnos hacen ping al recordatorio de bitácora
+        if (isAlumno.value) {
+          try { pingRecordatorioBitacora() } catch (e) { console.error('[Bitácora] ping error post-subscribed:', e) }
+        }
       })
 
+      userChannel.error((status) => console.error('[Echo] subscription_error', status))
+
+      // Citas (aplica a todos los roles)
+      userChannel.listen('.CitaEstadoCambiado', (data) => {
+        try {
+          notifCount.value++
+          notifications.value.unshift({
+            title: `Cita ${data?.estado ?? ''}`.trim(),
+            body: data?.mensaje || 'Se actualizó el estado de tu cita.',
+            time: new Date().toLocaleString(),
+            raw: data,
+            icon: 'bi-calendar-check'
+          })
+        } catch (e) { console.error('[Echo] handler CitaEstadoCambiado error:', e) }
+      })
+
+      // Bitácora (🔒 SOLO alumnos escuchan este evento en su canal de usuario)
+      if (isAlumno.value) {
+        userChannel.listen('.BitacoraRecordatorio', (data) => {
+          try {
+            notifCount.value++
+            notifications.value.unshift({
+              title: 'Recordatorio de Bitácora',
+              body: data?.mensaje || 'Aún no registras tu bitácora de hoy.',
+              time: new Date().toLocaleString(),
+              raw: data,
+              goTo: '/app/estudiante/bitacoras',
+              icon: 'bi-journal-text'
+            })
+          } catch (e) { console.error('[Echo] handler BitacoraRecordatorio error:', e) }
+        })
+      }
+
+      // 🔔 Recompensas (solo alumnos) — canal por rol
+      if (isAlumno.value) {
+        roleChannel = echo.private('role.estudiante')
+
+        roleChannel.subscribed(() => {
+          console.log('[Echo] subscription_succeeded role.estudiante')
+        })
+
+        roleChannel.error((status) => console.error('[Echo] subscription_error role.estudiante', status))
+
+        roleChannel.listen('.RecompensaCreada', (data) => {
+          try {
+            const titulo = data?.recompensa?.titulo || 'Nueva recompensa'
+            notifCount.value++
+            notifications.value.unshift({
+              title: 'Nueva recompensa disponible',
+              body: `Se agregó “${titulo}” a la tienda de recompensas.`,
+              time: new Date().toLocaleString(),
+              raw: data,
+              goTo: '/app/estudiante/recompensas',
+              icon: 'bi-trophy'
+            })
+          } catch (e) {
+            console.error('[Echo] handler RecompensaCreada error:', e)
+          }
+        })
+      }
     }
+
+    // Fallback: si en 1.5s no nos suscribimos, intenta el ping SOLO si es alumno
+    setTimeout(() => {
+      if (!subscribedReady && !pingRetried && isAlumno.value) {
+        pingRetried = true
+        try { pingRecordatorioBitacora() } catch (e) { console.error('[Bitácora] ping retry error:', e) }
+      }
+    }, 1500)
+
   } catch (e) {
-    console.error('Echo init error:', e)
+    console.error('[Echo] init error (no bloquea UI):', e)
   }
 }
 
 function destroyEcho () {
   try {
-    if (channel) {
-      channel.stopListening('.CitaEstadoCambiado')
-      channel.stopListening('.ForcedLogout')
-      channel = null
+    if (userChannel) {
+      userChannel.stopListening('.CitaEstadoCambiado')
+      userChannel.stopListening('.BitacoraRecordatorio')
+      userChannel.stopListening('.ForcedLogout')
+      userChannel = null
+    }
+    if (roleChannel) { // 🔔 Recompensas
+      roleChannel.stopListening('.RecompensaCreada')
+      roleChannel = null
     }
     if (echo) {
       echo.disconnect()
       echo = null
     }
     bound = false
+    subscribedReady = false
+    pingRetried = false
   } catch (e) {
-    console.error('Echo destroy error:', e)
+    console.error('[Echo] destroy error:', e)
   }
 }
 
 function ack (i) {
-  if (i >= 0) {
-    notifications.value.splice(i, 1)
-    notifCount.value = Math.max(0, notifCount.value - 1)
-  }
+  try {
+    if (i >= 0) {
+      notifications.value.splice(i, 1)
+      notifCount.value = Math.max(0, notifCount.value - 1)
+    }
+  } catch (e) { console.error('[Sidebar] ack error:', e) }
 }
 function clearAll () {
-  notifications.value = []
-  notifCount.value = 0
+  try {
+    notifications.value = []
+    notifCount.value = 0
+  } catch (e) { console.error('[Sidebar] clearAll error:', e) }
 }
 function toggleExpand () {
   showAll.value = !showAll.value
 }
+function onNotifClick (i) {
+  try {
+    const n = notifications.value?.[i]
+    if (n?.goTo) {
+      router.push(n.goTo)
+    }
+    ack(i)
+  } catch (e) { console.error('[Sidebar] onNotifClick error:', e) }
+}
+
+/* Llamada al endpoint (NO await) — 🔒 SOLO alumnos */
+function pingRecordatorioBitacora() {
+  if (!isAlumno.value) return
+  const token = localStorage.getItem('token')
+  if (!token) { console.warn('[Bitácora] sin token, no ping'); return }
+  axios.post(
+    (process.env.VUE_APP_API_URL || '') + '/bitacoras/remind-today',
+    {},
+    { headers: { Authorization: `Bearer ${token}` } }
+  )
+  .then(res => console.log('[Bitácora] remind-today status:', res?.status))
+  .catch(err => {
+    if (err?.response) {
+      console.log('[Bitácora] remind-today error:', err.response.status, err.response.data)
+    } else {
+      console.log('[Bitácora] remind-today error:', err?.message || err)
+    }
+  })
+}
 
 onMounted(() => {
-  initEcho()
+  // Deja que la app pinte y luego inicializa Echo
+  requestAnimationFrame(() => initEcho())
 
-  // (Opcional) Re-armar aviso de expiración si existe expires_at y expira pronto
   const expiresAt = localStorage.getItem('expires_at')
   if (expiresAt && typeof window.scheduleExpiryPrompt === 'function') {
     const diffMs = new Date(expiresAt).getTime() - Date.now()
     if (diffMs > 0) {
       const expiresInSec = Math.floor(diffMs / 1000)
-      window.scheduleExpiryPrompt(expiresInSec)
+      try { window.scheduleExpiryPrompt(expiresInSec) } catch (e) {}
     }
   }
 })
@@ -478,107 +593,43 @@ onBeforeUnmount(() => { destroyEcho() })
 <style src="@/assets/css/Sidebar.css"></style>
 <style scoped>
 /* Estética ligera para el dropdown de notificaciones */
-.notif-dropdown {
-  border-radius: 12px;
-  overflow: hidden;
-}
-.notif-dropdown .list-group-item {
-  transition: background-color .15s ease, box-shadow .15s ease;
-}
-.notif-dropdown .list-group-item:hover {
-  background-color: #f8f9fa;
-}
-.action-btn {
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
+.notif-dropdown { border-radius: 12px; overflow: hidden; }
+.notif-dropdown .list-group-item { transition: background-color .15s ease, box-shadow .15s ease; }
+.notif-dropdown .list-group-item:hover { background-color: #f8f9fa; }
+.action-btn { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; }
 
-/* ===== Navbar moderno ===== */
+/* Navbar */
 .mf-navbar{
   backdrop-filter: blur(8px) saturate(140%);
   -webkit-backdrop-filter: blur(8px) saturate(140%);
   background: linear-gradient(180deg, rgba(255,255,255,.85) 0%, rgba(255,255,255,.65) 100%) !important;
   border-bottom: 1px solid rgba(16,24,40,.06);
 }
-.mf-brand .brand-mini{
-  width: 28px; height: 28px; object-fit: contain; border-radius: 8px;
-}
-.fw-700{ font-weight:700; }
-.fw-600{ font-weight:600; }
-.mf-icon-btn{
-  border-radius: 999px;
-  background: #fff;
-  box-shadow: 0 6px 18px rgba(16,24,40,.08);
-}
+.mf-brand .brand-mini{ width: 28px; height: 28px; object-fit: contain; border-radius: 8px; }
+.fw-700{ font-weight:700; } .fw-600{ font-weight:600; }
+.mf-icon-btn{ border-radius: 999px; background: #fff; box-shadow: 0 6px 18px rgba(16,24,40,.08); }
+.mf-user-btn{ background: #fff; border: 1px solid rgba(16,24,40,.08); border-radius: 999px; padding: .35rem .6rem; }
+.user-avatar{ width: 28px; height: 28px; } .user-avatar-sm{ width: 30px; height: 30px; }
+.user-dropdown{ border: 0; border-radius: 14px; overflow: hidden; min-width: 240px; }
+.user-dropdown .dropdown-item{ font-weight: 500; border-radius: 8px; margin: 4px 8px; }
+.user-dropdown .dropdown-item:hover{ background: #f5f6f8; }
 
-/* ===== Usuario dropdown moderno ===== */
-.mf-user-btn{
-  background: #fff;
-  border: 1px solid rgba(16,24,40,.08);
-  border-radius: 999px;
-  padding: .35rem .6rem;
-}
-.user-avatar{ width: 28px; height: 28px; }
-.user-avatar-sm{ width: 30px; height: 30px; }
-
-.user-dropdown{
-  border: 0;
-  border-radius: 14px;
-  overflow: hidden;
-  min-width: 240px;
-}
-.user-dropdown .dropdown-item{
-  font-weight: 500;
-  border-radius: 8px;
-  margin: 4px 8px;
-}
-.user-dropdown .dropdown-item:hover{
-  background: #f5f6f8;
-}
-
-/* ✅ Tablet: ancho razonable y control de overflow */
+/* Responsivo */
 @media (max-width: 991.98px){
   .notif-dropdown{
-    min-width: 360px !important;
-    max-width: calc(100vw - 24px) !important;
-    right: 12px !important;
-    left: auto !important;
-    border-radius: 12px;
-    max-height: calc(100vh - var(--navbar-h) - 24px);
-    overflow: auto;
+    min-width: 360px !important; max-width: calc(100vw - 24px) !important;
+    right: 12px !important; left: auto !important;
+    border-radius: 12px; max-height: calc(100vh - var(--navbar-h) - 24px); overflow: auto;
   }
 }
-
-/* ✅ Teléfono: sheet centrado y ancho casi completo */
 @media (max-width: 575.98px){
   .notif-dropdown{
-    position: fixed !important;
-    top: calc(var(--navbar-h) + 8px) !important;
-    right: 8px !important;
-    left: 8px !important;
-    min-width: unset !important;
-    width: auto !important;
-    max-width: none !important;
-    border-radius: 14px;
-    box-shadow: 0 12px 40px rgba(16,24,40,.18);
-    max-height: calc(100vh - var(--navbar-h) - 16px);
-    overflow: auto;
-    z-index: 1301; /* sobre la sidebar móvil */
+    position: fixed !important; top: calc(var(--navbar-h) + 8px) !important;
+    right: 8px !important; left: 8px !important; min-width: unset !important; width: auto !important;
+    max-width: none !important; border-radius: 14px; box-shadow: 0 12px 40px rgba(16,24,40,.18);
+    max-height: calc(100vh - var(--navbar-h) - 16px); overflow: auto; z-index: 1301;
   }
-
-  /* Tap targets más cómodos */
-  .notif-dropdown .list-group-item{
-    padding: 12px 14px;
-    font-size: 0.95rem;
-  }
-
-  /* Barra de acciones: botones más grandes/fáciles de pulsar */
-  .action-btn{
-    width: 40px;
-    height: 40px;
-  }
+  .notif-dropdown .list-group-item{ padding: 12px 14px; font-size: 0.95rem; }
+  .action-btn{ width: 40px; height: 40px; }
 }
 </style>

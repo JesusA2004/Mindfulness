@@ -10,6 +10,9 @@ use Illuminate\Http\JsonResponse;
 use MongoDB\BSON\ObjectId;
 use Throwable;
 
+// 👇 Importación añadida para el broadcast
+use App\Events\RecompensaCreada;
+
 class RecompensaController extends Controller
 {
     /**
@@ -31,6 +34,25 @@ class RecompensaController extends Controller
     {
         // NOTA: asegúrate de que el modelo Recompensa tenga 'canjeo' en $fillable y 'array' en $casts
         $recompensa = Recompensa::create($request->validated());
+
+        // 🔔 Emitir evento para notificar SOLO a alumnos (canal role.estudiante)
+        try {
+            event(new RecompensaCreada([
+                'tipo'       => 'recompensa_nueva',
+                'mensaje'    => '¡Nueva recompensa disponible!',
+                'recompensa' => [
+                    'id'     => (string) ($recompensa->_id ?? $recompensa->id),
+                    'titulo' => $recompensa->titulo ?? 'Recompensa',
+                    // Puedes añadir más campos si quieres mostrarlos en el front:
+                    // 'costo'  => $recompensa->costo ?? null,
+                    // 'stock'  => $recompensa->stock ?? null,
+                ],
+                'created_at' => now()->toDateTimeString(),
+            ]));
+        } catch (\Throwable $e) {
+            // No romper el flujo si falla el broadcast
+            // \Log::error('Broadcast RecompensaCreada falló', ['error' => $e->getMessage()]);
+        }
 
         return response()->json([
             'mensaje'    => 'Recompensa creada correctamente.',

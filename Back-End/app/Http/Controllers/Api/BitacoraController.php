@@ -9,6 +9,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\BitacoraRequest;
 use App\Http\Resources\BitacoraResource;
 use Carbon\Carbon;
+use App\Events\BitacoraRecordatorio;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class BitacoraController extends Controller
 {
@@ -68,8 +71,22 @@ class BitacoraController extends Controller
 
     public function store(BitacoraRequest $request): JsonResponse
     {
+        $tz = config('app.timezone', 'America/Mexico_City');
+
         $data = $request->validated();
         $data['alumno_id'] = auth()->id();
+
+        // ⚙️ Normalizar la fecha entrante a la zona de la app y a Y-m-d (por si viene con hora o TZ)
+        if (!empty($data['fecha'])) {
+            try {
+                $data['fecha'] = Carbon::parse($data['fecha'], $tz)->toDateString();
+            } catch (\Throwable $e) {
+                // Si no se puede parsear, forzamos a hoy (mejor opción: validar en el FormRequest)
+                $data['fecha'] = Carbon::now($tz)->toDateString();
+            }
+        } else {
+            $data['fecha'] = Carbon::now($tz)->toDateString();
+        }
 
         // Buscar si existe registro para (alumno, fecha)
         $bitacora = Bitacora::firstOrNew([
@@ -77,7 +94,6 @@ class BitacoraController extends Controller
             'fecha'     => $data['fecha'],
         ]);
 
-        // Será "nuevo" si aún no existía en BD
         $wasNew = !$bitacora->exists;
 
         $bitacora->fill($data)->save();
@@ -85,10 +101,9 @@ class BitacoraController extends Controller
         return response()->json([
             'mensaje'  => 'Bitácora emocional guardada correctamente.',
             'bitacora' => new BitacoraResource($bitacora),
-            'awarded'  => $wasNew, // ← bandera para abonar puntos solo si es la primera del día
+            'awarded'  => $wasNew, // abonar puntos solo si es la primera del día
         ], 201);
     }
-
 
     public function show(Bitacora $bitacora): JsonResponse
     {
@@ -112,12 +127,23 @@ class BitacoraController extends Controller
 
     public function update(BitacoraRequest $request, Bitacora $bitacora): JsonResponse
     {
-        // Asegurar que la bitácora sea del usuario autenticado (opcional, recomendado)
         if ($bitacora->alumno_id !== auth()->id()) {
             return response()->json(['message' => 'No autorizado.'], 403);
         }
 
-        $bitacora->update($request->validated());
+        $tz = config('app.timezone', 'America/Mexico_City');
+        $data = $request->validated();
+
+        // ⚙️ Si actualizan la fecha, también normalizamos
+        if (!empty($data['fecha'])) {
+            try {
+                $data['fecha'] = Carbon::parse($data['fecha'], $tz)->toDateString();
+            } catch (\Throwable $e) {
+                $data['fecha'] = Carbon::now($tz)->toDateString();
+            }
+        }
+
+        $bitacora->update($data);
 
         return response()->json([
             'mensaje'  => 'Bitácora emocional actualizada correctamente.',
@@ -127,7 +153,6 @@ class BitacoraController extends Controller
 
     public function destroy(Bitacora $bitacora): JsonResponse
     {
-        // Asegurar que la bitácora sea del usuario autenticado (opcional, recomendado)
         if ($bitacora->alumno_id !== auth()->id()) {
             return response()->json(['message' => 'No autorizado.'], 403);
         }
@@ -136,6 +161,50 @@ class BitacoraController extends Controller
 
         return response()->json([
             'mensaje' => 'Bitácora emocional eliminada correctamente.',
+        ], 200);
+    }
+
+    /**
+     * POST /bitacoras/remind-today
+     * Emite recordatorio SOLO si no hay bitácora con fecha == hoy (timezone app).
+     */
+    public function remindToday(Request $request): JsonResponse
+    {
+        $tz   = config('app.timezone', 'America/Mexico_City');
+        $hoy  = Carbon::now($tz)->toDateString();
+
+        $alumnoId = (string) Auth::id();
+        if (!$alumnoId) {
+            return response()->json(['message' => 'No autenticado.'], 401);
+        }
+
+        // ✅ Igualdad exacta por fecha Y-m-d (evita problemas de hour/TZ)
+        $existe = Bitacora::where('alumno_id', $alumnoId)
+            ->where('fecha', $hoy)
+            ->exists();
+
+        if ($existe) {
+            return response()->json(null, 204); // ya la tiene: no recordar
+        }
+
+        $payload = [
+            'fecha'   => $hoy,
+            'mensaje' => 'Aún no registras tu bitácora emocional de hoy. Tómate 3 minutos para completarla.',
+            'tipo'    => 'recordatorio_bitacora',
+        ];
+
+        try {
+            event(new BitacoraRecordatorio($alumnoId, $payload));
+        } catch (\Throwable $e) {
+            Log::error('Broadcast BitacoraRecordatorio falló', [
+                'error' => $e->getMessage(),
+            ]);
+            // puedes devolver 500 si lo prefieres; 200 evita romper flujo en front
+        }
+
+        return response()->json([
+            'ok'      => true,
+            'mensaje' => 'Recordatorio enviado.',
         ], 200);
     }
 }

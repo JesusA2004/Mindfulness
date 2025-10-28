@@ -69,14 +69,22 @@
     <!-- ======= Grid de Cards ======= -->
     <div class="container-fluid px-3 px-lg-2">
       <div class="row g-3 row-cols-1 row-cols-sm-2 row-cols-lg-3">
-        <div v-for="item in filteredItems" :key="getId(item)" class="col">
+        <div v-for="item in visibleItems" :key="getId(item)" class="col">
           <div class="card h-100 item-card shadow-sm hover-raise">
             <div class="card-body">
               <div class="d-flex justify-content-between align-items-start mb-2">
                 <h5 class="card-title mb-0 text-truncate fw-bold" :title="item.titulo">
                   {{ item.titulo }}
                 </h5>
-                <span class="badge rounded-pill bg-status bg-success">Encuesta</span>
+
+                <!-- Badge de estado -->
+                <span
+                  class="badge rounded-pill"
+                  :class="badgeClass(availabilityOf(item).status)"
+                  :title="availabilityOf(item).hint"
+                >
+                  {{ availabilityOf(item).label }}
+                </span>
               </div>
 
               <p class="card-text clamp-3 mb-2" v-if="item.descripcion">{{ item.descripcion }}</p>
@@ -85,10 +93,12 @@
                 <i class="bi bi-clock-history me-1"></i>
                 {{ item.duracion_estimada ? item.duracion_estimada + ' min' : '—' }}
               </div>
+
               <div class="small text-muted mt-1">
                 <i class="bi bi-calendar-event me-1"></i>
-                {{ formatDateRange(item.fechaAsignacion, item.fechaFinalizacion) }}
+                {{ formatDateRangeLocal(item) }}
               </div>
+
               <div class="small text-muted mt-1">
                 <i class="bi bi-list-check me-1"></i>
                 {{ (item.cuestionario?.length || 0) }} pregunta(s)
@@ -99,10 +109,10 @@
               <!-- ÚNICO botón por card -->
               <button
                 class="btn btn-primary btn-sm w-100 btn-with-label"
-                @click="startSurvey(item)"
-                :disabled="(item.cuestionario?.length || 0) === 0"
+                @click="guardedStartSurvey(item)"
+                :disabled="(item.cuestionario?.length || 0) === 0 || availabilityOf(item).status !== 'open'"
+                :title="buttonTitle(availabilityOf(item))"
                 data-bs-toggle="tooltip"
-                title="Contestar encuesta"
               >
                 <i class="bi bi-pencil-square me-1"></i>
                 <span>Contestar encuesta</span>
@@ -116,12 +126,12 @@
         </div>
 
         <!-- Vacío -->
-        <div v-if="!isLoading && filteredItems.length === 0" class="col-12">
+        <div v-if="!isLoading && visibleItems.length === 0" class="col-12">
           <div class="alert alert-light border d-flex align-items-center gap-2">
             <i class="bi bi-inbox text-secondary fs-4"></i>
             <div>
               <strong>Sin resultados.</strong>
-              Ajusta tu búsqueda por texto.
+              No hay encuestas disponibles en este momento.
             </div>
           </div>
         </div>
@@ -165,13 +175,116 @@ import { authHeaders, toast as baseToast } from '@/assets/js/crudUtils';
  * - Búsqueda por texto
  * - Listado + paginación
  * - Único botón: Contestar encuesta (SweetAlert2)
+ * - *** Nuevo: disponibilidad por fechaInicio/fechaFin ***
  */
 const {
   items, isLoading, hasMore, filteredItems,
   searchQuery, onInstantSearch, clearSearch,
-  getId, formatDateRange, labelTipo,
-  loadMore
+  getId, loadMore
 } = useEncuestasCrud();
+
+/* ===========================================================
+   Helpers de fecha y disponibilidad
+   Considera alias de campos:
+   - inicio: fechaInicio | fechaAsignacion | fecha_inicio
+   - fin:    fechaFin    | fechaFinalizacion | fecha_fin
+=========================================================== */
+const tzLabel = 'America/Mexico_City'; // referencia conceptual
+
+function pickStart(item) {
+  return item?.fechaInicio ?? item?.fechaAsignacion ?? item?.fecha_inicio ?? null;
+}
+function pickEnd(item) {
+  return item?.fechaFin ?? item?.fechaFinalizacion ?? item?.fecha_fin ?? null;
+}
+
+/** Parseo local seguro para 'YYYY-MM-DD' e ISO. */
+function parseLocalDate(val, endOfDay = false) {
+  if (!val) return null;
+
+  // Si viene como objeto fecha de backend (Date/ISO), Date lo maneja
+  if (val instanceof Date) return val;
+
+  const s = String(val).trim();
+
+  // YYYY-MM-DD -> crear en horario local evitando UTC
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (m) {
+    const y = Number(m[1]), mo = Number(m[2]) - 1, d = Number(m[3]);
+    if (endOfDay) return new Date(y, mo, d, 23, 59, 59, 999);
+    return new Date(y, mo, d, 0, 0, 0, 0);
+  }
+
+  // ISO u otros: dejar que Date lo interprete
+  const dt = new Date(s);
+  if (Number.isNaN(dt.getTime())) return null;
+  return dt;
+}
+
+function availabilityOf(item) {
+  const now = new Date();
+  const start = parseLocalDate(pickStart(item), false);
+  const end   = parseLocalDate(pickEnd(item), true);
+
+  if (start && now < start) {
+    return {
+      status: 'upcoming',
+      label: 'Próxima',
+      hint: `Disponible desde ${fmtDate(start)}`
+    };
+  }
+  if (end && now > end) {
+    return {
+      status: 'closed',
+      label: 'Finalizada',
+      hint: `Cerró el ${fmtDate(end)}`
+    };
+  }
+  return {
+    status: 'open',
+    label: 'Disponible',
+    hint: (start || end) ? formatDateRangeLocal(item) : 'Disponible'
+  };
+}
+
+function fmtDate(dateObj) {
+  try {
+    return dateObj.toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: '2-digit' });
+  } catch {
+    return dateObj?.toISOString?.().slice(0, 10) || '';
+  }
+}
+
+function formatDateRangeLocal(item) {
+  const start = parseLocalDate(pickStart(item), false);
+  const end   = parseLocalDate(pickEnd(item), true);
+  if (!start && !end) return 'Sin fechas';
+
+  if (start && end) return `${fmtDate(start)} — ${fmtDate(end)}`;
+  if (start)        return `Desde ${fmtDate(start)}`;
+  return `Hasta ${fmtDate(end)}`;
+}
+
+/** Badge class por estado */
+function badgeClass(status) {
+  if (status === 'open') return 'bg-status bg-success';
+  if (status === 'upcoming') return 'bg-status bg-warning text-dark';
+  if (status === 'closed') return 'bg-status bg-secondary';
+  return 'bg-secondary';
+}
+
+/** Texto del title en el botón */
+function buttonTitle(av) {
+  if (av.status === 'open') return 'Contestar encuesta';
+  if (av.status === 'upcoming') return av.hint || 'Aún no disponible';
+  if (av.status === 'closed') return av.hint || 'Encuesta finalizada';
+  return 'No disponible';
+}
+
+/** Solo encuestas abiertas + respetar el filtro por texto de useEncuestasCrud */
+const visibleItems = computed(() => {
+  return (filteredItems.value || []).filter(it => availabilityOf(it).status === 'open');
+});
 
 /* ===========================================================
    Responder Encuesta con SweetAlert2
@@ -194,7 +307,7 @@ function escapeHtml (str) {
     .replace(/'/g,'&#039;');
 }
 
-/* Icono y badge por tipo de pregunta (por si quieres usar más tarde) */
+/* Icono/badge por tipo (por si decides mostrarlo más tarde) */
 const tipoIcon = (tipo) => {
   switch (tipo) {
     case 'opcion_multiple':    return 'bi bi-ui-radios';
@@ -212,9 +325,26 @@ const tipoBadgeClass = (tipo) => {
   }
 };
 
+/** Verifica ventana antes de iniciar y da feedback si no procede */
+async function guardedStartSurvey(encuesta) {
+  const av = availabilityOf(encuesta);
+  if (av.status !== 'open') {
+    baseToast(av.hint || 'Esta encuesta no está disponible.', 'warning');
+    return;
+  }
+  await startSurvey(encuesta);
+}
+
 async function startSurvey (encuesta) {
   const uid = getUserIdFromStorage();
   if (!uid) { baseToast('No se pudo identificar al usuario para responder la encuesta.', 'error'); return; }
+
+  // última verificación justo antes de abrir el flujo
+  const av = availabilityOf(encuesta);
+  if (av.status !== 'open') {
+    baseToast(av.hint || 'Esta encuesta no está disponible.', 'warning');
+    return;
+  }
 
   const qs = Array.isArray(encuesta?.cuestionario) ? encuesta.cuestionario : [];
   const validQuestions = qs.filter(q => ['opcion_multiple','seleccion_multiple','respuesta_abierta'].includes(q?.tipo));
@@ -459,7 +589,8 @@ async function startSurvey (encuesta) {
   box-shadow: 0 10px 24px rgba(0,0,0,.08);
 }
 
-/* Badges por tipo (si en algún momento muestras el tipo de pregunta) */
+/* Estado */
+.bg-status{ border: 1px solid rgba(0,0,0,.08); }
 .bg-type-multi{ background: #e7f7ef; color: #0f7a47; border: 1px solid #bce8d1; }
 .bg-type-open{  background: #fff4e5; color: #8a4b00; border: 1px solid #ffe0b8; }
 
