@@ -7,11 +7,11 @@
 
 # ¡Bienvenido(a), {{ $name }}!
 
-Tu cuenta en **Mindora** fue creada o actualizada. Aquí tienes tus credenciales temporales:
+Tu cuenta en **Mindora** fue creada o actualizada. Aquí tienes tus credenciales:
 
 @component('mail::panel')
 **Usuario:** {{ $emailPlain }}  
-**Contraseña temporal:** <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;">{{ $passwordPlain }}</span>
+**Contraseña:** <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;">{{ $passwordPlain }}</span>
 @endcomponent
 
 > Por seguridad, inicia sesión y **cambia tu contraseña**.

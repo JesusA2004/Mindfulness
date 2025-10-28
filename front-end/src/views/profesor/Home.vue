@@ -36,7 +36,6 @@
           </div>
         </div>
       </div>
-
     </section>
 
     <!-- ===== Calendario y Progreso – DESPUÉS ===== -->
@@ -85,10 +84,14 @@
         <div class="card shadow-sm chart-card lift h-100">
           <div class="card-header d-flex align-items-center justify-content-between">
             <h5 class="mb-0">Actividades por grupo</h5>
-            <small class="text-muted">Conteo por cohorte</small>
           </div>
           <div class="card-body">
-            <canvas ref="progressCanvas" height="120" aria-label="Gráfica de actividades por grupo" role="img"></canvas>
+            <canvas
+              ref="progressCanvas"
+              height="120"
+              aria-label="Gráfica de actividades por grupo"
+              role="img"
+            ></canvas>
           </div>
           <div class="card-footer d-flex align-items-center justify-content-between">
             <small class="text-muted">
@@ -101,7 +104,6 @@
         </div>
       </div>
     </section>
-
   </main>
 </template>
 
@@ -128,11 +130,15 @@ function authHeaders () {
     const u = JSON.parse(localStorage.getItem('user') || '{}')
     const token = u?.access_token || u?.token || localStorage.getItem('token')
     const type  = localStorage.getItem('token_type') || 'Bearer'
-    return token ? { Authorization: `${type} ${token}`, Accept: 'application/json' } : { Accept: 'application/json' }
+    return token
+      ? { Authorization: `${type} ${token}`, Accept: 'application/json' }
+      : { Accept: 'application/json' }
   } catch {
     const token = localStorage.getItem('token')
     const type  = localStorage.getItem('token_type') || 'Bearer'
-    return token ? { Authorization: `${type} ${token}`, Accept: 'application/json' } : { Accept: 'application/json' }
+    return token
+      ? { Authorization: `${type} ${token}`, Accept: 'application/json' }
+      : { Accept: 'application/json' }
   }
 }
 
@@ -144,6 +150,7 @@ function fmtDateLabel (isoOrStr) {
   const opts = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }
   return d.toLocaleDateString('es-MX', opts)
 }
+
 function monthRangeISO () {
   const now = new Date()
   const start = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -184,15 +191,14 @@ async function fetchCalendarioMes () {
 
 /* ===== Actividades por grupo ===== */
 async function fetchActividadesPorGrupo () {
-  // Usa endpoint dedicado del backend; no necesita pasar cohortes porque las infiere por el usuario autenticado
   try {
     const url = `${API}/dashboard/profesor/actividades-por-grupo`
     const { data } = await axios.get(url, { headers: authHeaders() })
     const labels = Array.isArray(data?.labels) ? data.labels : []
     const serie  = Array.isArray(data?.data)   ? data.data   : []
 
-    // Si el backend no devolvió etiquetas (p.ej., porque no hay modelo Actividad),
-    // al menos muestra las cohortes como 0.
+    // Si el backend no devolvió etiquetas (p.ej., no hay modelo Actividad),
+    // mostramos las cohortes detectadas en overview con 0.
     if (!labels.length && groupLabels.value.length) {
       actsByGroup.value = groupLabels.value.map(() => 0)
     } else {
@@ -245,9 +251,9 @@ function renderChart () {
 
 /* ===== Init ===== */
 onMounted(async () => {
-  await fetchProfesorOverview()   // hoy, cohortes (desde Persona), alumnosCargo
-  await fetchCalendarioMes()      // calendario (citas -> fallback actividades)
-  await fetchActividadesPorGrupo()// gráfica
+  await fetchProfesorOverview()    // hoy, cohortes (Persona), alumnosCargo
+  await fetchCalendarioMes()       // calendario (citas -> fallback actividades)
+  await fetchActividadesPorGrupo() // gráfica
 })
 </script>
 

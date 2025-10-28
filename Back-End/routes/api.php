@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\TestController;
 use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\UserPointsController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Auth\PasswordResetController;
 
 /*
 |--------------------------------------------------------------------------
@@ -42,6 +43,9 @@ Route::prefix('auth')->group(function () {
 
 // Registro de persona SIN autenticación (necesario antes de registrar user)
 Route::post('personas', [PersonaController::class, 'store']);
+
+Route::post('/password/forgot', [PasswordResetController::class, 'forgot']);
+Route::post('/password/reset',  [PasswordResetController::class, 'reset']);
 
 /*
 |--------------------------------------------------------------------------
@@ -121,7 +125,6 @@ Route::middleware(['auth:api'])->group(function () {
             Route::get('/calendario',             [DashboardController::class, 'profesorCalendario']);
             Route::get('/actividades-por-grupo',  [DashboardController::class, 'profesorActividadesPorGrupo']);
 
-            Route::get('/debug', [DashboardController::class, 'profesorDebug']); // Temporal
         });
 
 

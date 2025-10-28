@@ -3,6 +3,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 // 404
 import ComponenteNoEncontrado from '@/views/NoEncontrado.vue'
+// Cambiar contraseña
+import ResetPassword from '@/views/ResetPasword.vue'
 
 // Layouts
 import PublicLayout from '@/layouts/PublicLayout.vue'
@@ -129,6 +131,12 @@ const routes = [
       }
     ]
   },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',    
+    component: ResetPassword 
+  }
+  ,
   { path: '/:pathMatch(.*)*', component: ComponenteNoEncontrado }
 ]
 
