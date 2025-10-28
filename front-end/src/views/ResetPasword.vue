@@ -251,7 +251,7 @@ export default {
 .reset-wrapper {
   position: relative;
   min-height: 100vh;
-  background: var(--reset-bg, url('/img/tu-fondo.jpg')) center/cover no-repeat fixed;
+  background: var(--reset-bg, url('@/assets/images/backgroundMind.png')) center center / cover no-repeat fixed;
 }
 .overlay {
   position: absolute; inset: 0;
