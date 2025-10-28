@@ -49,17 +49,11 @@
 
         <!-- Acciones -->
         <div class="col-12 col-md-5 col-xl-2 d-flex gap-2 justify-content-end">
-          <button
-            class="btn btn-outline-primary fw-semibold rounded-pill px-3 py-2"
-            @click="openBulkModal"
-          >
+          <button class="btn btn-outline-primary fw-semibold rounded-pill px-3 py-2" @click="openBulkModal">
             <i class="bi bi-cloud-upload"></i>
             <span class="d-none d-xxl-inline ms-1">Cargar</span>
           </button>
-          <button
-            class="btn btn-success fw-semibold shadow pulse-btn rounded-pill px-3 py-2"
-            @click="openCreate"
-          >
+          <button class="btn btn-success fw-semibold shadow pulse-btn rounded-pill px-3 py-2" @click="openCreate">
             <i class="bi bi-plus-lg"></i>
             <span class="d-none d-xxl-inline ms-1">Registrar</span>
           </button>
@@ -153,7 +147,7 @@
       </div>
     </div>
 
-    <!-- ===== Modal: Registrar / Modificar (sin subida de foto) ===== -->
+    <!-- ===== Modal: Registrar / Modificar ===== -->
     <div class="modal fade" ref="formModalRef" tabindex="-1">
       <div class="modal-dialog modal-dialog-centered modal-lg modal-fixed">
         <form class="modal-content shadow-lg" @submit.prevent="onSubmit">
@@ -215,11 +209,10 @@
                       <div v-if="emailInvalid" class="invalid-feedback">Ingresa un correo válido.</div>
                     </div>
 
-                    <!-- Imagen segura (solo vista, sin subir) -->
+                    <!-- Imagen automática -->
                     <div class="col-12">
                       <label class="form-label d-flex align-items-center gap-2">
-                        Imagen 
-                        <span class="badge bg-info-subtle text-info border">Automática</span>
+                        Imagen <span class="badge bg-info-subtle text-info border">Automática</span>
                       </label>
                       <div class="d-flex align-items-center gap-3">
                         <div class="preview rounded-circle secure-preview">
@@ -230,7 +223,7 @@
                           />
                         </div>
                         <small class="text-muted">
-                          Se genera automáticamente con las iniciales (Nombre + Apellido paterno). No es posible subir imagen en esta versión.
+                          Se genera con iniciales (Nombre + Apellido paterno).
                         </small>
                       </div>
                     </div>
@@ -238,7 +231,7 @@
                     <div class="col-12">
                       <div class="alert alert-info py-2 px-3 mt-2">
                         <i class="bi bi-shield-lock me-1"></i>
-                        La contraseña se <strong>generará automáticamente</strong> y se enviará por correo desde el servidor.
+                        La contraseña se <strong>generará automáticamente</strong> y se enviará por correo.
                       </div>
                     </div>
                   </div>
@@ -326,10 +319,70 @@
                       <input v-model.trim="form.persona.matricula" type="text" class="form-control" required />
                     </div>
 
-                    <!-- PROFESOR: cohortes como array -->
+                    <!-- PROFESOR: 3 inputs + Botón Agregar + chips -->
                     <template v-if="isProfessor">
-                      <div class="col-12">
-                        <label class="form-label">Grupo</label>
+                      <div class="col-12 col-md-4">
+                        <label class="form-label">Carrera <span class="text-danger">*</span></label>
+                        <input
+                          v-model.trim="currentCarrera"
+                          type="text"
+                          class="form-control"
+                          placeholder="Ej. ITI"
+                          inputmode="text"
+                          autocomplete="off"
+                          @keydown="allowOnlyLettersSpaces"
+                          @paste="onLettersPaste"
+                          @input="onCarreraInput"
+                          pattern="^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+$"
+                          title="Solo letras y espacios"
+                        />
+                      </div>
+
+                      <div class="col-6 col-md-2">
+                        <label class="form-label">Cuatrimestre <span class="text-danger">*</span></label>
+                        <input
+                          v-model.trim="currentCuatrimestre"
+                          type="number"
+                          min="1" max="12" step="1"
+                          class="form-control"
+                          inputmode="numeric"
+                          @keydown="blockNonNumber"
+                          @input="onCuatriInput"
+                        />
+                      </div>
+
+                      <div class="col-6 col-md-2">
+                        <label class="form-label">Grupo <span class="text-danger">*</span></label>
+                        <input
+                          v-model.trim="currentGrupo"
+                          type="text"
+                          class="form-control"
+                          placeholder="Ej. A"
+                          inputmode="text"
+                          autocomplete="off"
+                          @keydown="allowOnlyLettersSpaces"
+                          @paste="onLettersPaste"
+                          @input="onGrupoInput"
+                          pattern="^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+$"
+                          title="Solo letras y espacios"
+                        />
+                      </div>
+
+                      <div class="col-12 col-md-4 d-flex align-items-end">
+                        <button
+                          type="button"
+                          class="btn btn-outline-secondary w-100"
+                          :disabled="!canAddProfCohorte"
+                          @click="addProfCohorte"
+                          title="Agregar grupo a la lista del profesor"
+                          aria-label="Agregar grupo"
+                        >
+                          <i class="bi bi-plus-lg me-1"></i> Agregar grupo
+                        </button>
+                      </div>
+
+                      <div class="col-12" v-if="form.persona.cohortes.length">
+                        <label class="form-label">Grupos del profesor</label>
                         <div class="chips-input">
                           <div class="chips">
                             <span class="chip" v-for="(v,i) in form.persona.cohortes" :key="'coh-'+i">
@@ -337,18 +390,8 @@
                               <button type="button" class="chip-x" @click="removeTag('cohortes', i)" aria-label="Quitar">&times;</button>
                             </span>
                           </div>
-                          <div class="input-group">
-                            <input
-                              v-model.trim="tagInputs.cohortes"
-                              type="text"
-                              class="form-control"
-                              placeholder='Escribe "ITI 10 A" y presiona Enter'
-                              @keydown.enter.prevent="addTag('cohortes')"
-                            />
-                            <button class="btn btn-outline-secondary" type="button" @click="addTag('cohortes')">Agregar</button>
-                          </div>
                         </div>
-                        <small class="text-muted">Formato: <strong>CARRERA CUAT GRUPO</strong>, ej.: <code>ITI 10 A</code>.</small>
+                        <small class="text-muted">Cada chip = <strong>CARRERA CUAT GRUPO</strong> (ej.: <code>ITI 10 A</code>).</small>
                       </div>
                     </template>
 
@@ -404,7 +447,6 @@
                         />
                       </div>
                     </template>
-
                   </div>
                 </div>
               </transition>
@@ -413,7 +455,7 @@
 
           <div class="modal-footer border-0">
             <button type="button" class="btn btn-outline-secondary" @click="hideModal">Cancelar</button>
-            <button type="submit" class="btn btn-primary" :disabled="saving">
+            <button type="submit" class="btn btn-primary" :disabled="saving || !canSubmitUser">
               <span v-if="!saving">{{ isEditing ? 'Guardar cambios' : 'Registrar' }}</span>
               <span v-else class="spinner-border spinner-border-sm ms-2"></span>
             </button>
@@ -430,9 +472,7 @@
             <div class="d-flex align-items-center gap-3">
               <img
                 class="ui-avatar"
-                :src="(selected?.urlFotoPerfil && selected.urlFotoPerfil.startsWith('http'))
-                      ? selected.urlFotoPerfil
-                      : safeImg(selected?.urlFotoPerfil, avatarNameFromRow(selected))"
+                :src="(selected?.urlFotoPerfil && selected.urlFotoPerfil.startsWith('http')) ? selected.urlFotoPerfil : safeImg(selected?.urlFotoPerfil, avatarNameFromRow(selected))"
                 alt="Avatar"
               />
               <div>
@@ -535,13 +575,10 @@
 
             <div v-if="bulk.running" class="mt-3">
               <div class="progress">
-                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" :style="{ width: bulk.progress + '%' }">
-                  {{ bulk.progress }}%
-                </div>
+                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" :style="{ width: bulk.progress + '%' }">{{ bulk.progress }}%</div>
               </div>
               <div class="small mt-1">{{ bulk.done }} / {{ bulk.total }} procesados</div>
             </div>
-
           </div>
 
           <div class="modal-footer border-0">
@@ -562,22 +599,22 @@ import { useUsuarios } from '@/assets/js/Usuarios'
 const {
   server, rows, filteredRows, searchQuery, filters,
   form, isEditing, saving, errors, hasErrors, sec,
-  tagInputs, selected, bulk, bulkFileRef,
+  selected, bulk, bulkFileRef,
   formModalRef, viewModalRef, bulkModalRef,
   touch,
   onImgError, safeImg,
   badgeRol, badgeEstatus, asTitle, formatDatePretty, arrOrStr,
   maxAdultDOB, emailInvalid, phoneInvalid, isAdult,
-  isProfessor, buildCohorte,
+  isProfessor, buildCohorte, canAddProfCohorte, addProfCohorte, canSubmitUser,
   onInstantSearch, clearSearch, fetchUsers, goPage,
   openCreate, openEdit, hideModal, onSubmit,
-  addTag, removeTag, blockNonNumber, allowOnlyDigits, onPhoneInput,
+  blockNonNumber, allowOnlyDigits, onPhoneInput,
   openView, hideView, modifyFromView, deleteFromView, confirmDelete,
   openBulkModal, hideBulk, onBulkFileSelected, startBulk,
   parseCohorte, displayNameFromPersona,
   prettyField, avatarNameFromRow, allowOnlyLettersSpaces, onLettersPaste,
   currentCarrera, currentCuatrimestre, currentGrupo, onCarreraInput, onGrupoInput, onCuatriInput,
-
+  removeTag,
 } = useUsuarios()
 </script>
 

@@ -102,14 +102,12 @@ const form = reactive({
     fechaNacimiento: '',
     telefono: '',
     sexo: '',
-    // estudiante/admin (simple)
+    // profesor: array de cohortes ["ITI 10 A", ...]
+    cohortes: [],
+    // alumno/admin: se arma desde los 3 inputs y se envía como string en 'cohorte'
     carrera: '',
     cuatrimestre: '',
     grupo: '',
-    // profesor (múltiple)
-    carreras: [],
-    cuatrimestres: [],
-    grupos: [],
     matricula: ''
   },
   user: {
@@ -123,8 +121,8 @@ const form = reactive({
   }
 })
 
-/* Inputs temporales para chips */
-const tagInputs = reactive({ carreras: '', cuatrimestres: '', grupos: '' })
+/* Inputs temporales (chips genéricos si los necesitas en otros lados) */
+const tagInputs = reactive({})
 
 /* Visualizar */
 const selected = ref(null)
@@ -140,8 +138,7 @@ function prettyField (f) {
   const map = {
     'persona.nombre':'Nombre','persona.apellidoPaterno':'Apellido paterno','persona.apellidoMaterno':'Apellido materno',
     'persona.fechaNacimiento':'Fecha de nacimiento','persona.telefono':'Teléfono','persona.sexo':'Sexo',
-    'persona.carrera':'Carrera','persona.carreras':'Carreras','persona.matricula':'Matrícula',
-    'persona.cuatrimestre':'Cuatrimestre','persona.cuatrimestres':'Cuatrimestres','persona.grupo':'Grupo','persona.grupos':'Grupos',
+    'persona.matricula':'Matrícula','persona.cohortes':'Grupos del profesor',
     'user.email':'Correo','user.rol':'Rol','user.estatus':'Estatus','user.password':'Contraseña'
   }
   return map[f] || f
@@ -178,13 +175,70 @@ function buildCohorte(carrera, cuatrimestre, grupo){
   return parts.length ? parts.join(' ') : ''
 }
 
+/* ===== Rol actual ===== */
+const isProfessor = computed(() => (form.user.rol || '').toLowerCase() === 'profesor')
+
+/* ===== Modelos controlados (alumno/admin) ===== */
+const currentCarrera = ref('')
+const currentCuatrimestre = ref('')
+const currentGrupo = ref('')
+const builtCohorteStr = computed(() =>
+  buildCohorte(currentCarrera.value, currentCuatrimestre.value, currentGrupo.value)
+)
+function syncCohorteFieldsIntoForm(){
+  form.persona.carrera = currentCarrera.value
+  form.persona.cuatrimestre = currentCuatrimestre.value
+  form.persona.grupo = currentGrupo.value
+}
+function onCarreraInput(e){
+  currentCarrera.value = (e.target.value || '').toUpperCase().trim()
+  syncCohorteFieldsIntoForm()
+}
+function onCuatriInput(e){
+  let v = parseInt(e.target.value || '')
+  if (isNaN(v)) v = ''
+  if (v !== '') { if (v < 1) v = 1; if (v > 12) v = 12 }
+  e.target.value = v
+  currentCuatrimestre.value = String(v)
+  syncCohorteFieldsIntoForm()
+}
+function onGrupoInput(e){
+  currentGrupo.value = (e.target.value || '').toUpperCase().trim()
+  syncCohorteFieldsIntoForm()
+}
+
+/* ===== Habilitar botón Agregar (profesor) ===== */
+const canAddProfCohorte = computed(() => {
+  const c=(currentCarrera.value||'').trim()
+  const q=(currentCuatrimestre.value||'').toString().trim()
+  const g=(currentGrupo.value||'').trim()
+  const validQ=/^\d+$/.test(q) && +q>=1 && +q<=12
+  return !!c && !!g && validQ
+})
+function addProfCohorte(){
+  const val = (builtCohorteStr.value || '').toUpperCase().replace(/\s+/g,' ').trim()
+  if (!val) return
+  if (!form.persona.cohortes.includes(val)) form.persona.cohortes.push(val)
+  currentCarrera.value = ''; currentCuatrimestre.value = ''; currentGrupo.value = ''
+  syncCohorteFieldsIntoForm()
+}
+function removeTag(field, idx){
+  const arr=form.persona[field]; if(Array.isArray(arr)) arr.splice(idx,1)
+}
+
+/* ===== Botón Registrar habilitado ===== */
+const canSubmitUser = computed(() => {
+  const rol=(form.user.rol||'').toLowerCase()
+  if (rol==='profesor') return Array.isArray(form.persona.cohortes) && form.persona.cohortes.length>0
+  // alumno/admin: requiere cohorte válido
+  return !!builtCohorteStr.value
+})
+
+/* ===== Fetch/normalize ===== */
 function normalizeUser(u){
   const persona = u.persona || {}
   const nombreCompleto = u.name || toNombreCompleto(persona) || null
-  const carrera      = persona?.carreras ?? persona?.carrera ?? ''
-  const cuatrimestre = persona?.cuatrimestres ?? persona?.cuatrimestre ?? ''
-  const grupo        = persona?.grupos ?? persona?.grupo ?? ''
-  const cohorte      = persona?.cohorte ?? buildCohorte(carrera, cuatrimestre, grupo)
+  const cohorte = persona?.cohorte ?? buildCohorte(persona?.carrera, persona?.cuatrimestre, persona?.grupo)
 
   return {
     _uid: String(u._id ?? u.id ?? Math.random()),
@@ -194,7 +248,6 @@ function normalizeUser(u){
     fechaNacimiento: normalizeDate(persona?.fechaNacimiento) ?? null,
     telefono: persona?.telefono ?? '',
     sexo: persona?.sexo ?? '',
-    carrera, cuatrimestre, grupo,
     cohorte,
     matricula: persona?.matricula ?? '',
     rol: (u.rol || '').toLowerCase(),
@@ -205,7 +258,6 @@ function normalizeUser(u){
   }
 }
 
-/* ===== Fetch ===== */
 async function fetchUsers(pageUrl=null){
   try{
     const usersUrl = pageUrl || USERS_URL
@@ -249,8 +301,7 @@ const filteredRows = computed(() => {
     const rolOk = filters.rol ? (u.rol === filters.rol) : true
     const estOk = filters.estatus ? (u.estatus === filters.estatus) : true
     const bag = [
-      u.nombreCompleto, u.matricula, u.email, u.telefono,
-      arrOrStr(u.carrera), arrOrStr(u.cuatrimestre), arrOrStr(u.grupo)
+      u.nombreCompleto, u.matricula, u.email, u.telefono, arrOrStr(u.cohorte)
     ].join(' ').toLowerCase()
     const qOk = !q || bag.includes(q)
     return rolOk && estOk && qOk
@@ -266,15 +317,6 @@ async function mountInit () {
   bulkModal  = new Modal(bulkModalRef.value)
 }
 
-/* ===== Chips ===== */
-function addTag(field){
-  let v=(tagInputs[field]||'').trim(); if(!v) return
-  if(field==='cuatrimestres' && !/^\d+$/.test(v)){ toast('Cuatrimestre debe ser numérico.','error'); return }
-  const arr=form.persona[field]; if(Array.isArray(arr) && !arr.includes(v)) arr.push(v)
-  tagInputs[field]=''
-}
-function removeTag(field, idx){ const arr=form.persona[field]; if(Array.isArray(arr)) arr.splice(idx,1) }
-
 /* ===== Modal Form ===== */
 function hideModal(){ formModal.hide() }
 function clearErrors(){ Object.keys(errors).forEach(k=>delete errors[k]) }
@@ -282,13 +324,14 @@ function resetForm(){
   Object.assign(form.persona, {
     _id:null, nombre:'', apellidoPaterno:'', apellidoMaterno:'',
     fechaNacimiento:'', telefono:'', sexo:'',
+    cohortes:[],
     carrera:'', cuatrimestre:'', grupo:'',
-    carreras:[], cuatrimestres:[], grupos:[], matricula:''
+    matricula:''
   })
   Object.assign(form.user, { _id:null, persona_id:null, name:'', email:'', rol:'', estatus:'activo', urlFotoPerfil:'' })
-  tagInputs.carreras=''; tagInputs.cuatrimestres=''; tagInputs.grupos=''
   clearErrors()
   touch.email=false; touch.telefono=false; touch.fecha=false
+  currentCarrera.value=''; currentCuatrimestre.value=''; currentGrupo.value=''
 }
 function openCreate(){
   isEditing.value = false
@@ -310,41 +353,26 @@ function openEdit(row){
   form.persona.sexo = p?.sexo || ''
   form.persona.matricula = p?.matricula || ''
 
-  form.persona.carrera      = Array.isArray(p.carrera) ? (p.carrera[0] || '') : (p.carrera || '')
-  form.persona.cuatrimestre = Array.isArray(p.cuatrimestre) ? (p.cuatrimestre[0] || '') : (p.cuatrimestre || '')
-  form.persona.grupo        = Array.isArray(p.grupo) ? (p.grupo[0] || '') : (p.grupo || '')
-
-  form.persona.carreras      = Array.isArray(p.carreras) ? p.carreras.slice()
-                             : Array.isArray(p.carrera)  ? p.carrera.slice()
-                             : (p.carrera ? [String(p.carrera)] : [])
-  form.persona.cuatrimestres = Array.isArray(p.cuatrimestres) ? p.cuatrimestres.slice()
-                             : Array.isArray(p.cuatrimestre)  ? p.cuatrimestre.slice()
-                             : (p.cuatrimestre ? [String(p.cuatrimestre)] : [])
-  form.persona.grupos        = Array.isArray(p.grupos) ? p.grupos.slice()
-                             : Array.isArray(p.grupo)  ? p.grupo.slice()
-                             : (p.grupo ? [String(p.grupo)] : [])
+  // Si viene cohorte como array → profesor; si es string → alumno/admin
+  if (Array.isArray(p?.cohorte)) {
+    form.user.rol = 'profesor'
+    form.persona.cohortes = p.cohorte.slice()
+  } else {
+    const coh = p?.cohorte || row.cohorte || ''
+    const { carrera, cuatrimestre, grupo } = parseCohorte(coh)
+    currentCarrera.value = (carrera || '').toUpperCase()
+    currentCuatrimestre.value = String(cuatrimestre || '')
+    currentGrupo.value = (grupo || '').toUpperCase()
+    syncCohorteFieldsIntoForm()
+  }
 
   form.user._id = row.user_id || null
   form.user.persona_id = row.persona_id || null
   form.user.name = row.nombreCompleto || ''
   form.user.email = row.email || ''
-  form.user.rol = row.rol || ''
+  form.user.rol = form.user.rol || row.rol || ''
   form.user.estatus = row.estatus || 'activo'
   form.user.urlFotoPerfil = row.urlFotoPerfil || ''
-
-  const isProf = (row.rol || '').toLowerCase() === 'profesor'
-  if (!isProf) {
-    // prioriza persona.carrera/cuatrimestre/grupo; si no, descompón cohorte
-    let car = form.persona.carrera, cua = form.persona.cuatrimestre, grp = form.persona.grupo
-    if (!car && !cua && !grp && row.cohorte) {
-      const p = parseCohorte(row.cohorte)
-      car = p.carrera; cua = p.cuatrimestre; grp = p.grupo
-      form.persona.carrera = car; form.persona.cuatrimestre = cua; form.persona.grupo = grp
-    }
-    currentCarrera.value = String(car || '').toUpperCase()
-    currentCuatrimestre.value = String(cua || '')
-    currentGrupo.value = String(grp || '').toUpperCase()
-  }
 
   formModal.show()
 }
@@ -380,15 +408,6 @@ function onPhoneInput(e){
   form.persona.telefono=e.target.value
 }
 
-// Nombre para avatar a partir de la fila
-function avatarNameFromRow(row){
-  if (!row) return 'Usuario'
-  if (row.nombreCompleto) return row.nombreCompleto
-  const p = row.raw?.persona || {}
-  const name = toNombreCompleto(p)
-  return name || 'Usuario'
-}
-
 // Parsear cohorte "CARRERA CUAT GRUPO" => { carrera, cuatrimestre, grupo }
 function parseCohorte(str){
   if (!str || typeof str !== 'string') return { carrera:'', cuatrimestre:'', grupo:'' }
@@ -404,7 +423,6 @@ function parseCohorte(str){
 function displayNameFromPersona(){
   return toNombreCompleto(form.persona) || 'Usuario'
 }
-
 // Restricción de letras/espacios
 function allowOnlyLettersSpaces(evt){
   const k = evt.key
@@ -419,34 +437,6 @@ function onLettersPaste(evt){
   const start = el.selectionStart, end = el.selectionEnd
   el.value = el.value.slice(0,start) + t + el.value.slice(end)
   el.dispatchEvent(new Event('input', { bubbles:true }))
-}
-
-// Modelos controlados para estudiante/admin
-const currentCarrera = ref('')
-const currentCuatrimestre = ref('')
-const currentGrupo = ref('')
-
-function syncCohorteFieldsIntoForm(){
-  form.persona.carrera = currentCarrera.value
-  form.persona.cuatrimestre = currentCuatrimestre.value
-  form.persona.grupo = currentGrupo.value
-}
-
-function onCarreraInput(e){
-  currentCarrera.value = (e.target.value || '').toUpperCase().trim()
-  syncCohorteFieldsIntoForm()
-}
-function onCuatriInput(e){
-  let v = parseInt(e.target.value || '')
-  if (isNaN(v)) v = ''
-  if (v !== '') { if (v < 1) v = 1; if (v > 12) v = 12 }
-  e.target.value = v
-  currentCuatrimestre.value = String(v)
-  syncCohorteFieldsIntoForm()
-}
-function onGrupoInput(e){
-  currentGrupo.value = (e.target.value || '').toUpperCase().trim()
-  syncCohorteFieldsIntoForm()
 }
 
 function clearErrorsObj(){ Object.keys(errors).forEach(k=>delete errors[k]) }
@@ -468,14 +458,9 @@ function validateFront(){
 
   const rol=(form.user.rol||'').toLowerCase()
   if(rol==='profesor'){
-    if(!form.persona.carreras.length)      errs['persona.carreras']=['Agrega al menos una carrera.']
-    if(!form.persona.cuatrimestres.length) errs['persona.cuatrimestres']=['Agrega al menos un cuatrimestre.']
-    if(form.persona.cuatrimestres.some(c => !/^\d+$/.test(String(c)))) errs['persona.cuatrimestres']=['Todos los cuatrimestres deben ser numéricos.']
-    if(!form.persona.grupos.length)        errs['persona.grupos']=['Agrega al menos un grupo.']
-  } else if (rol==='estudiante' || rol==='admin') {
-    if(!isRequired(form.persona.carrera))      errs['persona.carrera']=['La carrera es obligatoria.']
-    if(!/^\d+$/.test(form.persona.cuatrimestre||'')) errs['persona.cuatrimestre']=['El cuatrimestre debe ser numérico.']
-    if(!isRequired(form.persona.grupo))        errs['persona.grupo']=['El grupo es obligatorio.']
+    if(!form.persona.cohortes.length) errs['persona.cohortes']=['Agrega al menos un grupo (cohorte).']
+  } else {
+    if(!builtCohorteStr.value) errs['persona.cohorte']=['Completa carrera, cuatrimestre y grupo.']
   }
 
   if(Object.keys(errs).length){ Object.assign(errors,errs); return false }
@@ -535,9 +520,7 @@ function extractIdDeep(payload, headers){
 async function findPersonaByMatricula (matricula) {
   if (!matricula) return null
   try {
-    // Intento por querystring típico ?matricula=...
     const { data } = await axios.get(PERSONAS_URL, { headers: authHeaders(), params: { matricula, per_page: 1 } })
-    // Soporta {data:[...]}, {registros:[...]}, o array directo
     const arr = Array.isArray(data) ? data
               : Array.isArray(data?.data) ? data.data
               : Array.isArray(data?.registros) ? data.registros
@@ -549,33 +532,21 @@ async function findPersonaByMatricula (matricula) {
 }
 
 async function createOrUpdatePersona(){
-  // arma payload según rol
   const isProf = (form.user.rol || '').toLowerCase() === 'profesor'
-  const personaPayload = isProf
-    ? {
-        nombre: form.persona.nombre,
-        apellidoPaterno: form.persona.apellidoPaterno,
-        apellidoMaterno: form.persona.apellidoMaterno,
-        fechaNacimiento: form.persona.fechaNacimiento,
-        telefono: form.persona.telefono,
-        sexo: form.persona.sexo,
-        matricula: form.persona.matricula,
-        carrera: form.persona.carreras.slice(),
-        cuatrimestre: form.persona.cuatrimestres.slice(),
-        grupo: form.persona.grupos.slice(),
-      }
-    : {
-        nombre: form.persona.nombre,
-        apellidoPaterno: form.persona.apellidoPaterno,
-        apellidoMaterno: form.persona.apellidoMaterno,
-        fechaNacimiento: form.persona.fechaNacimiento,
-        telefono: form.persona.telefono,
-        sexo: form.persona.sexo,
-        matricula: form.persona.matricula,
-        carrera: form.persona.carrera || null,
-        cuatrimestre: form.persona.cuatrimestre || null,
-        grupo: form.persona.grupo || null,
-      }
+
+  const personaPayload = {
+    nombre: form.persona.nombre,
+    apellidoPaterno: form.persona.apellidoPaterno,
+    apellidoMaterno: form.persona.apellidoMaterno,
+    fechaNacimiento: form.persona.fechaNacimiento,
+    telefono: form.persona.telefono,
+    sexo: form.persona.sexo,
+    matricula: form.persona.matricula,
+    // 👇 clave: SOLO 'cohorte'
+    cohorte: isProf
+      ? form.persona.cohortes.slice()
+      : builtCohorteStr.value
+  }
 
   let personaId = form.persona._id
   if (personaId) {
@@ -584,12 +555,8 @@ async function createOrUpdatePersona(){
   }
 
   const resp = await axios.post(PERSONAS_URL, personaPayload, { headers: authHeaders() })
-  console.debug('[PERSONAS POST] data:', resp?.data, 'headers:', resp?.headers)
   let newId = extractIdDeep(resp?.data, resp?.headers)
-  if (!newId) {
-    // último recurso: buscar por matrícula
-    newId = await findPersonaByMatricula(form.persona.matricula)
-  }
+  if (!newId) newId = await findPersonaByMatricula(form.persona.matricula)
   if (!newId) throw new Error('No se pudo obtener el ID de persona después de crearla.')
   form.persona._id = String(newId)
   return String(newId)
@@ -612,7 +579,6 @@ async function createOrUpdateUser(personaId){
     notify_email: !isEditing.value
   }
 
-  // intento normal
   if (form.user._id) {
     await axios.put(`${USERS_URL}/${form.user._id}`, userPayloadBase, { headers: authHeaders() })
     return
@@ -621,7 +587,6 @@ async function createOrUpdateUser(personaId){
   try {
     await axios.post(USERS_URL, userPayloadBase, { headers: authHeaders() })
   } catch (e) {
-    // Si pidió password (422), reintento con una password aleatoria
     const resp = e?.response?.data
     const status = e?.response?.status
     if (status === 422 && resp?.errors && (resp.errors.password || resp.errors['user.password'])) {
@@ -637,15 +602,12 @@ async function createOrUpdateUser(personaId){
 async function onSubmit(){
   touch.email=true; touch.telefono=true; touch.fecha=true
   if(!validateFront()){ toast('Revisa los campos obligatorios.','error'); return }
+  if(!canSubmitUser.value){ toast('Completa el cohorte antes de registrar.','error'); return }
 
   saving.value=true
   try{
-    // 1) PERSONA
     const personaId = await createOrUpdatePersona()
-
-    // 2) USER (con persona_id ya resuelto)
     await createOrUpdateUser(personaId)
-
     await fetchUsers()
     hideModal()
     toast('Registro guardado.')
@@ -734,7 +696,10 @@ async function startBulk(){
   bulk.running=true; bulk.total=bulk.preview.length; bulk.done=0; bulk.progress=0
   for(const raw of bulk.preview){
     try{
-      const toArr = (v) => Array.isArray(v) ? v : (typeof v === 'string' && v.includes(',')) ? v.split(',').map(s => s.trim()).filter(Boolean) : v
+      const coh =
+        Array.isArray(raw.cohorte) ? raw.cohorte.filter(Boolean).map(s=>String(s)) :
+        (raw.cohorte ? String(raw.cohorte) : buildCohorte(raw.carrera, raw.cuatrimestre, raw.grupo))
+
       const persona = {
         nombre: raw.nombre ?? '',
         apellidoPaterno: raw.apellidoPaterno ?? '',
@@ -742,9 +707,7 @@ async function startBulk(){
         fechaNacimiento: raw.fechaNacimiento ?? '',
         telefono: raw.telefono ?? '',
         sexo: raw.sexo ?? '',
-        carrera: toArr(raw.carreras ?? raw.carrera ?? ''),
-        cuatrimestre: toArr(raw.cuatrimestres ?? raw.cuatrimestre ?? ''),
-        grupo: toArr(raw.grupos ?? raw.grupo ?? ''),
+        cohorte: coh,
         matricula: raw.matricula ?? ''
       }
       const presp = await axios.post(PERSONAS_URL, persona, { headers: authHeaders() })
@@ -781,18 +744,35 @@ export function useUsuarios () {
     safeImg, onImgError, onFormImgError, onShowImgError,
     badgeRol, badgeEstatus, asTitle, formatDatePretty, arrOrStr,
     maxAdultDOB, emailInvalid, phoneInvalid, isAdult,
-    toNombreCompleto,
-    onPhoneInput, allowOnlyDigits,
+
+    // avatar / nombres
+    toNombreCompleto, avatarNameFromRow: (row)=> {
+      if (!row) return 'Usuario'
+      if (row.nombreCompleto) return row.nombreCompleto
+      const p = row.raw?.persona || {}
+      const name = toNombreCompleto(p)
+      return name || 'Usuario'
+    },
+    displayNameFromPersona,
+
+    // inputs y validaciones varias
+    onPhoneInput, allowOnlyDigits, allowOnlyLettersSpaces, onLettersPaste,
+
+    // flujo
     openCreate, openEdit, hideModal, onSubmit,
     openView, hideView, modifyFromView, deleteFromView, confirmDelete,
-    openBulkModal, hideBulk, onBulkFileSelected, startBulk,
     onInstantSearch, clearSearch, fetchUsers, goPage,
-    addTag, removeTag,
+    openBulkModal, hideBulk, onBulkFileSelected, startBulk,
+    removeTag,
 
+    // cohorte
     buildCohorte, parseCohorte,
-    avatarNameFromRow, displayNameFromPersona,
-    allowOnlyLettersSpaces, onLettersPaste,
     currentCarrera, currentCuatrimestre, currentGrupo,
     onCarreraInput, onCuatriInput, onGrupoInput,
+
+    // rol profesor
+    isProfessor, canAddProfCohorte, addProfCohorte, canSubmitUser,
+
+    prettyField,
   }
 }

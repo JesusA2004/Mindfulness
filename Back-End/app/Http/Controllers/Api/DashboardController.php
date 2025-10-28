@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Tecnica;
 use App\Models\Bitacora;
-
+use Illuminate\Support\Carbon; // zona horaria
 use Exception;
 
 class DashboardController extends Controller
@@ -16,21 +16,40 @@ class DashboardController extends Controller
     public function overview(Request $request)
     {
         try {
-            // roles según tu modelo: estudiante | profesor | admin
-            $totalUsuarios  = User::whereIn('rol', ['estudiante', 'profesor'])->count();
-            $totalTecnicas  = Tecnica::count();
-            $totalBitacoras = Bitacora::count();
+            // Zona horaria MX para "hoy"
+            $todayMx = Carbon::now('America/Mexico_City')->toDateString(); // "YYYY-MM-DD"
+
+            // Separados por rol
+            $totalEstudiantes = User::where('rol', 'estudiante')->count();
+            $totalDocentes    = User::where('rol', 'profesor')->count();
+            $totalUsuarios    = $totalEstudiantes + $totalDocentes;
+
+            $totalTecnicas    = Tecnica::count();
+
+            // Bitácoras de HOY (fecha string "YYYY-MM-DD")
+            $bitacorasHoy     = Bitacora::where('fecha', $todayMx)->count();
+
+            // Total global (mantener por compatibilidad)
+            $bitacorasTotales = Bitacora::count();
 
             return response()->json([
-                'totalUsuarios'  => (int) $totalUsuarios,
-                'totalTecnicas'  => (int) $totalTecnicas,
-                'totalBitacoras' => (int) $totalBitacoras,
+                'usuariosTotales'  => (int) $totalUsuarios,
+                'estudiantes'      => (int) $totalEstudiantes,
+                'docentes'         => (int) $totalDocentes,
+                'totalTecnicas'    => (int) $totalTecnicas,
+                'bitacorasHoy'     => (int) $bitacorasHoy,
+                'bitacorasTotales' => (int) $bitacorasTotales,
+                'hoy'              => $todayMx,
             ], 200);
         } catch (Exception $e) {
             return response()->json([
-                'totalUsuarios'  => 0,
-                'totalTecnicas'  => 0,
-                'totalBitacoras' => 0,
+                'usuariosTotales'  => 0,
+                'estudiantes'      => 0,
+                'docentes'         => 0,
+                'totalTecnicas'    => 0,
+                'bitacorasHoy'     => 0,
+                'bitacorasTotales' => 0,
+                'hoy'              => Carbon::now('America/Mexico_City')->toDateString(),
             ], 200);
         }
     }
@@ -41,7 +60,7 @@ class DashboardController extends Controller
         $labels = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
         try {
-            // Pipeline usando fecha STRING "YYYY-MM-DD"
+            // Pipeline con fecha STRING "YYYY-MM-DD"
             $pipeline = [
                 [
                     '$match' => [
