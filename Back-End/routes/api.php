@@ -59,6 +59,10 @@ Route::middleware(['auth:api'])->group(function () {
 
     // CRUD de los demás modelos
     Route::apiResource('users', UserController::class);
+    Route::prefix('actividades')->group(function () {
+        Route::get('mis-cohortes', [ActividadController::class, 'misCohortes']);
+        Route::get('mis-alumnos',  [ActividadController::class, 'misAlumnos']);
+    });
     Route::apiResource('actividades', ActividadController::class); // <- corregido (antes: actividads)
     Route::apiResource('bitacoras', BitacoraController::class);
     Route::post('/bitacoras/remind-today', [BitacoraController::class, 'remindToday']);

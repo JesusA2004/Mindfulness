@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Actividad;
 use App\Models\User;
+use App\Models\Persona;
 use Illuminate\Http\Request;
 use App\Http\Requests\ActividadRequest;
 use Illuminate\Http\JsonResponse;
@@ -15,19 +16,14 @@ class ActividadController extends Controller
 {
     /**
      * GET /api/actividades
-     * Filtros: ?docente_id=&desde=YYYY-MM-DD&hasta=YYYY-MM-DD&cohorte=ITI%2010%20A
-     * Respuesta: { registros: [...], enlaces: { primero, ultimo, anterior, siguiente } }
      */
     public function index(Request $request): JsonResponse
     {
         $q = Actividad::query();
 
-        // Docente asignador
         if ($docenteId = $request->string('docente_id')->toString()) {
             $q->where('docente_id', (string) $docenteId);
         }
-
-        // Rango de fechas (sobre fechaAsignacion)
         if ($desde = $request->string('desde')->toString()) {
             $q->where('fechaAsignacion', '>=', $desde);
         }
@@ -35,12 +31,14 @@ class ActividadController extends Controller
             $q->where('fechaAsignacion', '<=', $hasta);
         }
 
-        // Filtro por cohorte -> cruza participantes.user_id
+        // 🔧 Filtrado por cohorte (opcional)
         if ($cohorte = $request->string('cohorte')->toString()) {
+            // Obtén IDs de alumnos de ese cohorte (campo puede ser string o array)
             $cohortUsers = User::query()
+                ->whereIn('rol', ['estudiante','alumno'])
                 ->where(function ($w) use ($cohorte) {
-                    $w->where('persona.cohorte', $cohorte)
-                      ->orWhere('persona.cohorte', 'all', [$cohorte]);
+                    // $in sobre persona.cohorte -> funciona para string o array con Jenssegers
+                    $w->whereIn('persona.cohorte', [$cohorte]);
                 })
                 ->pluck('_id')
                 ->map(fn($v) => (string) $v)
@@ -84,19 +82,19 @@ class ActividadController extends Controller
     {
         $data = $request->validated();
 
-        // === Fecha de asignación forzada a "hoy" en America/Mexico_City ===
+        // Fecha de asignación siempre hoy (MX)
         $data['fechaAsignacion'] = Carbon::now('America/Mexico_City')->toDateString();
 
-        // Normaliza ids a string (Mongo)
+        // Normaliza a string por si te llega ObjectId desde otra parte
         $data['docente_id'] = (string) $data['docente_id'];
         $data['tecnica_id'] = (string) $data['tecnica_id'];
 
-        // Participantes -> asegura estructura
+        // Normaliza participantes
         if (isset($data['participantes']) && is_array($data['participantes'])) {
             $data['participantes'] = array_values(array_map(function ($p) {
                 return [
                     'user_id' => (string) ($p['user_id'] ?? ''),
-                    'estado'  => in_array(($p['estado'] ?? 'Pendiente'), ['Pendiente', 'Completado', 'Omitido'])
+                    'estado'  => in_array(($p['estado'] ?? 'Pendiente'), ['Pendiente', 'Completado', 'Omitido'], true)
                         ? $p['estado'] : 'Pendiente',
                 ];
             }, $data['participantes']));
@@ -121,17 +119,16 @@ class ActividadController extends Controller
     {
         $data = $request->validated();
 
-        // Mantener fechaAsignacion existente si no viene; si viene, normalizar
+        // Mantén fechaAsignacion si no se envía
         $data['fechaAsignacion'] = $data['fechaAsignacion'] ?? $actividad->fechaAsignacion;
-
-        $data['docente_id'] = (string) $data['docente_id'];
-        $data['tecnica_id'] = (string) $data['tecnica_id'];
+        $data['docente_id']      = (string) $data['docente_id'];
+        $data['tecnica_id']      = (string) $data['tecnica_id'];
 
         if (isset($data['participantes']) && is_array($data['participantes'])) {
             $data['participantes'] = array_values(array_map(function ($p) {
                 return [
                     'user_id' => (string) ($p['user_id'] ?? ''),
-                    'estado'  => in_array(($p['estado'] ?? 'Pendiente'), ['Pendiente', 'Completado', 'Omitido'])
+                    'estado'  => in_array(($p['estado'] ?? 'Pendiente'), ['Pendiente', 'Completado', 'Omitido'], true)
                         ? $p['estado'] : 'Pendiente',
                 ];
             }, $data['participantes']));
@@ -152,5 +149,115 @@ class ActividadController extends Controller
         return response()->json([
             'mensaje' => 'Actividad eliminada correctamente.',
         ], 200);
+    }
+
+    /* ======================= ENDPOINTS PROFESOR ======================= */
+
+    /**
+     * GET /api/actividades/mis-cohortes
+     */
+    public function misCohortes(Request $request): JsonResponse
+    {
+        try {
+            $u = auth('api')->user();
+            if (!$u) return response()->json(['cohortes' => []], 200);
+
+            $cohortes = [];
+
+            // 1) Embebido en user.persona
+            $raw = $u->persona->cohorte ?? $u->persona['cohorte'] ?? null;
+            if ($raw) {
+                if (is_array($raw)) {
+                    foreach ($raw as $c) { $s = trim((string)$c); if ($s !== '') $cohortes[] = $s; }
+                } elseif (is_string($raw)) {
+                    $s = trim($raw); if ($s !== '') $cohortes[] = $s;
+                }
+            }
+
+            // 2) Relación persona
+            if (empty($cohortes) && !empty($u->persona_id)) {
+                $p = Persona::find($u->persona_id);
+                if ($p) {
+                    $raw = $p->cohorte ?? null;
+                    if (is_array($raw)) {
+                        foreach ($raw as $c) { $s = trim((string)$c); if ($s !== '') $cohortes[] = $s; }
+                    } elseif (is_string($raw)) {
+                        $s = trim($raw); if ($s !== '') $cohortes[] = $s;
+                    }
+                }
+            }
+
+            $cohortes = array_values(array_unique($cohortes));
+            return response()->json(['cohortes' => $cohortes], 200);
+        } catch (\Throwable $e) {
+            return response()->json(['cohortes' => []], 200);
+        }
+    }
+
+    /**
+     * GET /api/actividades/mis-alumnos?cohorte=...
+     */
+    public function misAlumnos(Request $request): JsonResponse
+    {
+        try {
+            $u = auth('api')->user();
+            if (!$u) return response()->json(['alumnos' => []], 200);
+
+            // 1) Cohortes del profe
+            $cohortes = $this->cohortesDe($u);
+
+            // 2) Filtro opcional exacto
+            $fCoh = trim((string)$request->query('cohorte', ''));
+            if ($fCoh !== '') {
+                $cohortes = array_values(array_filter($cohortes, fn($c) => strcasecmp($c, $fCoh) === 0));
+            }
+
+            if (empty($cohortes)) return response()->json(['alumnos' => []], 200);
+
+            // 3) Alumnos en cualquiera de esas cohortes (string o array)
+            $usersQ = User::query()
+                ->whereIn('rol', ['estudiante','alumno'])
+                ->where(function ($w) use ($cohortes) {
+                    // $in sobre persona.cohorte (match si el campo es string == valor o array que contiene valor)
+                    $w->whereIn('persona.cohorte', $cohortes);
+                });
+
+            $students = $usersQ->get(['_id','id','name','email','matricula','rol','persona']);
+            $alumnos = $students->map(function ($u) {
+                return [
+                    '_id'       => (string)($u->_id ?? $u->id ?? ''),
+                    'id'        => (string)($u->id ?? $u->_id ?? ''),
+                    'name'      => (string)($u->name ?? ''),
+                    'email'     => (string)($u->email ?? ''),
+                    'matricula' => (string)($u->matricula ?? ''),
+                    'rol'       => (string)($u->rol ?? ''),
+                    'persona'   => is_array($u->persona) ? $u->persona : (array)($u->persona ?? []),
+                ];
+            })->values()->all();
+
+            return response()->json(['alumnos' => $alumnos], 200);
+        } catch (\Throwable $e) {
+            return response()->json(['alumnos' => []], 200);
+        }
+    }
+
+    /* -------------------- helper privado local -------------------- */
+    private function cohortesDe(User $u): array
+    {
+        $out = [];
+        $raw = $u->persona->cohorte ?? $u->persona['cohorte'] ?? null;
+        if ($raw) {
+            if (is_array($raw)) { foreach ($raw as $c) { $s = trim((string)$c); if ($s!=='') $out[]=$s; } }
+            elseif (is_string($raw)) { $s=trim($raw); if($s!=='') $out[]=$s; }
+        }
+        if (empty($out) && !empty($u->persona_id)) {
+            $p = Persona::find($u->persona_id);
+            if ($p) {
+                $raw = $p->cohorte ?? null;
+                if (is_array($raw)) { foreach ($raw as $c) { $s = trim((string)$c); if ($s!=='') $out[]=$s; } }
+                elseif (is_string($raw)) { $s=trim($raw); if($s!=='') $out[]=$s; }
+            }
+        }
+        return array_values(array_unique($out));
     }
 }

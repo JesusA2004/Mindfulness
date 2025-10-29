@@ -1,4 +1,4 @@
-// src/composables/actividades.js
+// src/composables/actividades.js 
 import axios from "axios";
 
 /** ========= Base URL priorizando VUE_APP_API_URL ========= */
@@ -140,7 +140,83 @@ export function paramsFromPaginationUrl(url) {
   }
 }
 
+/* ======================================================================
+ *                     🔹 LÓGICA PARA PROFESOR 🔹
+ *  (Se añade sin modificar nada de lo anterior para ADMIN)
+ * ====================================================================== */
+
+/**
+ * Cohortes (grupos) del profesor autenticado.
+ * GET /api/actividades/mis-cohortes  → { cohortes: string[] }
+ */
+export async function fetchMisCohortes() {
+  try {
+    const { data } = await api.get("/actividades/mis-cohortes");
+    return Array.isArray(data?.cohortes) ? data.cohortes : [];
+  } catch (e) {
+    console.error("Error al cargar cohortes del profesor:", e?.response?.status || e?.message);
+    return [];
+  }
+}
+
+/**
+ * Alumnos del profesor autenticado (opcionalmente por cohorte).
+ * GET /api/actividades/mis-alumnos?cohorte=ITI%2010%20A
+ * → { alumnos: [...] } (se normaliza _key en front)
+ */
+export async function fetchMisAlumnos({ cohorte = "" } = {}) {
+  try {
+    const params = {};
+    if (cohorte) params.cohorte = cohorte;
+    const { data } = await api.get("/actividades/mis-alumnos", { params });
+    const list = Array.isArray(data?.alumnos) ? data.alumnos : [];
+    return list.map((u) => ({ ...u, _key: String(u._id || u.id || "") }));
+  } catch (e) {
+    console.error("Error al cargar alumnos del profesor:", e?.response?.status || e?.message);
+    return [];
+  }
+}
+
+/**
+ * (Opcional) Endpoints ya existentes para dashboard de profesor,
+ * útiles si quieres alimentar tarjetas o gráficas desde el mismo composable.
+ */
+export async function fetchProfesorOverview() {
+  try {
+    const { data } = await api.get("/dashboard/profesor/overview");
+    return data || { hoy: null, cohortes: [], alumnosCargo: 0 };
+  } catch {
+    return { hoy: null, cohortes: [], alumnosCargo: 0 };
+  }
+}
+
+export async function fetchProfesorCalendario({ start, end } = {}) {
+  try {
+    const params = {};
+    if (start) params.start = start;
+    if (end) params.end = end;
+    const { data } = await api.get("/dashboard/profesor/calendario", { params });
+    return Array.isArray(data?.items) ? data.items : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchActividadesPorGrupoProfesor() {
+  try {
+    const { data } = await api.get("/dashboard/profesor/actividades-por-grupo");
+    return {
+      labels: Array.isArray(data?.labels) ? data.labels : [],
+      data: Array.isArray(data?.data) ? data.data : [],
+    };
+  } catch {
+    return { labels: [], data: [] };
+  }
+}
+
+/** ========= Export por defecto (incluye profesor) ========= */
 export default {
+  // Admin / comunes
   getCurrentUser,
   fetchActividades,
   createActividad,
@@ -150,4 +226,11 @@ export default {
   fetchAlumnos,
   fetchDocentes,
   paramsFromPaginationUrl,
+
+  // Profesor
+  fetchMisCohortes,
+  fetchMisAlumnos,
+  fetchProfesorOverview,
+  fetchProfesorCalendario,
+  fetchActividadesPorGrupoProfesor,
 };

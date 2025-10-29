@@ -334,6 +334,11 @@ export default {
       paginaActual: 1,
       totalPaginas: 1,
 
+      // paginación cliente (cuando hay cohorte)
+      _clientPaginate: false,
+      _clientAll: [],
+      _clientPerPage: 6,
+
       filtros: { docenteId: "", cohorte: "", desde: "", hasta: "" },
 
       // dropdowns modernos
@@ -446,12 +451,18 @@ export default {
 
       // Alumnos cache + cohortes globales
       const alumnosAll = await this._ensureAlumnosCache();
+
+      // Cohortes globales (normalizadas)
       if (this.usuario?.rol !== "profesor") {
         const set = new Set();
         for (const u of alumnosAll) {
           const c = u?.persona?.cohorte;
-          if (Array.isArray(c)) c.forEach((v) => v && set.add(String(v)));
-          else if (c) set.add(String(c));
+          const push = (s) => {
+            const norm = String(s || "").replace(/\s+/g, " ").trim();
+            if (norm) set.add(norm);
+          };
+          if (Array.isArray(c)) c.forEach(push);
+          else if (c) push(c);
         }
         this.cohortesGlobales = Array.from(set).sort();
       }
@@ -475,52 +486,154 @@ export default {
       this.ddOpen.docente = false;
     },
     setCohorte(v) {
-      this.filtros.cohorte = v;
+      const norm = String(v || "").replace(/\s+/g, " ").trim();
+      this.filtros.cohorte = norm;
       this.ddOpen.cohorte = false;
     },
 
-    // Debounce para filtros automáticos
+    // 🔹 Cuando cambian filtros, siempre regresa a página 1
     onFiltrosChange() {
       if (this._filtroDebounce) clearTimeout(this._filtroDebounce);
-      this._filtroDebounce = setTimeout(() => this.cargarActividades(), 200);
+      this._filtroDebounce = setTimeout(() => {
+        this.paginaActual = 1;
+        this.cargarActividades({ page: 1 });
+      }, 180);
     },
 
+    _pageFromUrl(url) {
+      if (!url) return null;
+      try {
+        const u = new URL(url, window.location.origin);
+        const page = u.searchParams.get("page");
+        return page ? parseInt(page, 10) : null;
+      } catch {
+        return null;
+      }
+    },
+
+    /** =================== CARGA con fallback de filtrado en cliente =================== */
     async cargarActividades(extraParams = {}) {
+      // Siempre tenemos alumnosCache listo (para filtrar por cohorte en cliente)
+      await this._ensureAlumnosCache();
+
       const params = { ...extraParams };
-      if (this.filtros.cohorte) params.cohorte = this.filtros.cohorte;
+      // Solo enviamos al backend los filtros estables (docente/fechas)
       if (this.filtros.desde) params.desde = this.filtros.desde;
       if (this.filtros.hasta) params.hasta = this.filtros.hasta;
 
       if (this.filtros.docenteId) {
-        params.docente_id = this.filtros.docenteId;
+        params.docente_id = String(this.filtros.docenteId);
       } else if (this.usuario?.rol === "profesor") {
         params.docente_id = this.myId;
       }
 
-      const data = await fetchActividades(params);
-      this.registros = data?.registros || [];
-      this.enlaces = data?.enlaces || { anterior: null, siguiente: null };
-      this.totalVisible = this.registros.length;
+      const hayCohorte = !!(this.filtros.cohorte && this.filtros.cohorte.trim());
+      // Si hay cohorte, pedimos más por página para tener margen y filtramos local
+      params.perPage = hayCohorte ? 200 : 6;
 
-      this.paginaActual = this._pageFromUrl(this.enlaces.anterior) + 1;
-      const last = this._pageFromUrl(data?.enlaces?.ultimo);
-      this.totalPaginas = last || (this.enlaces.siguiente ? this.paginaActual + 1 : this.paginaActual);
+      console.info("[ACTIVIDADES] params enviados (sin cohorte en servidor):", params);
+
+      const data = await fetchActividades(params);
+
+      // Si NO hay cohorte -> modo servidor normal
+      if (!hayCohorte) {
+        this._clientPaginate = false;
+        this._clientAll = [];
+        this.registros = data?.registros || [];
+        this.enlaces = data?.enlaces || { anterior: null, siguiente: null };
+        this.totalVisible = this.registros.length;
+
+        const prev = this._pageFromUrl(this.enlaces.anterior);
+        this.paginaActual = prev ? prev + 1 : (params.page || 1);
+
+        const last = this._pageFromUrl(data?.enlaces?.ultimo);
+        this.totalPaginas = last || (this.enlaces.siguiente ? this.paginaActual + 1 : this.paginaActual);
+
+        console.info("[ACTIVIDADES] recibidos (server paging):", {
+          count: this.registros.length,
+          paginaActual: this.paginaActual,
+          totalPaginas: this.totalPaginas,
+        });
+        return;
+      }
+
+      // ====== MODO FILTRO POR COHORTE EN CLIENTE ======
+      // 1) armar set de user_ids pertenecientes al cohorte seleccionado
+      const objetivo = this.filtros.cohorte.trim().toLowerCase();
+      const userIdsCohorte = new Set(
+        (this.alumnosCache || [])
+          .filter((u) => {
+            const c = u?.persona?.cohorte;
+            if (!c) return false;
+            if (Array.isArray(c)) return c.some((s) => String(s).toLowerCase() === objetivo);
+            return String(c).toLowerCase() === objetivo;
+          })
+          .map((u) => String(u._key))
+      );
+
+      // 2) filtrar los registros por participantes
+      const todos = Array.isArray(data?.registros) ? data.registros : [];
+      const filtrados = todos.filter((a) => {
+        const p = a?.participantes;
+        if (Array.isArray(p)) {
+          return p.some((row) => userIdsCohorte.has(String(row?.user_id)));
+        }
+        if (typeof p === "string") {
+          // legacy string JSON
+          for (const uid of userIdsCohorte) {
+            if (p.includes(`"user_id":"${uid}"`)) return true;
+          }
+        }
+        return false;
+      });
+
+      // 3) activar paginación en cliente
+      this._clientPaginate = true;
+      this._clientAll = filtrados;
+      this._clientPerPage = 6;
+      this._applyClientPage(1);
+
+      console.info("[ACTIVIDADES] filtrados en cliente por cohorte:", {
+        enviados: todos.length,
+        filtrados: filtrados.length,
+        paginas: this.totalPaginas,
+      });
     },
-    go(url) {
-      if (!url) return;
-      const p = paramsFromPaginationUrl(url);
-      this.paginaActual = p?.page || this.paginaActual;
+
+    _applyClientPage(page) {
+      const total = this._clientAll.length;
+      const per = this._clientPerPage;
+      const last = Math.max(1, Math.ceil(total / per));
+      const p = Math.min(Math.max(1, page), last);
+
+      const start = (p - 1) * per;
+      const slice = this._clientAll.slice(start, start + per);
+
+      this.paginaActual = p;
+      this.totalPaginas = last;
+      this.registros = slice;
+      this.totalVisible = slice.length;
+
+      // Enlaces sintéticos para botones (usamos tokens 'prev'/'next')
+      this.enlaces = {
+        anterior: p > 1 ? "prev" : null,
+        siguiente: p < last ? "next" : null,
+      };
+    },
+
+    // Botones de paginación: soporta modo servidor y modo cliente
+    go(ref) {
+      if (!ref) return;
+      if (this._clientPaginate) {
+        const next = ref === "next" ? this.paginaActual + 1 : this.paginaActual - 1;
+        this._applyClientPage(next);
+        return;
+      }
+      const p = paramsFromPaginationUrl(ref);
       this.cargarActividades(p);
     },
-    _pageFromUrl(url) {
-      if (!url) return 0;
-      try {
-        const u = new URL(url, window.location.origin);
-        return Number(u.searchParams.get("page")) || 0;
-      } catch { return 0; }
-    },
 
-    // ====== Búsqueda de alumnos (cache) ====== 
+    // ====== Búsqueda de alumnos (cache) ======
     async _ensureAlumnosCache() {
       if (this.alumnosCache.length) return this.alumnosCache;
       try {
@@ -558,11 +671,9 @@ export default {
 
       return `
         <form id="swForm" class="sw-form text-start">
-          <!-- ===== Sección 1: Datos principales ===== -->
           <div class="card mb-3">
             <div class="card-header d-flex align-items-center justify-content-between bg-white border-0">
               <h6 class="m-0 fw-semibold">Datos principales</h6>
-              <!-- botón con ID CORRECTO -->
               <button id="btnToggleDatos" type="button" class="btn btn-sm btn-outline-secondary rounded-pill">
                 <i id="icoDatos" class="bi bi-chevron-up"></i>
                 <span id="txtDatos" class="ms-1">Ocultar</span>
@@ -571,7 +682,6 @@ export default {
 
             <div class="card-body" id="secDatos">
               <div class="row g-3">
-                <!-- Nombre -->
                 <div class="col-12">
                   <label class="form-label">
                     Nombre <span class="text-danger">*</span>
@@ -580,7 +690,6 @@ export default {
                   <input type="text" id="f_nombre" class="form-control" placeholder="Ej. Respiración consciente 4-7-8" maxlength="150" />
                 </div>
 
-                <!-- Búsqueda de técnica (mismo diseño) -->
                 <div class="col-12">
                   <label class="form-label">
                     Buscar técnica <span class="text-danger">*</span>
@@ -594,10 +703,8 @@ export default {
                     </button>
                   </div>
 
-                  <!-- Resultados -->
                   <div id="f_tecnicaList" class="list-group mt-2 tecnica-list"></div>
 
-                  <!-- Técnica seleccionada -->
                   <div id="f_tecnicaSel" class="alert alert-success mt-2 mb-0 py-2" style="display:none">
                     <i class="bi bi-check-circle me-1"></i>
                     Técnica seleccionada:
@@ -608,7 +715,6 @@ export default {
                   <input type="hidden" id="f_tecnicaId" />
                 </div>
 
-                <!-- Descripción -->
                 <div class="col-12">
                   <label class="form-label">
                     Descripción <span class="text-danger">*</span>
@@ -617,7 +723,6 @@ export default {
                   <textarea id="f_desc" class="form-control" rows="3" placeholder="Instrucciones, objetivo, duración sugerida…"></textarea>
                 </div>
 
-                <!-- Fecha máxima -->
                 <div class="col-12 col-md-6">
                   <label class="form-label">
                     Fecha máxima <span class="text-danger">*</span>
@@ -629,7 +734,6 @@ export default {
             </div>
           </div>
 
-          <!-- ===== Sección 2: Asignación ===== -->
           <div class="card">
             <div class="card-header d-flex align-items-center justify-content-between bg-white border-0">
               <h6 class="m-0 fw-semibold">Asignación</h6>
@@ -656,47 +760,24 @@ export default {
                 </div>
               </div>
 
-              <!-- Asignación a alumno -->
               <div id="secAlumno" style="display:none">
-                <label class="form-label">
-                  Buscar alumno <span class="text-danger">*</span>
-                  <i class="bi bi-info-circle ms-1 text-muted" title="Escribe para buscar y luego haz clic en el alumno encontrado."></i>
-                </label>
-
-                <!-- 🔹 Barra de búsqueda idéntica a la de técnica -->
+                <label class="form-label">Buscar alumno <span class="text-danger">*</span></label>
                 <div class="input-group">
                   <span class="input-group-text"><i class="bi bi-search"></i></span>
-                  <input
-                    id="f_alumnoQ"
-                    type="text"
-                    class="form-control"
-                    placeholder="Nombre, matrícula o correo…"
-                    aria-label="Buscar alumno"
-                  />
-                  <button
-                    id="btnClearAlu"
-                    type="button"
-                    class="btn btn-outline-secondary"
-                    aria-label="Limpiar búsqueda"
-                    style="display:none"
-                  >
+                  <input id="f_alumnoQ" type="text" class="form-control" placeholder="Nombre, matrícula o correo…" aria-label="Buscar alumno" />
+                  <button id="btnClearAlu" type="button" class="btn btn-outline-secondary" aria-label="Limpiar búsqueda" style="display:none">
                     <i class="bi bi-x-lg"></i>
                   </button>
                 </div>
-
                 <small class="text-muted d-block mt-1">Escribe al menos 2 caracteres.</small>
-
                 <div id="f_alumnoList" class="list-group mt-2 sw-list" style="max-height:240px;overflow:auto;"></div>
                 <input type="hidden" id="f_alumnoId" />
                 <div id="f_alumnoSel" class="form-text mt-1"></div>
               </div>
-            </div>
 
-              <!-- Asignación a grupo -->
               <div id="secGrupo">
                 <label class="form-label">
                   Cohorte / Grupo <span class="text-danger">*</span>
-                  <i class="bi bi-info-circle ms-1 text-muted" title="Grupo al que se asignará la actividad."></i>
                 </label>
                 <select id="f_grupo" class="form-select">
                   <option value="">Selecciona un grupo…</option>
@@ -713,10 +794,9 @@ export default {
     attachFormBehavior(containerEl) {
       const $ = (sel) => containerEl.querySelector(sel);
 
-      // ====== Toggle secciones (con blindaje) ======
       const makeToggle = (btnId, secId, icoId, txtId) => {
         const btn = $(btnId), sec = $(secId), ico = $(icoId), txt = $(txtId);
-        if (!btn || !sec || !ico || !txt) return; // <-- evita null.addEventListener
+        if (!btn || !sec || !ico || !txt) return;
         btn.addEventListener("click", () => {
           const isOpen = sec.style.display !== "none";
           if (isOpen) {
@@ -733,7 +813,7 @@ export default {
       makeToggle("#btnToggleDatos", "#secDatos", "#icoDatos", "#txtDatos");
       makeToggle("#btnToggleAsig", "#secAsig", "#icoAsig", "#txtAsig");
 
-      // ====== Técnica: búsqueda y selección ======
+      // Técnica search
       const inpTec = $("#f_tecnicaQ");
       const btnClearTec = $("#btnClearTec");
       const lstTec = $("#f_tecnicaList");
@@ -795,7 +875,7 @@ export default {
         inpTec && inpTec.focus();
       });
 
-      // ====== Radios de asignación ======
+      // Radios de asignación
       const asigAlumno = $("#f_asigAlumno");
       const asigGrupo = $("#f_asigGrupo");
       const secAlumno = $("#secAlumno");
@@ -810,7 +890,7 @@ export default {
       };
       if (asigAlumno) asigAlumno.addEventListener("change", toggleAsignacion);
       if (asigGrupo) asigGrupo.addEventListener("change", toggleAsignacion);
-      toggleAsignacion(); // estado inicial
+      toggleAsignacion();
 
       if (grupoSel) {
         grupoSel.addEventListener("change", () => {
@@ -821,9 +901,8 @@ export default {
         });
       }
 
-      // ====== Buscar alumno ======
+      // Buscar alumno
       const aluQ = $("#f_alumnoQ");
-      const btnBuscarAlu = $("#btnBuscarAlu");
       const aluList = $("#f_alumnoList");
       const aluId = $("#f_alumnoId");
       const aluSel = $("#f_alumnoSel");
@@ -876,14 +955,7 @@ export default {
             (u.matricula || "").toLowerCase().includes(q);
           return inTxt;
         });
-        const g = (grupoSel?.value || "").trim();
-        const byGroup = g
-          ? matches.filter((u) => {
-              const c = u?.persona?.cohorte;
-              return Array.isArray(c) ? c.includes(String(g)) : String(c || "") === String(g);
-            })
-          : matches;
-        renderAlumnos(byGroup.slice(0, 20));
+        renderAlumnos(matches.slice(0, 20));
       };
 
       if (aluQ) {
@@ -892,7 +964,6 @@ export default {
           this._buscarAlumnoDebounce = setTimeout(doBuscarAlu, 180);
         });
       }
-      if (btnBuscarAlu) btnBuscarAlu.addEventListener("click", doBuscarAlu);
     },
 
     async openCreate() {
@@ -904,7 +975,7 @@ export default {
         width: 820,
         focusConfirm: false,
         showCancelButton: true,
-        showCloseButton: true, // X arriba
+        showCloseButton: true,
         confirmButtonText: "Guardar",
         cancelButtonText: "Cancelar",
         reverseButtons: true,
@@ -1088,6 +1159,8 @@ export default {
   },
 };
 </script>
+
+
 
 <style scoped>
 :root { --ink:#1b3b6f; --ink-2:#2c4c86; --sky:#eaf3ff; --card-b:#f8fbff; --stroke:#e6eefc; --chip:#eef6ff; --chip-ink:#2c4c86; }
