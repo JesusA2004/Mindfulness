@@ -12,14 +12,12 @@ class ActividadRequest extends FormRequest
     {
         return [
             // Fechas
-            'fechaAsignacion'   => 'required|date_format:Y-m-d',
-            // Finalización ahora es opcional y SIN validación cruzada
+            'fechaAsignacion'   => 'nullable|date_format:Y-m-d',
             'fechaFinalizacion' => 'nullable|date_format:Y-m-d',
-            // fechaMaxima solo exige ser >= asignación
             'fechaMaxima'       => [
                 'required',
                 'date_format:Y-m-d',
-                'after_or_equal:fechaAsignacion',
+                // La comparación con asignación no se valida aquí porque asignación la fija el backend a "hoy".
             ],
 
             // Datos principales
@@ -40,14 +38,10 @@ class ActividadRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'fechaAsignacion.required'    => 'La fecha de asignación es obligatoria.',
             'fechaAsignacion.date_format' => 'La fecha de asignación debe tener el formato YYYY-MM-DD.',
-
             'fechaFinalizacion.date_format' => 'La fecha de finalización debe tener el formato YYYY-MM-DD.',
-
             'fechaMaxima.required'        => 'La fecha máxima es obligatoria.',
             'fechaMaxima.date_format'     => 'La fecha máxima debe tener el formato YYYY-MM-DD.',
-            'fechaMaxima.after_or_equal'  => 'La fecha máxima no puede ser anterior a la asignación.',
 
             'nombre.required'             => 'El nombre de la actividad es obligatorio.',
             'nombre.max'                  => 'El nombre no puede exceder 150 caracteres.',

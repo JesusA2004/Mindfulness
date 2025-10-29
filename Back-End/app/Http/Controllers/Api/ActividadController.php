@@ -3,12 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\Actividad;
-use App\Models\User; // para filtrar por cohorte (participantes)
+use App\Models\User;
 use Illuminate\Http\Request;
 use App\Http\Requests\ActividadRequest;
 use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ActividadResource;
+use Illuminate\Support\Carbon;
 
 class ActividadController extends Controller
 {
@@ -26,7 +27,7 @@ class ActividadController extends Controller
             $q->where('docente_id', (string) $docenteId);
         }
 
-        // Rango de fechas (sobre fechaAsignacion por consistencia con tu UI)
+        // Rango de fechas (sobre fechaAsignacion)
         if ($desde = $request->string('desde')->toString()) {
             $q->where('fechaAsignacion', '>=', $desde);
         }
@@ -34,11 +35,10 @@ class ActividadController extends Controller
             $q->where('fechaAsignacion', '<=', $hasta);
         }
 
-        // Filtro por cohorte: encuentra alumnos de ese cohorte y cruza con participantes.user_id
+        // Filtro por cohorte -> cruza participantes.user_id
         if ($cohorte = $request->string('cohorte')->toString()) {
             $cohortUsers = User::query()
                 ->where(function ($w) use ($cohorte) {
-                    // soporta string ("ITI 10 A") o array en persona.cohorte
                     $w->where('persona.cohorte', $cohorte)
                       ->orWhere('persona.cohorte', 'all', [$cohorte]);
                 })
@@ -53,27 +53,18 @@ class ActividadController extends Controller
                     }
                 });
             } else {
-                // No hay alumnos en ese cohorte => sin resultados paginados
                 return response()->json([
                     'registros' => [],
-                    'enlaces'   => [
-                        'primero'   => null,
-                        'ultimo'    => null,
-                        'anterior'  => null,
-                        'siguiente' => null,
-                    ],
+                    'enlaces'   => ['primero'=>null,'ultimo'=>null,'anterior'=>null,'siguiente'=>null],
                 ]);
             }
         }
 
         $q->orderBy('fechaAsignacion', 'desc')->orderBy('_id', 'desc');
 
-        // Paginación de 6 en 6 (como pediste)
         $perPage     = (int) ($request->integer('perPage') ?: 6);
         $actividades = $q->paginate($perPage)->appends($request->query());
-
-        // Serializa con tu Resource (resuelve a array)
-        $registros = ActividadResource::collection($actividades)->resolve();
+        $registros   = ActividadResource::collection($actividades)->resolve();
 
         return response()->json([
             'registros' => $registros,
@@ -92,6 +83,9 @@ class ActividadController extends Controller
     public function store(ActividadRequest $request): JsonResponse
     {
         $data = $request->validated();
+
+        // === Fecha de asignación forzada a "hoy" en America/Mexico_City ===
+        $data['fechaAsignacion'] = Carbon::now('America/Mexico_City')->toDateString();
 
         // Normaliza ids a string (Mongo)
         $data['docente_id'] = (string) $data['docente_id'];
@@ -116,9 +110,6 @@ class ActividadController extends Controller
         ], 201);
     }
 
-    /**
-     * GET /api/actividades/{actividad}
-     */
     public function show(Actividad $actividad): JsonResponse
     {
         return response()->json([
@@ -126,12 +117,12 @@ class ActividadController extends Controller
         ], 200);
     }
 
-    /**
-     * PUT /api/actividades/{actividad}
-     */
     public function update(ActividadRequest $request, Actividad $actividad): JsonResponse
     {
         $data = $request->validated();
+
+        // Mantener fechaAsignacion existente si no viene; si viene, normalizar
+        $data['fechaAsignacion'] = $data['fechaAsignacion'] ?? $actividad->fechaAsignacion;
 
         $data['docente_id'] = (string) $data['docente_id'];
         $data['tecnica_id'] = (string) $data['tecnica_id'];
@@ -154,9 +145,6 @@ class ActividadController extends Controller
         ], 200);
     }
 
-    /**
-     * DELETE /api/actividades/{actividad}
-     */
     public function destroy(Actividad $actividad): JsonResponse
     {
         $actividad->delete();

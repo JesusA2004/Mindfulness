@@ -3,105 +3,218 @@
   <main class="panel-wrapper container-fluid py-3 py-lg-4">
     <!-- ======= Toolbar moderna ======= -->
     <div class="toolbar px-0 px-lg-2">
-      <div class="row g-2 align-items-center">
+      <div class="row g-3 align-items-stretch">
         <!-- Filtros (se aplican automáticamente) -->
         <div class="col-12 col-xl-8">
-          <div class="card border-0 shadow-sm mb-2">
+          <div class="card border-0 shadow-sm h-100">
             <div class="card-body py-3">
-              <div class="row g-2 align-items-end">
+              <!-- === Fila 1: Docente y Cohorte (selectores modernos) === -->
+              <div class="row g-2 align-items-center">
                 <div class="col-12">
-                  <div
-                    class="input-group input-group-lg search-group shadow-sm rounded-pill"
-                    role="search"
-                    aria-label="Filtrar actividades"
-                  >
-                    <span class="input-group-text rounded-start-pill">
-                      <i class="bi bi-funnel"></i>
-                    </span>
+                  <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <div class="filter-label me-1">
+                      <i class="bi bi-funnel me-1"></i>Filtros
+                    </div>
 
-                    <!-- Docente (solo visible para admin/roles no profesor) -->
-                    <select
-                      v-if="mostrarFiltroDocente"
-                      v-model="filtros.docenteId"
-                      class="form-select border-0"
-                      aria-label="Filtrar por docente"
-                    >
-                      <option value="">Todos los docentes</option>
-                      <option
-                        v-for="d in docentes"
-                        :key="d._id || d.id"
-                        :value="String(d._id || d.id)"
+                    <!-- ===== Docente (dropdown buscable) ===== -->
+                    <div v-if="mostrarFiltroDocente" class="modern-select" @keydown.stop>
+                      <button
+                        class="btn btn-select btn-sm"
+                        type="button"
+                        @click="toggleDD('docente')"
+                        :aria-expanded="ddOpen.docente ? 'true' : 'false'"
                       >
-                        {{ d.name }}
-                      </option>
-                    </select>
+                        <i class="bi bi-person-badge me-1"></i>
+                        <span class="text-truncate">
+                          {{ labelDocente }}
+                        </span>
+                        <i class="bi" :class="ddOpen.docente ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                      </button>
 
-                    <!-- Cohorte -->
-                    <select v-model="filtros.cohorte" class="form-select border-0" aria-label="Filtrar por cohorte">
-                      <option value="">Todas las cohortes</option>
-                      <option v-for="c in cohortesVisibles" :key="c" :value="c">{{ c }}</option>
-                    </select>
+                      <div v-show="ddOpen.docente" class="select-panel">
+                        <div class="select-search">
+                          <i class="bi bi-search"></i>
+                          <input
+                            v-model.trim="docenteQ"
+                            type="text"
+                            class="form-control form-control-sm"
+                            placeholder="Buscar docente…"
+                            @input="onFiltrosChange"
+                          />
+                          <button v-if="docenteQ" class="btn btn-clear" @click="docenteQ=''">
+                            <i class="bi bi-x-lg"></i>
+                          </button>
+                        </div>
 
-                    <!-- Rango de fechas -->
-                    <input
-                      type="date"
-                      class="form-control border-0"
-                      v-model="filtros.desde"
-                      :max="filtros.hasta || undefined"
-                      aria-label="Fecha desde"
-                    />
-                    <input
-                      type="date"
-                      class="form-control border-0"
-                      v-model="filtros.hasta"
-                      :min="filtros.desde || undefined"
-                      aria-label="Fecha hasta"
-                    />
+                        <div class="select-list">
+                          <button
+                            class="select-item"
+                            :class="{ active: !filtros.docenteId }"
+                            @click="setDocente('')"
+                          >
+                            <div class="title">
+                              <i class="bi bi-people me-2"></i>Todos los docentes
+                            </div>
+                            <i class="bi bi-check2-circle ms-2" v-if="!filtros.docenteId"></i>
+                          </button>
+
+                          <button
+                            class="select-item"
+                            :class="{ active: filtros.docenteId === myId }"
+                            @click="setDocente(myId)"
+                          >
+                            <div class="title">
+                              <i class="bi bi-person-check me-2"></i>Creadas por mí
+                            </div>
+                            <i class="bi bi-check2-circle ms-2" v-if="filtros.docenteId === myId"></i>
+                          </button>
+
+                          <div class="select-group">Docentes</div>
+                          <button
+                            v-for="d in docentesFiltrados"
+                            :key="d._id || d.id"
+                            class="select-item"
+                            :class="{ active: filtros.docenteId === String(d._id || d.id) }"
+                            @click="setDocente(String(d._id || d.id))"
+                          >
+                            <div class="title text-truncate">
+                              <i class="bi bi-person me-2"></i>{{ d.name }}
+                            </div>
+                            <i
+                              class="bi bi-check2-circle ms-2"
+                              v-if="filtros.docenteId === String(d._id || d.id)"
+                            ></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- ===== Cohorte (dropdown buscable) ===== -->
+                    <div class="modern-select" @keydown.stop>
+                      <button
+                        class="btn btn-select btn-sm"
+                        type="button"
+                        @click="toggleDD('cohorte')"
+                        :aria-expanded="ddOpen.cohorte ? 'true' : 'false'"
+                      >
+                        <i class="bi bi-mortarboard me-1"></i>
+                        <span class="text-truncate">{{ labelCohorte }}</span>
+                        <i class="bi" :class="ddOpen.cohorte ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                      </button>
+
+                      <div v-show="ddOpen.cohorte" class="select-panel">
+                        <div class="select-search">
+                          <i class="bi bi-search"></i>
+                          <input
+                            v-model.trim="cohorteQ"
+                            type="text"
+                            class="form-control form-control-sm"
+                            placeholder="Buscar cohorte…"
+                            @input="onFiltrosChange"
+                          />
+                          <button v-if="cohorteQ" class="btn btn-clear" @click="cohorteQ=''">
+                            <i class="bi bi-x-lg"></i>
+                          </button>
+                        </div>
+
+                        <div class="select-list">
+                          <button
+                            class="select-item"
+                            :class="{ active: !filtros.cohorte }"
+                            @click="setCohorte('')"
+                          >
+                            <div class="title">
+                              <i class="bi bi-grid-3x3-gap me-2"></i>Todos los grupos
+                            </div>
+                            <i class="bi bi-check2-circle ms-2" v-if="!filtros.cohorte"></i>
+                          </button>
+
+                          <div class="select-group">Cohortes</div>
+                          <button
+                            v-for="c in cohortesFiltradas"
+                            :key="c"
+                            class="select-item"
+                            :class="{ active: filtros.cohorte === c }"
+                            @click="setCohorte(c)"
+                          >
+                            <div class="title text-truncate">
+                              <i class="bi bi-hash me-2"></i>{{ c }}
+                            </div>
+                            <i class="bi bi-check2-circle ms-2" v-if="filtros.cohorte === c"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Chips resumen -->
+                    <div class="ms-auto">
+                      <span class="chip">En página: <strong>{{ totalVisible }}</strong></span>
+                    </div>
                   </div>
                 </div>
+              </div>
 
-                <!-- Acciones -->
-                <div class="col-12 text-end">
-                  <button class="btn btn-gradient fw-semibold shadow-sm rounded-pill px-4 py-2" @click="openCreate">
-                    <i class="bi bi-plus-lg me-1"></i> Nueva actividad
-                  </button>
+              <!-- === Fila 2: Fechas (en otra fila) === -->
+              <div class="row g-2 align-items-center mt-2">
+                <div class="col-12">
+                  <div class="filters-row w-100">
+                    <div class="filters-labels">
+                      <div class="filters-controls ms-auto">
+                        <small class="text-muted me-3">Agregadas desde</small>
+                        <input
+                          type="date"
+                          class="form-control form-control-sm"
+                          v-model="filtros.desde"
+                          :max="filtros.hasta || undefined"
+                          aria-label="Agregadas desde"
+                        />
+                        <small class="text-muted">Asignadas hasta</small>
+                        <input
+                          type="date"
+                          class="form-control form-control-sm"
+                          v-model="filtros.hasta"
+                          :min="filtros.desde || undefined"
+                          aria-label="Asignadas hasta"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
+
+              <!-- Chips dinámicos -->
+              <div class="row g-2 mt-2">
+                <div class="col-12">
+                  <div class="d-flex flex-wrap gap-2">
+                    <span v-if="mostrarFiltroDocente && filtros.docenteId" class="chip chip-info">
+                      Docente: <strong>{{ docenteNombre(filtros.docenteId) }}</strong>
+                      <button class="chip-x" @click="setDocente('')" aria-label="Quitar docente">
+                        <i class="bi bi-x"></i>
+                      </button>
+                    </span>
+                    <span v-if="filtros.cohorte" class="chip chip-info">
+                      Cohorte: <strong>{{ filtros.cohorte }}</strong>
+                      <button class="chip-x" @click="setCohorte('')" aria-label="Quitar cohorte">
+                        <i class="bi bi-x"></i>
+                      </button>
+                    </span>
+                    <span v-if="filtros.desde" class="chip chip-info">
+                      Desde: <strong>{{ filtros.desde }}</strong>
+                      <button class="chip-x" @click="filtros.desde=''" aria-label="Quitar fecha desde">
+                        <i class="bi bi-x"></i>
+                      </button>
+                    </span>
+                    <span v-if="filtros.hasta" class="chip chip-info">
+                      Hasta: <strong>{{ filtros.hasta }}</strong>
+                      <button class="chip-x" @click="filtros.hasta=''" aria-label="Quitar fecha hasta">
+                        <i class="bi bi-x"></i>
+                      </button>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <!-- /chips -->
             </div>
-          </div>
-
-          <!-- Chips de estado -->
-          <div class="d-flex flex-wrap gap-2 mb-3">
-            <span class="chip">Total en página: <strong>{{ totalVisible }}</strong></span>
-
-            <span v-if="mostrarFiltroDocente && filtros.docenteId" class="chip chip-info">
-              Docente:
-              <strong>{{ docenteNombre(filtros.docenteId) }}</strong>
-              <button class="chip-x" @click="filtros.docenteId=''" aria-label="Quitar docente">
-                <i class="bi bi-x"></i>
-              </button>
-            </span>
-
-            <span v-if="filtros.cohorte" class="chip chip-info">
-              Cohorte: <strong>{{ filtros.cohorte }}</strong>
-              <button class="chip-x" @click="filtros.cohorte=''" aria-label="Quitar cohorte">
-                <i class="bi bi-x"></i>
-              </button>
-            </span>
-
-            <span v-if="filtros.desde" class="chip chip-info">
-              Desde: <strong>{{ filtros.desde }}</strong>
-              <button class="chip-x" @click="filtros.desde=''" aria-label="Quitar fecha desde">
-                <i class="bi bi-x"></i>
-              </button>
-            </span>
-
-            <span v-if="filtros.hasta" class="chip chip-info">
-              Hasta: <strong>{{ filtros.hasta }}</strong>
-              <button class="chip-x" @click="filtros.hasta=''" aria-label="Quitar fecha hasta">
-                <i class="bi bi-x"></i>
-              </button>
-            </span>
           </div>
         </div>
 
@@ -110,7 +223,6 @@
           <div class="card gradient-card border-0 shadow-sm h-100">
             <div class="card-body d-flex align-items-center justify-content-between gap-3">
               <div>
-                <div class="fw-semibold text-white-50 small">Gestión</div>
                 <div class="fw-bold text-white fs-5">Actividades en el aula</div>
               </div>
               <button class="btn btn-light rounded-pill fw-semibold px-3" @click="openCreate">
@@ -134,11 +246,12 @@
                 <th>Asignación</th>
                 <th class="d-none d-md-table-cell">Fecha máx.</th>
                 <th class="text-end">Participantes</th>
+                <th class="text-end">Acciones</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="registros.length === 0">
-                <td colspan="5" class="text-center py-4 text-muted">
+                <td colspan="6" class="text-center py-4 text-muted">
                   Sin resultados con los filtros actuales.
                 </td>
               </tr>
@@ -168,6 +281,11 @@
                     {{ (a.participantes && Array.isArray(a.participantes)) ? a.participantes.length : 0 }}
                   </span>
                 </td>
+                <td class="text-end">
+                  <button class="btn btn-sm btn-outline-primary" @click="verDetalles(a)">
+                    <i class="bi bi-eye me-1"></i> Detalles
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -187,242 +305,13 @@
         </div>
       </div>
     </div>
-
-    <!-- ======= Modal: Crear actividad ======= -->
-    <div class="modal fade" id="modalCreate" tabindex="-1" ref="modalEl" aria-hidden="true">
-      <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content animate-pop">
-          <div class="modal-header border-0">
-            <h5 class="modal-title fw-bold">Registrar actividad</h5>
-            <button type="button" class="btn-close" @click="closeCreate" aria-label="Cerrar"></button>
-          </div>
-
-          <div class="modal-body">
-            <!-- Datos principales -->
-            <div class="card mb-3">
-              <div class="card-body">
-                <div class="row g-3">
-                  <!-- Nombre -->
-                  <div class="col-12">
-                    <label class="form-label">
-                      Nombre <span class="text-danger">*</span>
-                      <i class="bi bi-info-circle ms-1 text-muted"
-                         data-bs-toggle="tooltip"
-                         title="Título breve que verán los alumnos (ej. Respiración 4-7-8)."></i>
-                    </label>
-                    <input
-                      type="text"
-                      class="form-control"
-                      v-model.trim="form.nombre"
-                      maxlength="150"
-                      required
-                      placeholder="Ej. Respiración consciente 4-7-8"
-                    />
-                  </div>
-
-                  <!-- Búsqueda de técnica (sin select) -->
-                  <div class="col-12">
-                    <label class="form-label">
-                      Buscar técnica <span class="text-danger">*</span>
-                      <i class="bi bi-info-circle ms-1 text-muted"
-                         data-bs-toggle="tooltip"
-                         title="Escribe para buscar y luego haz clic en la técnica encontrada."></i>
-                    </label>
-                    <div class="input-group">
-                      <span class="input-group-text"><i class="bi bi-search"></i></span>
-                      <input
-                        type="search"
-                        class="form-control"
-                        v-model.trim="tecnicaQuery"
-                        placeholder="Escribe el nombre de la técnica…"
-                        @input="filtrarTecnicas"
-                        aria-label="Buscar técnica"
-                      />
-                      <button v-if="tecnicaQuery" class="btn btn-outline-secondary" @click="clearTecnicaBusqueda" aria-label="Limpiar búsqueda">
-                        <i class="bi bi-x-lg"></i>
-                      </button>
-                    </div>
-
-                    <!-- Resultados buscador -->
-                    <div v-if="tecnicaQuery" class="list-group mt-2 tecnica-list">
-                      <button
-                        v-for="t in tecnicasFiltradasModal"
-                        :key="t._id || t.id"
-                        type="button"
-                        class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
-                        @click="seleccionarTecnica(t)"
-                      >
-                        <span>
-                          <strong>{{ t.nombre }}</strong>
-                          <small v-if="t.categoria" class="text-muted d-block">Categoría: {{ t.categoria }}</small>
-                        </span>
-                        <i class="bi bi-check2-circle" v-if="form.tecnica_id === String(t._id || t.id)"></i>
-                      </button>
-                      <div v-if="tecnicaQuery && tecnicasFiltradasModal.length === 0" class="text-muted small px-2 py-1">
-                        No se encontraron técnicas con “{{ tecnicaQuery }}”.
-                      </div>
-                    </div>
-
-                    <!-- Técnica seleccionada -->
-                    <div v-if="form.tecnica_id" class="alert alert-success mt-2 mb-0 py-2">
-                      <i class="bi bi-check-circle me-1"></i>
-                      Técnica seleccionada:
-                      <strong>{{ tecnicaSeleccionadaNombre }}</strong>
-                      <button class="btn btn-sm btn-link ms-2" @click="quitarTecnica">Cambiar</button>
-                    </div>
-                  </div>
-
-                  <!-- Descripción -->
-                  <div class="col-12">
-                    <label class="form-label">
-                      Descripción <span class="text-danger">*</span>
-                      <i class="bi bi-info-circle ms-1 text-muted"
-                         data-bs-toggle="tooltip"
-                         title="Instrucciones, objetivo, duración sugerida o recomendaciones."></i>
-                    </label>
-                    <textarea
-                      class="form-control"
-                      v-model.trim="form.descripcion"
-                      rows="3"
-                      required
-                      placeholder="Instrucciones, objetivo, duración sugerida…"
-                    ></textarea>
-                  </div>
-
-                  <!-- Fecha máxima -->
-                  <div class="col-12 col-md-6">
-                    <label class="form-label">
-                      Fecha máxima <span class="text-danger">*</span>
-                      <i class="bi bi-info-circle ms-1 text-muted"
-                         data-bs-toggle="tooltip"
-                         title="Último día en que el alumno puede completar la actividad."></i>
-                    </label>
-                    <input type="date" class="form-control" v-model="form.fechaMaxima" @change="validarFechas" required />
-                    <div class="invalid-feedback d-block" v-if="errors.includes('fm_invalida')">
-                      Selecciona una fecha máxima válida (hoy o posterior).
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Asignación -->
-            <div class="card">
-              <div class="card-body">
-                <label class="form-label d-block">
-                  Asignar a
-                  <i class="bi bi-info-circle ms-1 text-muted"
-                     data-bs-toggle="tooltip"
-                     title="Elige si la asignación será para un solo alumno o para un grupo completo."></i>
-                </label>
-
-                <div class="d-flex flex-wrap gap-3 mb-3">
-                  <div class="form-check">
-                    <input class="form-check-input" type="radio" id="asigAlumno" value="alumno" v-model="form.asignarA" />
-                    <label class="form-check-label" for="asigAlumno">Un alumno</label>
-                  </div>
-                  <div class="form-check">
-                    <input class="form-check-input" type="radio" id="asigGrupo" value="grupo" v-model="form.asignarA" />
-                    <label class="form-check-label" for="asigGrupo">Todo un grupo</label>
-                  </div>
-                </div>
-
-                <!-- Asignación a alumno -->
-                <div v-if="form.asignarA === 'alumno'">
-                  <label class="form-label">
-                    Buscar alumno
-                    <i class="bi bi-info-circle ms-1 text-muted"
-                       data-bs-toggle="tooltip"
-                       title="Escribe nombre, matrícula o correo. Solo se mostrarán coincidencias reales."></i>
-                  </label>
-                  <div class="input-group">
-                    <input
-                      type="search"
-                      class="form-control"
-                      v-model.trim="alumnoQuery"
-                      placeholder="Nombre, matrícula o correo…"
-                      @input="buscarAlumnos"
-                      aria-label="Buscar alumno"
-                    />
-                    <button class="btn btn-outline-secondary" type="button" @click="buscarAlumnos" aria-label="Buscar">
-                      <i class="bi bi-search"></i>
-                    </button>
-                  </div>
-                  <small class="text-muted d-block mt-1">Escribe al menos 2 caracteres. Solo se mostrarán coincidencias.</small>
-
-                  <div v-if="alumnosFiltrados.length" class="list-group mt-2 alumno-list">
-                    <button
-                      v-for="u in alumnosFiltrados"
-                      :key="u._id || u.id"
-                      type="button"
-                      class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
-                      @click="seleccionarAlumno(u)"
-                    >
-                      <span>
-                        <strong>{{ u.name }}</strong>
-                        <small class="text-muted d-block">{{ u.email }}</small>
-                        <small class="text-muted d-block">Cohorte: {{ cohorteStr(u) || '—' }}</small>
-                      </span>
-                      <span class="badge" :class="puedeTomarlo(u) ? 'bg-success' : 'bg-danger'">
-                        {{ puedeTomarlo(u) ? 'A su cargo' : 'Fuera de sus grupos' }}
-                      </span>
-                    </button>
-                  </div>
-
-                  <div
-                    v-if="alumnoSeleccionado"
-                    class="alert mt-2"
-                    :class="puedeTomarlo(alumnoSeleccionado) ? 'alert-success' : 'alert-danger'"
-                  >
-                    <i class="bi" :class="puedeTomarlo(alumnoSeleccionado) ? 'bi-check-circle' : 'bi-exclamation-triangle'"></i>
-                    <strong> Seleccionado:</strong> {{ alumnoSeleccionado.name }}
-                    <span class="ms-2 text-muted">({{ cohorteStr(alumnoSeleccionado) || '—' }})</span>
-                  </div>
-                </div>
-
-                <!-- Asignación a grupo -->
-                <div v-if="form.asignarA === 'grupo'">
-                  <label class="form-label">
-                    Cohorte / Grupo <span class="text-danger">*</span>
-                    <i class="bi bi-info-circle ms-1 text-muted"
-                       data-bs-toggle="tooltip"
-                       title="Grupo al que se asignará la actividad."></i>
-                  </label>
-                  <select class="form-select" v-model="grupoSeleccionado" required>
-                    <option value="" disabled>Selecciona un grupo…</option>
-                    <option v-for="c in cohortesVisibles" :key="c" :value="c">{{ c }}</option>
-                  </select>
-                  <div v-if="grupoSeleccionado" class="form-text">
-                    Se asignará a todos los alumnos del grupo <strong>{{ grupoSeleccionado }}</strong>.
-                  </div>
-                </div>
-
-                <!-- Errores locales -->
-                <div v-if="errors.length" class="alert alert-warning mt-3">
-                  <ul class="mb-0 ps-3">
-                    <li v-for="(e, i) in errors" :key="i">{{ e }}</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="modal-footer border-0">
-            <button class="btn btn-outline-secondary" type="button" @click="closeCreate">Cancelar</button>
-            <button class="btn btn-gradient" type="button" :disabled="submitting" @click="confirmarCrear">
-              <span v-if="!submitting"><i class="bi bi-check2-circle me-1"></i>Guardar</span>
-              <span v-else class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
   </main>
 </template>
 
 <script>
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
+
 import {
   getCurrentUser,
   fetchActividades,
@@ -447,35 +336,38 @@ export default {
 
       filtros: { docenteId: "", cohorte: "", desde: "", hasta: "" },
 
-      // Modal / formulario
+      // dropdowns modernos
+      ddOpen: { docente: false, cohorte: false },
+      docenteQ: "",
+      cohorteQ: "",
+
+      // cache datos
       tecnicas: [],
-      tecnicaQuery: "",
-      form: {
-        // fechaAsignacion se guarda en el backend automáticamente
-        fechaMaxima: "",
-        nombre: "",
-        tecnica_id: "",
-        descripcion: "",
-        asignarA: "grupo",
-      },
-
       alumnosCache: [],
-      alumnoQuery: "",
-      alumnosFiltrados: [],
-      alumnoSeleccionado: null,
-      grupoSeleccionado: "",
-
       cohortesGlobales: [],
+
+      // estados
       submitting: false,
-      errors: [],
       _buscarAlumnoDebounce: null,
       _filtroDebounce: null,
-      _modalInstance: null,
     };
   },
   computed: {
+    myId() {
+      return String(this.usuario?._id || this.usuario?.id || "");
+    },
     mostrarFiltroDocente() {
       return this.usuario && this.usuario.rol !== "profesor";
+    },
+    labelDocente() {
+      if (!this.mostrarFiltroDocente) return "";
+      if (!this.filtros.docenteId) return "Todos los docentes";
+      if (this.filtros.docenteId === this.myId) return "Creadas por mí";
+      const d = this.docentes.find((x) => String(x._id || x.id) === String(this.filtros.docenteId));
+      return d?.name || "Docente";
+    },
+    labelCohorte() {
+      return this.filtros.cohorte ? this.filtros.cohorte : "Todos los grupos";
     },
     cohortesVisibles() {
       const rol = this.usuario?.rol;
@@ -487,20 +379,16 @@ export default {
       }
       return this.cohortesGlobales;
     },
-    tecnicasFiltradasModal() {
-      const q = (this.tecnicaQuery || "").toLowerCase().trim();
-      if (!q) return [];
-      return this.tecnicas.filter((t) => (t?.nombre || "").toLowerCase().includes(q)).slice(0, 20);
+    docentesFiltrados() {
+      const q = this.docenteQ.toLowerCase();
+      return this.docentes.filter((d) => (d?.name || "").toLowerCase().includes(q));
     },
-    tecnicaSeleccionadaNombre() {
-      const id = this.form.tecnica_id;
-      if (!id) return "";
-      const t = this.tecnicas.find((x) => String(x._id || x.id) === String(id));
-      return t?.nombre || "";
+    cohortesFiltradas() {
+      const q = this.cohorteQ.toLowerCase();
+      return this.cohortesVisibles.filter((c) => c.toLowerCase().includes(q));
     },
   },
   watch: {
-    // Aplicar filtros automáticamente
     "filtros.docenteId": "onFiltrosChange",
     "filtros.cohorte": "onFiltrosChange",
     "filtros.desde": "onFiltrosChange",
@@ -508,13 +396,15 @@ export default {
   },
   async mounted() {
     await this.bootstrap();
-    this.bootstrapModal();
+    document.addEventListener("click", this.handleOutside);
+  },
+  beforeUnmount() {
+    document.removeEventListener("click", this.handleOutside);
   },
   methods: {
-    fmt(d) {
-      return d || "—";
-    },
+    fmt(d) { return d || "—"; },
     docenteNombre(id) {
+      if (String(id) === this.myId) return "Creadas por mí";
       const d = this.docentes.find((x) => String(x._id || x.id) === String(id));
       return d?.name || id;
     },
@@ -525,9 +415,7 @@ export default {
     },
     puedeTomarlo(u) {
       if (this.usuario?.rol !== "profesor") return true;
-      const mis = this.usuario?.persona?.cohorte;
       const del = u?.persona?.cohorte;
-      if (!mis) return false;
       const inSet = (coh) => {
         if (!coh) return false;
         if (Array.isArray(coh)) return coh.some((v) => this.inMisCohortes(v));
@@ -545,18 +433,18 @@ export default {
     async bootstrap() {
       this.usuario = await getCurrentUser();
 
-      // Docentes (para filtro solo si no es profesor)
+      // Docentes (solo si no es profesor)
       if (this.mostrarFiltroDocente) {
-        this.docentes = await fetchDocentes();
+        const allDocs = await fetchDocentes();
+        this.docentes = (allDocs || []).filter((d) => String(d._id || d.id) !== this.myId);
       } else {
-        // si es profesor, el filtro queda fijado a su propio id
-        this.filtros.docenteId = String(this.usuario?._id || this.usuario?.id || "");
+        this.filtros.docenteId = this.myId;
       }
 
-      // Técnicas para buscador del formulario
+      // Técnicas
       this.tecnicas = await fetchTecnicas();
 
-      // Cohortes globales (para admin/otros)
+      // Alumnos cache + cohortes globales
       const alumnosAll = await this._ensureAlumnosCache();
       if (this.usuario?.rol !== "profesor") {
         const set = new Set();
@@ -571,88 +459,24 @@ export default {
       await this.cargarActividades();
     },
 
-    bootstrapModal() {
-      const el = this.$refs.modalEl;
-      if (!el) return;
-
-      // Habilitar tooltips de Bootstrap
-      const enableTooltips = () => {
-        const tipEls = el.querySelectorAll('[data-bs-toggle="tooltip"]');
-        tipEls.forEach((t) => {
-          try {
-            // eslint-disable-next-line no-new
-            new window.bootstrap.Tooltip(t);
-          } catch {}
-        });
-      };
-
-      if (window.bootstrap?.Modal) {
-        el.addEventListener("shown.bs.modal", () => {
-          // activamos animación
-          const content = el.querySelector(".modal-content");
-          if (content) {
-            content.classList.remove("animate-pop"); // reset
-            // Forzar reflow
-            void content.offsetWidth;
-            content.classList.add("animate-pop");
-          }
-          enableTooltips();
-        });
-      } else {
-        // sin Bootstrap JS
-        enableTooltips();
-      }
+    // ===== Dropdown moderno helpers
+    toggleDD(which) {
+      this.ddOpen[which] = !this.ddOpen[which];
+      if (which === "docente") this.ddOpen.cohorte = false;
+      if (which === "cohorte") this.ddOpen.docente = false;
     },
-
-    openCreate() {
-      this.resetForm();
-      const el = this.$refs.modalEl;
-      if (window.bootstrap?.Modal) {
-        const m = new window.bootstrap.Modal(el, { backdrop: "static" });
-        m.show();
-        this._modalInstance = m;
-      } else {
-        el.style.display = "block";
-        el.removeAttribute("aria-hidden");
-        el.classList.add("show");
-      }
+    handleOutside(e) {
+      const wrappers = Array.from(document.querySelectorAll(".modern-select"));
+      const isInside = wrappers.some((w) => w.contains(e.target));
+      if (!isInside) this.ddOpen = { docente: false, cohorte: false };
     },
-    closeCreate() {
-      const el = this.$refs.modalEl;
-      if (this._modalInstance) this._modalInstance.hide();
-      else {
-        el.style.display = "none";
-        el.setAttribute("aria-hidden", "true");
-        el.classList.remove("show");
-      }
+    setDocente(id) {
+      this.filtros.docenteId = id;
+      this.ddOpen.docente = false;
     },
-
-    resetForm() {
-      this.form = {
-        fechaMaxima: "",
-        nombre: "",
-        tecnica_id: "",
-        descripcion: "",
-        asignarA: "grupo",
-      };
-      this.tecnicaQuery = "";
-      this.alumnoQuery = "";
-      this.alumnosFiltrados = [];
-      this.alumnoSeleccionado = null;
-      this.grupoSeleccionado = "";
-      this.errors = [];
-    },
-
-    validarFechas() {
-      // Limpiamos y validamos que la fecha máxima sea hoy o posterior
-      this.errors = this.errors.filter((e) => e !== "fm_invalida");
-      const fm = this.form.fechaMaxima;
-      if (!fm) return;
-      const hoy = new Date();
-      const sel = new Date(fm + "T00:00:00");
-      if (sel < new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())) {
-        this.errors.push("fm_invalida");
-      }
+    setCohorte(v) {
+      this.filtros.cohorte = v;
+      this.ddOpen.cohorte = false;
     },
 
     // Debounce para filtros automáticos
@@ -667,11 +491,10 @@ export default {
       if (this.filtros.desde) params.desde = this.filtros.desde;
       if (this.filtros.hasta) params.hasta = this.filtros.hasta;
 
-      // Docente: para admin viene de select; para profesor ya está seteado en mounted
       if (this.filtros.docenteId) {
         params.docente_id = this.filtros.docenteId;
       } else if (this.usuario?.rol === "profesor") {
-        params.docente_id = String(this.usuario?._id || this.usuario?.id);
+        params.docente_id = this.myId;
       }
 
       const data = await fetchActividades(params);
@@ -679,7 +502,6 @@ export default {
       this.enlaces = data?.enlaces || { anterior: null, siguiente: null };
       this.totalVisible = this.registros.length;
 
-      // Página actual / total
       this.paginaActual = this._pageFromUrl(this.enlaces.anterior) + 1;
       const last = this._pageFromUrl(data?.enlaces?.ultimo);
       this.totalPaginas = last || (this.enlaces.siguiente ? this.paginaActual + 1 : this.paginaActual);
@@ -695,25 +517,26 @@ export default {
       try {
         const u = new URL(url, window.location.origin);
         return Number(u.searchParams.get("page")) || 0;
-      } catch {
-        return 0;
-      }
+      } catch { return 0; }
     },
 
-    // ====== Búsqueda de alumnos (front) ======
+    // ====== Búsqueda de alumnos (cache) ====== 
     async _ensureAlumnosCache() {
       if (this.alumnosCache.length) return this.alumnosCache;
       try {
         const all = await fetchAlumnos({});
-        this.alumnosCache = Array.isArray(all)
-          ? all.map((u) => ({
-              ...u,
-              name: u?.name || "",
-              email: u?.email || "",
-              matricula: u?.matricula || "",
-              persona: u?.persona || {},
-            }))
-          : [];
+        const onlyStudents = (Array.isArray(all) ? all : []).filter((u) => {
+          const r = String(u?.rol || "").toLowerCase();
+          return r === "estudiante" || r === "alumno";
+        });
+        this.alumnosCache = onlyStudents.map((u) => ({
+          ...u,
+          _key: String(u._id || u.id),
+          name: u?.name || "",
+          email: u?.email || "",
+          matricula: u?.matricula || "",
+          persona: u?.persona || {},
+        }));
       } catch (e) {
         console.error("No se pudieron cargar alumnos:", e?.message || e);
         this.alumnosCache = [];
@@ -721,155 +544,485 @@ export default {
       return this.alumnosCache;
     },
 
-    async buscarAlumnos() {
-      const q = (this.alumnoQuery || "").trim();
-      if (q.length < 2) {
-        this.alumnosFiltrados = [];
-        this.alumnoSeleccionado = null;
-        return;
-      }
-      if (this._buscarAlumnoDebounce) clearTimeout(this._buscarAlumnoDebounce);
-      this._buscarAlumnoDebounce = setTimeout(async () => {
-        const alumnos = await this._ensureAlumnosCache();
-        const Q = q.toLowerCase();
+    // =============== SWEETALERT FORM ===============
+    createFormHtml() {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+      const minDate = `${yyyy}-${mm}-${dd}`;
 
-        const coincide = (u) => {
-          const name = String(u?.name || "").toLowerCase();
-          const email = String(u?.email || "").toLowerCase();
-          const mat = String(u?.matricula || "").toLowerCase();
-          return name.includes(Q) || email.includes(Q) || mat.includes(Q);
-        };
+      const optsGrupo = this.cohortesVisibles
+        .map((c) => `<option value="${this.escape(c)}">${this.escape(c)}</option>`)
+        .join("");
 
-        const matchGrupo = (u) => {
-          if (!this.grupoSeleccionado) return true;
-          const c = u?.persona?.cohorte;
-          if (Array.isArray(c)) return c.includes(String(this.grupoSeleccionado));
-          return String(c || "") === String(this.grupoSeleccionado);
-        };
+      return `
+        <form id="swForm" class="sw-form text-start">
+          <!-- ===== Sección 1: Datos principales ===== -->
+          <div class="card mb-3">
+            <div class="card-header d-flex align-items-center justify-content-between bg-white border-0">
+              <h6 class="m-0 fw-semibold">Datos principales</h6>
+              <!-- botón con ID CORRECTO -->
+              <button id="btnToggleDatos" type="button" class="btn btn-sm btn-outline-secondary rounded-pill">
+                <i id="icoDatos" class="bi bi-chevron-up"></i>
+                <span id="txtDatos" class="ms-1">Ocultar</span>
+              </button>
+            </div>
 
-        const base = alumnos.filter(coincide).filter(matchGrupo);
-        const filtrados = base.filter((u) => this.puedeTomarlo(u));
+            <div class="card-body" id="secDatos">
+              <div class="row g-3">
+                <!-- Nombre -->
+                <div class="col-12">
+                  <label class="form-label">
+                    Nombre <span class="text-danger">*</span>
+                    <i class="bi bi-info-circle ms-1 text-muted" title="Título breve que verán los alumnos (ej. Respiración 4-7-8)."></i>
+                  </label>
+                  <input type="text" id="f_nombre" class="form-control" placeholder="Ej. Respiración consciente 4-7-8" maxlength="150" />
+                </div>
 
-        this.alumnosFiltrados = filtrados.slice(0, 20);
-        if (this.alumnosFiltrados.length === 1) {
-          this.alumnoSeleccionado = this.alumnosFiltrados[0];
-        } else {
-          this.alumnoSeleccionado = null;
-        }
-      }, 180);
+                <!-- Búsqueda de técnica (mismo diseño) -->
+                <div class="col-12">
+                  <label class="form-label">
+                    Buscar técnica <span class="text-danger">*</span>
+                    <i class="bi bi-info-circle ms-1 text-muted" title="Escribe para buscar y luego haz clic en la técnica encontrada."></i>
+                  </label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input id="f_tecnicaQ" type="text" class="form-control" placeholder="Escribe el nombre de la técnica…" aria-label="Buscar técnica" />
+                    <button id="btnClearTec" type="button" class="btn btn-outline-secondary" aria-label="Limpiar búsqueda" style="display:none">
+                      <i class="bi bi-x-lg"></i>
+                    </button>
+                  </div>
+
+                  <!-- Resultados -->
+                  <div id="f_tecnicaList" class="list-group mt-2 tecnica-list"></div>
+
+                  <!-- Técnica seleccionada -->
+                  <div id="f_tecnicaSel" class="alert alert-success mt-2 mb-0 py-2" style="display:none">
+                    <i class="bi bi-check-circle me-1"></i>
+                    Técnica seleccionada:
+                    <strong id="f_tecnicaSelName"></strong>
+                    <button id="f_btnCambiarTec" type="button" class="btn btn-sm btn-link ms-2">Cambiar</button>
+                  </div>
+
+                  <input type="hidden" id="f_tecnicaId" />
+                </div>
+
+                <!-- Descripción -->
+                <div class="col-12">
+                  <label class="form-label">
+                    Descripción <span class="text-danger">*</span>
+                    <i class="bi bi-info-circle ms-1 text-muted" title="Instrucciones, objetivo, duración sugerida o recomendaciones."></i>
+                  </label>
+                  <textarea id="f_desc" class="form-control" rows="3" placeholder="Instrucciones, objetivo, duración sugerida…"></textarea>
+                </div>
+
+                <!-- Fecha máxima -->
+                <div class="col-12 col-md-6">
+                  <label class="form-label">
+                    Fecha máxima <span class="text-danger">*</span>
+                    <i class="bi bi-info-circle ms-1 text-muted" title="Último día para completar la actividad."></i>
+                  </label>
+                  <input type="date" id="f_fechaMax" class="form-control" min="${minDate}" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== Sección 2: Asignación ===== -->
+          <div class="card">
+            <div class="card-header d-flex align-items-center justify-content-between bg-white border-0">
+              <h6 class="m-0 fw-semibold">Asignación</h6>
+              <button id="btnToggleAsig" type="button" class="btn btn-sm btn-outline-secondary rounded-pill">
+                <i id="icoAsig" class="bi bi-chevron-up"></i>
+                <span id="txtAsig" class="ms-1">Ocultar</span>
+              </button>
+            </div>
+
+            <div class="card-body" id="secAsig">
+              <label class="form-label d-block">
+                Asignar a
+                <i class="bi bi-info-circle ms-1 text-muted" title="Un alumno específico o un grupo completo."></i>
+              </label>
+
+              <div class="d-flex flex-wrap gap-3 mb-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="f_asignarA" id="f_asigAlumno" value="alumno">
+                  <label class="form-check-label" for="f_asigAlumno">Un alumno</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="f_asignarA" id="f_asigGrupo" value="grupo" checked>
+                  <label class="form-check-label" for="f_asigGrupo">Todo un grupo</label>
+                </div>
+              </div>
+
+              <!-- Asignación a alumno -->
+              <div id="secAlumno" style="display:none">
+                <label class="form-label">
+                  Buscar alumno <span class="text-danger">*</span>
+                  <i class="bi bi-info-circle ms-1 text-muted" title="Escribe para buscar y luego haz clic en el alumno encontrado."></i>
+                </label>
+
+                <!-- 🔹 Barra de búsqueda idéntica a la de técnica -->
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-search"></i></span>
+                  <input
+                    id="f_alumnoQ"
+                    type="text"
+                    class="form-control"
+                    placeholder="Nombre, matrícula o correo…"
+                    aria-label="Buscar alumno"
+                  />
+                  <button
+                    id="btnClearAlu"
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    aria-label="Limpiar búsqueda"
+                    style="display:none"
+                  >
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </div>
+
+                <small class="text-muted d-block mt-1">Escribe al menos 2 caracteres.</small>
+
+                <div id="f_alumnoList" class="list-group mt-2 sw-list" style="max-height:240px;overflow:auto;"></div>
+                <input type="hidden" id="f_alumnoId" />
+                <div id="f_alumnoSel" class="form-text mt-1"></div>
+              </div>
+            </div>
+
+              <!-- Asignación a grupo -->
+              <div id="secGrupo">
+                <label class="form-label">
+                  Cohorte / Grupo <span class="text-danger">*</span>
+                  <i class="bi bi-info-circle ms-1 text-muted" title="Grupo al que se asignará la actividad."></i>
+                </label>
+                <select id="f_grupo" class="form-select">
+                  <option value="">Selecciona un grupo…</option>
+                  ${optsGrupo}
+                </select>
+                <div id="f_grupoHelp" class="form-text" style="display:none"></div>
+              </div>
+            </div>
+          </div>
+        </form>
+      `;
     },
 
-    seleccionarAlumno(u) {
-      this.alumnoSeleccionado = u;
-    },
+    attachFormBehavior(containerEl) {
+      const $ = (sel) => containerEl.querySelector(sel);
 
-    // ====== Búsqueda de técnicas (modal) ======
-    filtrarTecnicas() {
-      // la lista está computada; este método existe por claridad y para futuros hooks
-    },
-    clearTecnicaBusqueda() {
-      this.tecnicaQuery = "";
-    },
-    seleccionarTecnica(t) {
-      this.form.tecnica_id = String(t._id || t.id);
-      this.tecnicaQuery = t.nombre;
-    },
-    quitarTecnica() {
-      this.form.tecnica_id = "";
-      this.tecnicaQuery = "";
-    },
-
-    async confirmarCrear() {
-      // Validaciones
-      this.validarFechas();
-
-      const faltantes = [];
-      if (!this.form.nombre) faltantes.push("nombre");
-      if (!this.form.tecnica_id) faltantes.push("técnica");
-      if (!this.form.descripcion) faltantes.push("descripción");
-      if (!this.form.fechaMaxima) faltantes.push("fecha máxima");
-      if (this.form.asignarA === "alumno" && !this.alumnoSeleccionado) faltantes.push("alumno");
-      if (this.form.asignarA === "grupo" && !this.grupoSeleccionado) faltantes.push("grupo");
-
-      if (faltantes.length) {
-        this.toast("Completa: " + faltantes.join(", "), "warning");
-        return;
-      }
-      if (this.errors.includes("fm_invalida")) {
-        this.toast("Corrige la fecha máxima.", "warning");
-        return;
-      }
-
-      let participantes = [];
-      let resumenAsignacion = "";
-
-      if (this.form.asignarA === "alumno") {
-        if (!this.puedeTomarlo(this.alumnoSeleccionado)) {
-          this.toast("El alumno seleccionado no pertenece a tus cohortes.", "error");
-          return;
-        }
-        const uid = this.alumnoSeleccionado?._id || this.alumnoSeleccionado?.id;
-        participantes = [{ user_id: String(uid), estado: "Pendiente" }];
-        resumenAsignacion = `1 alumno (${this.alumnoSeleccionado?.name})`;
-      } else {
-        const grupo = this.grupoSeleccionado;
-        if (this.usuario?.rol === "profesor" && !this.inMisCohortes(grupo)) {
-          this.toast("No puedes asignar a un grupo que no es de tu cargo.", "error");
-          return;
-        }
-
-        await this._ensureAlumnosCache();
-        const delGrupo = this.alumnosCache.filter((u) => {
-          const c = u?.persona?.cohorte;
-          if (Array.isArray(c)) return c.includes(String(grupo));
-          return String(c || "") === String(grupo);
+      // ====== Toggle secciones (con blindaje) ======
+      const makeToggle = (btnId, secId, icoId, txtId) => {
+        const btn = $(btnId), sec = $(secId), ico = $(icoId), txt = $(txtId);
+        if (!btn || !sec || !ico || !txt) return; // <-- evita null.addEventListener
+        btn.addEventListener("click", () => {
+          const isOpen = sec.style.display !== "none";
+          if (isOpen) {
+            sec.style.display = "none";
+            ico.className = "bi bi-chevron-down";
+            txt.textContent = "Mostrar";
+          } else {
+            sec.style.display = "";
+            ico.className = "bi bi-chevron-up";
+            txt.textContent = "Ocultar";
+          }
         });
+      };
+      makeToggle("#btnToggleDatos", "#secDatos", "#icoDatos", "#txtDatos");
+      makeToggle("#btnToggleAsig", "#secAsig", "#icoAsig", "#txtAsig");
 
-        participantes = delGrupo.map((u) => ({
-          user_id: String(u._id || u.id),
-          estado: "Pendiente",
-        }));
-        resumenAsignacion = `${participantes.length} alumnos del grupo ${grupo}`;
-      }
+      // ====== Técnica: búsqueda y selección ======
+      const inpTec = $("#f_tecnicaQ");
+      const btnClearTec = $("#btnClearTec");
+      const lstTec = $("#f_tecnicaList");
+      const hidTec = $("#f_tecnicaId");
+      const selBox = $("#f_tecnicaSel");
+      const selName = $("#f_tecnicaSelName");
+      const btnCambiar = $("#f_btnCambiarTec") || $("#btnCambiarTec");
 
-      const payload = {
-        // fechaAsignacion: se define en backend
-        fechaMaxima: this.form.fechaMaxima,
-        nombre: this.form.nombre,
-        tecnica_id: this.form.tecnica_id,
-        descripcion: this.form.descripcion,
-        docente_id: String(this.usuario?._id || this.usuario?.id),
-        participantes,
+      const renderTec = (items) => {
+        lstTec.innerHTML = items.map((t) => {
+          const id = this.escape(String(t._id || t.id));
+          const name = this.escape(t.nombre || "");
+          const cat = t.categoria ? `<small class="text-muted d-block">Categoría: ${this.escape(t.categoria)}</small>` : "";
+          return `
+            <button type="button"
+              class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+              data-id="${id}" data-name="${name}">
+              <span>
+                <strong>${name}</strong>
+                ${cat}
+              </span>
+              <i class="bi bi-check2-circle" style="opacity:.6"></i>
+            </button>
+          `;
+        }).join("");
+        Array.from(lstTec.querySelectorAll("button")).forEach((b) => {
+          b.addEventListener("click", () => {
+            hidTec.value = b.getAttribute("data-id") || "";
+            selName.textContent = b.getAttribute("data-name") || (inpTec.value || "");
+            selBox.style.display = "";
+            lstTec.innerHTML = "";
+          });
+        });
       };
 
-      const htmlResumen = `
-        <div class="text-start">
-          <p class="mb-1"><strong>Nombre:</strong> ${this.escape(payload.nombre)}</p>
-          <p class="mb-1"><strong>Máxima:</strong> ${this.escape(payload.fechaMaxima)}</p>
-          <p class="mb-1"><strong>Técnica:</strong> ${this.escape(this.tecnicaSeleccionadaNombre)}</p>
-          <p class="mb-1"><strong>Asignados:</strong> ${this.escape(resumenAsignacion)}</p>
-        </div>
-      `;
+      const filterTec = () => {
+        const q = (inpTec?.value || "").toLowerCase().trim();
+        if (btnClearTec) btnClearTec.style.display = q ? "" : "none";
+        if (!q) { lstTec.innerHTML = ""; return; }
+        const items = (this.tecnicas || [])
+          .filter((t) => (t?.nombre || "").toLowerCase().includes(q))
+          .slice(0, 20);
+        renderTec(items);
+      };
 
-      const res = await Swal.fire({
-        title: "¿Crear actividad?",
-        html: htmlResumen,
-        icon: "question",
-        showCancelButton: true,
-        confirmButtonText: "Sí, crear",
-        cancelButtonText: "Cancelar",
-        focusConfirm: false,
-        // Evitar que se esconda bajo el navbar fijo
-        customClass: { container: "swal2-pt" },
-        scrollbarPadding: false,
+      if (inpTec) inpTec.addEventListener("input", filterTec);
+      if (btnClearTec) btnClearTec.addEventListener("click", () => {
+        if (!inpTec) return;
+        inpTec.value = "";
+        hidTec.value = "";
+        selBox.style.display = "none";
+        selName.textContent = "";
+        lstTec.innerHTML = "";
+        inpTec.focus();
       });
-      if (!res.isConfirmed) return;
+      if (btnCambiar) btnCambiar.addEventListener("click", () => {
+        hidTec.value = "";
+        selBox.style.display = "none";
+        inpTec && inpTec.focus();
+      });
+
+      // ====== Radios de asignación ======
+      const asigAlumno = $("#f_asigAlumno");
+      const asigGrupo = $("#f_asigGrupo");
+      const secAlumno = $("#secAlumno");
+      const secGrupo = $("#secGrupo");
+      const grupoSel = $("#f_grupo");
+      const grupoHelp = $("#f_grupoHelp");
+
+      const toggleAsignacion = () => {
+        const alumno = !!(asigAlumno && asigAlumno.checked);
+        if (secAlumno) secAlumno.style.display = alumno ? "" : "none";
+        if (secGrupo) secGrupo.style.display = alumno ? "none" : "";
+      };
+      if (asigAlumno) asigAlumno.addEventListener("change", toggleAsignacion);
+      if (asigGrupo) asigGrupo.addEventListener("change", toggleAsignacion);
+      toggleAsignacion(); // estado inicial
+
+      if (grupoSel) {
+        grupoSel.addEventListener("change", () => {
+          const v = (grupoSel.value || "").trim();
+          if (!grupoHelp) return;
+          grupoHelp.style.display = v ? "" : "none";
+          grupoHelp.innerHTML = v ? `Se asignará a todos los alumnos del grupo <strong>${this.escape(v)}</strong>.` : "";
+        });
+      }
+
+      // ====== Buscar alumno ======
+      const aluQ = $("#f_alumnoQ");
+      const btnBuscarAlu = $("#btnBuscarAlu");
+      const aluList = $("#f_alumnoList");
+      const aluId = $("#f_alumnoId");
+      const aluSel = $("#f_alumnoSel");
+
+      const renderAlumnos = (items) => {
+        aluList.innerHTML = items.map((u) => {
+          const coh = this.cohorteStr(u) || "—";
+          const ok = this.puedeTomarlo(u);
+          const badge = ok ? "bg-success" : "bg-danger";
+          const label = ok ? "A su cargo" : "Fuera de sus grupos";
+          return `
+            <button type="button"
+              class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+              data-id="${this.escape(u._key)}"
+              data-ok="${ok ? "1" : "0"}">
+              <span>
+                <strong>${this.escape(u.name)}</strong>
+                <small class="text-muted d-block">${this.escape(u.email)}</small>
+                <small class="text-muted d-block">Cohorte: ${this.escape(coh)}</small>
+              </span>
+              <span class="badge ${badge}">${label}</span>
+            </button>
+          `;
+        }).join("");
+        Array.from(aluList.querySelectorAll("button")).forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const id = btn.getAttribute("data-id");
+            const ok = btn.getAttribute("data-ok") === "1";
+            const u = this.alumnosCache.find((x) => x._key === id);
+            aluId.value = id;
+            aluSel.innerHTML = ok
+              ? `<span class="text-success"><i class="bi bi-check-circle me-1"></i>Seleccionado: <strong>${this.escape(u?.name || "")}</strong></span>`
+              : `<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>El alumno no pertenece a tus cohortes.</span>`;
+          });
+        });
+      };
+
+      const doBuscarAlu = () => {
+        const q = (aluQ?.value || "").trim().toLowerCase();
+        if (q.length < 2) {
+          aluList.innerHTML = "";
+          aluId.value = "";
+          aluSel.innerHTML = "";
+          return;
+        }
+        const matches = (this.alumnosCache || []).filter((u) => {
+          const inTxt =
+            (u.name || "").toLowerCase().includes(q) ||
+            (u.email || "").toLowerCase().includes(q) ||
+            (u.matricula || "").toLowerCase().includes(q);
+          return inTxt;
+        });
+        const g = (grupoSel?.value || "").trim();
+        const byGroup = g
+          ? matches.filter((u) => {
+              const c = u?.persona?.cohorte;
+              return Array.isArray(c) ? c.includes(String(g)) : String(c || "") === String(g);
+            })
+          : matches;
+        renderAlumnos(byGroup.slice(0, 20));
+      };
+
+      if (aluQ) {
+        aluQ.addEventListener("input", () => {
+          clearTimeout(this._buscarAlumnoDebounce);
+          this._buscarAlumnoDebounce = setTimeout(doBuscarAlu, 180);
+        });
+      }
+      if (btnBuscarAlu) btnBuscarAlu.addEventListener("click", doBuscarAlu);
+    },
+
+    async openCreate() {
+      await this._ensureAlumnosCache();
+
+      const result = await Swal.fire({
+        title: "Registrar actividad",
+        html: this.createFormHtml(),
+        width: 820,
+        focusConfirm: false,
+        showCancelButton: true,
+        showCloseButton: true, // X arriba
+        confirmButtonText: "Guardar",
+        cancelButtonText: "Cancelar",
+        reverseButtons: true,
+        customClass: {
+          container: "swal2-pt",
+          popup: "swal2-rounded",
+          confirmButton: "btn btn-gradient",
+          cancelButton: "btn btn-outline-secondary ms-2",
+          actions: "sw-actions",
+          closeButton: "swal2-close-pt",
+        },
+        didOpen: (el) => this.attachFormBehavior(el),
+        preConfirm: () => {
+          const el = Swal.getHtmlContainer();
+          const $ = (sel) => el.querySelector(sel);
+
+          const nombre = ($("#f_nombre")?.value || "").trim();
+          const tecnica_id = ($("#f_tecnicaId")?.value || "").trim();
+          const descripcion = ($("#f_desc")?.value || "").trim();
+          const fechaMaxima = ($("#f_fechaMax")?.value || "").trim();
+
+          const asigAlumno = $("#f_asigAlumno")?.checked;
+          const asignarA = asigAlumno ? "alumno" : "grupo";
+          const alumno_id = ($("#f_alumnoId")?.value || "").trim();
+          const grupo = ($("#f_grupo")?.value || "").trim();
+
+          const faltantes = [];
+          if (!nombre) faltantes.push("nombre");
+          if (!tecnica_id) faltantes.push("técnica");
+          if (!descripcion) faltantes.push("descripción");
+          if (!fechaMaxima) faltantes.push("fecha máxima");
+          if (asignarA === "alumno" && !alumno_id) faltantes.push("alumno");
+          if (asignarA === "grupo" && !grupo) faltantes.push("grupo");
+
+          const hoy = new Date(); hoy.setHours(0,0,0,0);
+          const fm = fechaMaxima ? new Date(fechaMaxima) : null;
+          if (!fm || (fm.setHours(0,0,0,0), fm) < hoy) {
+            faltantes.push("fecha máxima (hoy o posterior)");
+          }
+
+          if (faltantes.length) {
+            Swal.showValidationMessage("Completa: " + faltantes.join(", "));
+            return false;
+          }
+
+          if (asignarA === "alumno") {
+            const u = this.alumnosCache.find((x) => x._key === alumno_id);
+            if (!this.puedeTomarlo(u)) {
+              Swal.showValidationMessage("El alumno seleccionado no pertenece a tus cohortes.");
+              return false;
+            }
+          }
+
+          return { nombre, tecnica_id, descripcion, fechaMaxima, asignarA, alumno_id, grupo };
+        },
+      });
+
+      if (!result.isConfirmed) return;
 
       try {
         this.submitting = true;
+
+        const {
+          nombre, tecnica_id, descripcion, fechaMaxima,
+          asignarA, alumno_id, grupo
+        } = result.value;
+
+        let participantes = [];
+        let resumenAsignacion = "";
+        if (asignarA === "alumno") {
+          participantes = [{ user_id: alumno_id, estado: "Pendiente" }];
+          const u = this.alumnosCache.find((x) => x._key === alumno_id);
+          resumenAsignacion = `1 alumno (${u?.name || alumno_id})`;
+        } else {
+          const delGrupo = this.alumnosCache.filter((u) => {
+            const c = u?.persona?.cohorte;
+            return Array.isArray(c) ? c.includes(String(grupo)) : String(c || "") === String(grupo);
+          });
+          if (this.usuario?.rol === "profesor" && !this.inMisCohortes(grupo)) {
+            this.toast("No puedes asignar a un grupo que no es de tu cargo.", "error");
+            return;
+          }
+          participantes = delGrupo.map((u) => ({ user_id: u._key, estado: "Pendiente" }));
+          resumenAsignacion = `${participantes.length} alumnos del grupo ${grupo}`;
+        }
+
+        const payload = {
+          fechaMaxima,
+          nombre,
+          tecnica_id,
+          descripcion,
+          docente_id: this.myId,
+          participantes,
+        };
+
+        const tName = (this.tecnicas.find((t) => String(t._id || t.id) === String(tecnica_id))?.nombre) || "—";
+        const htmlResumen = `
+          <div class="text-start">
+            <p class="mb-1"><strong>Nombre:</strong> ${this.escape(nombre)}</p>
+            <p class="mb-1"><strong>Máxima:</strong> ${this.escape(fechaMaxima)}</p>
+            <p class="mb-1"><strong>Técnica:</strong> ${this.escape(tName)}</p>
+            <p class="mb-1"><strong>Asignados:</strong> ${this.escape(resumenAsignacion)}</p>
+          </div>
+        `;
+
+        const ok = await Swal.fire({
+          title: "¿Crear actividad?",
+          html: htmlResumen,
+          icon: "question",
+          showCancelButton: true,
+          confirmButtonText: "Sí, crear",
+          cancelButtonText: "Cancelar",
+          customClass: { container: "swal2-pt" },
+        });
+        if (!ok.isConfirmed) return;
+
         const resp = await createActividad(payload);
         this.toast(resp?.mensaje || "Actividad creada correctamente.", "success");
-        this.closeCreate();
         await this.cargarActividades();
       } catch (e) {
         const msg = e?.response?.data?.message || e?.message || "Error al crear la actividad.";
@@ -877,6 +1030,44 @@ export default {
       } finally {
         this.submitting = false;
       }
+    },
+
+    async verDetalles(a) {
+      await this._ensureAlumnosCache();
+      const map = new Map(this.alumnosCache.map((u) => [String(u._key), u]));
+
+      const total = Array.isArray(a?.participantes) ? a.participantes.length : 0;
+      const items = (a?.participantes || []).map((p) => {
+        const u = map.get(String(p.user_id));
+        const nombre = u?.name || `ID ${p.user_id}`;
+        const coh = this.cohorteStr(u) || "—";
+        const estado = p?.estado || "Pendiente";
+        const badge = estado === "Completado" ? "success" : (estado === "Omitido" ? "secondary" : "warning");
+        return `
+          <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <div class="fw-semibold">${this.escape(nombre)}</div>
+              <div class="text-muted small">Cohorte: ${this.escape(coh)}</div>
+            </div>
+            <span class="badge bg-${badge}">${this.escape(estado)}</span>
+          </div>
+        `;
+      }).join("");
+
+      const html = `
+        <div class="text-start">
+          <div class="mb-2"><span class="badge bg-primary-subtle text-primary border">Total: ${total}</span></div>
+          <div class="list-group">${items || '<div class="text-muted">No hay participantes registrados.</div>'}</div>
+        </div>
+      `;
+
+      await Swal.fire({
+        title: `Participantes • ${this.escape(a.nombre)}`,
+        html,
+        width: 720,
+        confirmButtonText: "Cerrar",
+        customClass: { container: "swal2-pt" },
+      });
     },
 
     toast(text, icon = "info") {
@@ -899,63 +1090,125 @@ export default {
 </script>
 
 <style scoped>
-/* ===== Colores y estilo tipo "tests" ===== */
-:root {
-  --ink:#1b3b6f; --ink-2:#2c4c86; --sky:#eaf3ff; --card-b:#f8fbff; --stroke:#e6eefc;
-  --chip:#eef6ff; --chip-ink:#2c4c86;
-}
-
+:root { --ink:#1b3b6f; --ink-2:#2c4c86; --sky:#eaf3ff; --card-b:#f8fbff; --stroke:#e6eefc; --chip:#eef6ff; --chip-ink:#2c4c86; }
 .fw-600 { font-weight: 600; }
 
-.search-group .form-control,
-.search-group .form-select { border:0 !important; box-shadow:none !important; }
-.search-group .input-group-text { background:transparent; border:0; }
+.filter-label { font-size:.9rem; color:var(--ink-2); font-weight:600; }
 
-.gradient-card {
-  background: linear-gradient(135deg, #6a8dff, #7b5cff);
-  border-radius: 16px;
+/* Selectores modernos */
+.modern-select { position: relative; }
+.btn-select {
+  border:1px solid var(--stroke);
+  background:#fff; color:#223; border-radius:999px;
+  display:flex; align-items:center; gap:.5rem;
+  padding:.35rem .75rem;
+  max-width: 260px;
 }
+.btn-select .text-truncate { max-width: 150px; }
+.btn-select:hover { background:#f9fbff; }
 
-.btn-gradient {
-  background: linear-gradient(135deg, #6a8dff, #7b5cff);
-  color:#fff; border:0;
+.select-panel{
+  position:absolute; z-index: 5; top: calc(100% + 6px); left:0;
+  min-width: 280px; width:max-content; max-width: 360px;
+  background:#fff; border:1px solid var(--stroke); border-radius:12px;
+  box-shadow: 0 10px 24px rgba(15,22,48,.12);
 }
+.select-search{
+  display:flex; align-items:center; gap:.5rem; padding:.5rem .6rem;
+  border-bottom:1px solid var(--stroke);
+}
+.select-search i { opacity:.7; }
+.select-search .form-control{ border:0; box-shadow:none; }
+.btn-clear{ border:0; background:transparent; padding:.2rem .25rem; }
+
+.select-list{ max-height: 260px; overflow:auto; padding:.35rem; }
+.select-group{
+  font-size:.75rem; text-transform:uppercase; letter-spacing:.04em;
+  color:#6b7a99; padding:.35rem .5rem .2rem;
+}
+.select-item{
+  width:100%; text-align:left; background:#fff; border:0;
+  padding:.55rem .65rem; border-radius:10px; display:flex; justify-content:space-between; align-items:center;
+}
+.select-item:hover{ background:#f5f8ff; }
+.select-item.active{ background:#eaf2ff; outline:1px solid #d7e6ff; }
+.select-item .title{ font-size:.92rem; }
+
+/* Fila de fechas */
+.filters-row{ display:flex; align-items:center; gap:.75rem; }
+.filters-labels small{ white-space:nowrap; }
+.filters-controls{ display:flex; gap:.5rem; }
+.filters-controls .form-control{ min-width: 10.5rem; }
+
+/* CTA */
+.gradient-card { background: linear-gradient(135deg, #6a8dff, #7b5cff); border-radius: 16px; }
+.btn-gradient { background: linear-gradient(135deg, #6a8dff, #7b5cff); color:#fff; border:0; }
 .btn-gradient:hover { filter: brightness(.95); color:#fff; }
 
-.chip {
-  display:inline-flex; align-items:center; gap:.5rem;
-  padding:.35rem .65rem; border-radius:999px; font-size:.875rem;
-  background:#fff; border:1px solid var(--stroke);
+/* Chips */
+.chip{
+  display:inline-flex; align-items:center; gap:.5rem; padding:.35rem .65rem;
+  border-radius:999px; font-size:.84rem; background:#fff; border:1px solid var(--stroke);
 }
 .chip-info { background:var(--chip); color:var(--chip-ink); border-color:#d8e6ff; }
-.chip .chip-x {
-  border:0; background:transparent; padding:0; margin-left:.25rem; line-height:0;
-  color:inherit; cursor:pointer;
-}
+.chip .chip-x{ border:0; background:transparent; padding:0; margin-left:.25rem; line-height:0; color:inherit; cursor:pointer; }
 
-.alumno-list, .tecnica-list { max-height: 280px; overflow:auto; }
-
+/* Tabla */
 .table td, .table th { vertical-align: middle; }
 
-/* Responsive fonts en tabla */
-@media (max-width: 576px) {
-  .table td, .table th { font-size: .92rem; }
+/* ======== SweetAlert: overlay y popup ======== */
+:deep(.swal2-container.swal2-pt){
+  padding-top: 5.5rem !important;
+  backdrop-filter: blur(4px);
+  background-color: rgba(10,16,28,.28) !important;
+}
+:deep(.swal2-popup.swal2-rounded){ border-radius: 18px !important; }
+:deep(.sw-actions){ display: flex; align-items: center; justify-content: flex-end; }
+:deep(.swal2-confirm.btn.btn-gradient){
+  background: linear-gradient(135deg, #6a8dff, #7b5cff) !important;
+  border: 0 !important; color:#fff !important;
+  padding: .5rem 1rem !important; border-radius: 999px !important;
+}
+:deep(.swal2-cancel.btn.btn-outline-secondary){ border-radius: 999px !important; }
+:deep(.swal2-close.swal2-close-pt){ box-shadow:none !important; opacity:.7; }
+:deep(.swal2-close.swal2-close-pt):hover{ opacity:1; }
+
+/* ======== Formulario SweetAlert ======== */
+.sw-card{ border:1px solid var(--stroke); border-radius: 16px; background: #fff; }
+.sw-card-header{
+  position: relative;
+  display:flex; align-items:center; justify-content:flex-start;
+  gap:.75rem; padding:.75rem 1rem;
+  background:#fff; border-bottom:1px solid var(--stroke);
+  border-top-left-radius:16px; border-top-right-radius:16px;
+}
+.sw-card-header h6{ display:flex; align-items:center; gap:.5rem; margin:0; }
+.sw-toggle-top{
+  position:absolute; right:12px; top:50%; transform:translateY(-50%);
 }
 
-/* Cards / modal */
-.card { border-radius:16px; }
-.modal-content { border-radius:18px; }
-
-/* Animación apertura modal */
-@keyframes popIn {
-  0% { transform: scale(.94); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
+/* ====== Barra de búsqueda tipo 'pill' ====== */
+.sw-search-group{
+  display:flex; align-items:center; gap:.5rem;
+  border:1px solid var(--stroke); border-radius:999px; padding:.35rem .6rem; background:#fff;
+  box-shadow: inset 0 0 0 2px rgba(122,153,255,.06);
+  white-space:nowrap;
 }
-.modal-content.animate-pop {
-  animation: popIn .22s ease-out;
+.sw-search-group .input-icon{ display:flex; align-items:center; opacity:.65; }
+.sw-search-input{ border:0 !important; box-shadow:none !important; flex:1 1 auto; min-width:0; height:38px; }
+.icon-btn{
+  border:0; background:transparent; display:flex; align-items:center; justify-content:center;
+  width:32px; height:32px; border-radius:999px; padding:0;
+}
+.icon-btn:hover{ background:#f2f6ff; }
+.tecnica-list, .sw-list { max-height: 280px; overflow:auto; }
+
+/* Responsive */
+@media (max-width: 576px){
+  .sw-search-group{ padding:.25rem .45rem; }
+  .sw-card-header h6{ font-size: .96rem; }
 }
 
-/* Ajuste SweetAlert para navbar fijo */
-:deep(.swal2-container.swal2-pt) { padding-top: 5.5rem !important; }
-:deep(.swal2-toast-pt) { padding-top: 4rem !important; }
+/* Lista con bordes suaves */
+:deep(.sw-form .sw-list .list-group-item){ border-radius: 10px; margin-bottom:.35rem; }
 </style>

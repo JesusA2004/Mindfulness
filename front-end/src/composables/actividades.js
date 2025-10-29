@@ -97,10 +97,15 @@ export async function fetchTecnicas(params = {}) {
 
 export async function fetchAlumnos(params = {}) {
   try {
+    // pedimos por API con rol estudiante (si tu endpoint lo respeta)
     const query = { ...params, rol: "estudiante" };
     const { data } = await api.get("/users", { params: query });
     const registros = data?.data || data?.registros || [];
-    return Array.isArray(registros) ? registros : [];
+    // defensa extra: en front nos quedamos SOLO con estudiante/alumno
+    return (Array.isArray(registros) ? registros : []).filter((u) => {
+      const r = String(u?.rol || "").toLowerCase();
+      return r === "estudiante" || r === "alumno";
+    });
   } catch (e) {
     console.error("Error al cargar alumnos:", e?.response?.status || e?.message);
     return [];
@@ -112,7 +117,11 @@ export async function fetchDocentes(params = {}) {
     const query = { ...params, rol: "profesor" };
     const { data } = await api.get("/users", { params: query });
     const registros = data?.data || data?.registros || [];
-    return Array.isArray(registros) ? registros : [];
+    // defensa extra: solo profesor
+    return (Array.isArray(registros) ? registros : []).filter((u) => {
+      const r = String(u?.rol || "").toLowerCase();
+      return r === "profesor";
+    });
   } catch (e) {
     console.error("Error al cargar docentes:", e?.response?.status || e?.message);
     return [];

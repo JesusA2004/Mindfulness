@@ -6,8 +6,6 @@ use MongoDB\Laravel\Eloquent\Model;
 
 class Actividad extends Model
 {
-
-    // Asegura el nombre de la colección si no coincide con la convención.
     protected $collection = 'actividads';
 
     protected $perPage = 20;
@@ -20,16 +18,13 @@ class Actividad extends Model
         'docente_id',
         'tecnica_id',
         'descripcion',
-        'participantes', // 👈 IMPORTANTE: para que se guarde
+        'participantes',
     ];
 
     protected $casts = [
-        // Recibes 'YYYY-MM-DD' desde el front; mantenlas como string
         'fechaAsignacion'   => 'string',
         'fechaFinalizacion' => 'string',
         'fechaMaxima'       => 'string',
-
-        // Guardar/leer el arreglo tal cual
         'participantes'     => 'array',
     ];
 }
