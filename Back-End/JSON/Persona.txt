@@ -6,10 +6,8 @@ JSON POST PERSONA (Estudiante):
   "fechaNacimiento": "2004-05-18",
   "telefono": "+52 777 555 2211",
   "sexo": "Femenino",
-  "matricula": "M2025-00045",
-  "carrera": ["Ingeniería en Software"],
-  "cuatrimestre": ["5"],
-  "grupo": ["5B"]
+  "matricula": "M20250045",
+  "cohorte": "Ingeniería en Software 5 5B"
 }
 
 JSON POST PERSONA (Profesor):
@@ -21,9 +19,7 @@ JSON POST PERSONA (Profesor):
   "telefono": "+52 777 493 1305",
   "sexo": "Femenino",
   "matricula": "SHYO221058",
-  "carrera": ["Ingeniería en Software"],
-  "cuatrimestre": ["10"],
-  "grupo": ["10A"]
+  "cohorte": ["Ingeniería en Software 10 A"]
 }
 
 JSON POST PERSONA (Administrador):
@@ -32,12 +28,9 @@ JSON POST PERSONA (Administrador):
   "apellidoPaterno": "Arizmendi",
   "apellidoMaterno": "Maya",
   "fechaNacimiento": "2004-12-10",
-  "telefono": "+52 777 4428209",
+  "telefono": "+52 777 442 8209",
   "sexo": "Masculino",
-  "matricula": "AMJO220898",
-  "carrera": ["Ingeniería en Software"],
-  "cuatrimestre": ["10"],
-  "grupo": ["10A"]
+  "matricula": "AMJO220898"
 }
 
 JSON PUT PERSONA:
@@ -48,9 +41,7 @@ JSON PUT PERSONA:
   "fechaNacimiento": "2004-05-18",
   "telefono": "+52 777 888 4422",
   "sexo": "Femenino",
-  "matricula": "M2025-00045",
-  "carrera": ["Ingeniería en Software"],
-  "cuatrimestre": ["6"],
-  "grupo": ["6A"]
+  "matricula": "M20250045",
+  "cohorte": "Ingeniería en Software 6 6A"
 }
 

@@ -3,11 +3,10 @@ JSON POST USER:
   "name": "María Fernanda López",
   "matricula": "M20250045",
   "email": "maria.lopez@itcuernavaca.edu.mx",
-  "password": "ClaveSegura2025",
-  "password_confirmation": "ClaveSegura2025",
+  "password": "Admin1234",
   "rol": "estudiante",
   "estatus": "activo",
-  "urlFotoPerfil": "https://miapp.com/storage/perfiles/maria.png",
+  "urlFotoPerfil": "",
   "persona_id": "68f472a4a82be0f6960d7ba2"
 }
 
@@ -15,11 +14,10 @@ JSON POST USER:
   "name": "Yatziry Serrano",
   "matricula": "SHYO221058",
   "email": "yatziry.serrano@itcuernavaca.edu.mx",
-  "password": "ClaveSegura2025",
-  "password_confirmation": "ClaveSegura2025",
+  "password": "Admin1234",
   "rol": "profesor",
   "estatus": "activo",
-  "urlFotoPerfil": "https://miapp.com/storage/perfiles/yatziry.png",
+  "urlFotoPerfil": "",
   "persona_id": "68daf59387b4eea7b8014fd4"
 }
 
@@ -27,13 +25,12 @@ JSON POST USER:
   "name": "Jesús Arizmendi",
   "matricula": "AMJO220898",
   "email": "jesus.arizmendi@itcuernavaca.edu.mx",
-  "password": "ClaveSegura2025",
-  "password_confirmation": "ClaveSegura2025",
-  "rol": "administrador",
+  "password": "Admin1234",
+  "rol": "admin",
   "estatus": "activo",
-  "urlFotoPerfil": "https://miapp.com/storage/perfiles/jesus.png",
+  "urlFotoPerfil": "",
   "persona_id": "68daf59387b4eea7b8014fd5"
 }
 
-JSON PUT USER:
+
 
