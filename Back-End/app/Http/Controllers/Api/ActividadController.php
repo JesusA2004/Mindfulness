@@ -2,15 +2,17 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\Actividad;
-use App\Models\User;
-use App\Models\Persona;
-use Illuminate\Http\Request;
-use App\Http\Requests\ActividadRequest;
-use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ActividadRequest;
 use App\Http\Resources\ActividadResource;
+use App\Models\Actividad;
+use App\Models\Persona;
+use App\Models\Tecnica;
+use App\Models\User;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use MongoDB\BSON\ObjectId;
 
 class ActividadController extends Controller
 {
@@ -21,6 +23,7 @@ class ActividadController extends Controller
     {
         $q = Actividad::query();
 
+        // Filtros
         if ($docenteId = $request->string('docente_id')->toString()) {
             $q->where('docente_id', (string) $docenteId);
         }
@@ -31,17 +34,15 @@ class ActividadController extends Controller
             $q->where('fechaAsignacion', '<=', $hasta);
         }
 
-        // 🔧 Filtrado por cohorte (opcional)
+        // Filtrado por cohorte (string o array en persona.cohorte)
         if ($cohorte = $request->string('cohorte')->toString()) {
-            // Obtén IDs de alumnos de ese cohorte (campo puede ser string o array)
             $cohortUsers = User::query()
-                ->whereIn('rol', ['estudiante','alumno'])
+                ->whereIn('rol', ['estudiante', 'alumno'])
                 ->where(function ($w) use ($cohorte) {
-                    // $in sobre persona.cohorte -> funciona para string o array con Jenssegers
                     $w->whereIn('persona.cohorte', [$cohorte]);
                 })
                 ->pluck('_id')
-                ->map(fn($v) => (string) $v)
+                ->map(fn ($v) => (string) $v)
                 ->all();
 
             if (!empty($cohortUsers)) {
@@ -53,24 +54,48 @@ class ActividadController extends Controller
             } else {
                 return response()->json([
                     'registros' => [],
-                    'enlaces'   => ['primero'=>null,'ultimo'=>null,'anterior'=>null,'siguiente'=>null],
-                ]);
+                    'enlaces'   => ['primero' => null, 'ultimo' => null, 'anterior' => null, 'siguiente' => null],
+                ], 200);
             }
         }
 
         $q->orderBy('fechaAsignacion', 'desc')->orderBy('_id', 'desc');
 
-        $perPage     = (int) ($request->integer('perPage') ?: 6);
-        $actividades = $q->paginate($perPage)->appends($request->query());
-        $registros   = ActividadResource::collection($actividades)->resolve();
+        $perPage   = (int) ($request->integer('perPage') ?: 6);
+        $paginator = $q->paginate($perPage)->appends($request->query());
+
+        // Base con Resource
+        $registros = collect(ActividadResource::collection($paginator)->resolve());
+
+        // ===== Enriquecer con TÉCNICAS (nombre/categoría) en un solo query =====
+        $tecnicaIds = $registros->pluck('tecnica_id')
+            ->filter(fn ($v) => !empty($v))
+            ->map(function ($v) {
+                try { return $v instanceof ObjectId ? $v : new ObjectId((string) $v); }
+                catch (\Throwable $e) { return null; }
+            })
+            ->filter()
+            ->unique()
+            ->values();
+
+        $tecnicas = $tecnicaIds->isEmpty()
+            ? collect()
+            : Tecnica::whereIn('_id', $tecnicaIds)->get(['_id','nombre','categoria'])
+                ->keyBy(fn ($t) => (string) $t->_id);
+
+        $registros = $registros->map(function (array $a) use ($tecnicas) {
+            $key = (string) ($a['tecnica_id'] ?? '');
+            $a['tecnica'] = ($key && isset($tecnicas[$key])) ? $tecnicas[$key] : null;
+            return $a;
+        })->values();
 
         return response()->json([
             'registros' => $registros,
             'enlaces'   => [
-                'primero'   => $actividades->url(1),
-                'ultimo'    => $actividades->url($actividades->lastPage()),
-                'anterior'  => $actividades->previousPageUrl(),
-                'siguiente' => $actividades->nextPageUrl(),
+                'primero'   => $paginator->url(1),
+                'ultimo'    => $paginator->url($paginator->lastPage()),
+                'anterior'  => $paginator->previousPageUrl(),
+                'siguiente' => $paginator->nextPageUrl(),
             ],
         ], 200);
     }
@@ -82,19 +107,19 @@ class ActividadController extends Controller
     {
         $data = $request->validated();
 
-        // Fecha de asignación siempre hoy (MX)
+        // Fecha de asignación hoy (MX)
         $data['fechaAsignacion'] = Carbon::now('America/Mexico_City')->toDateString();
 
-        // Normaliza a string por si te llega ObjectId desde otra parte
+        // Normalizaciones a string
         $data['docente_id'] = (string) $data['docente_id'];
         $data['tecnica_id'] = (string) $data['tecnica_id'];
 
-        // Normaliza participantes
+        // Normalizar participantes
         if (isset($data['participantes']) && is_array($data['participantes'])) {
             $data['participantes'] = array_values(array_map(function ($p) {
                 return [
                     'user_id' => (string) ($p['user_id'] ?? ''),
-                    'estado'  => in_array(($p['estado'] ?? 'Pendiente'), ['Pendiente', 'Completado', 'Omitido'], true)
+                    'estado'  => in_array(($p['estado'] ?? 'Pendiente'), ['Pendiente','Completado','Omitido'], true)
                         ? $p['estado'] : 'Pendiente',
                 ];
             }, $data['participantes']));
@@ -102,24 +127,37 @@ class ActividadController extends Controller
 
         $actividad = Actividad::create($data);
 
+        // Respuesta con técnica adjunta
+        $payload = (new ActividadResource($actividad))->resolve();
+        $payload['tecnica'] = $this->findTecnicaShallow($payload['tecnica_id'] ?? null);
+
         return response()->json([
             'mensaje'   => 'Actividad creada correctamente.',
-            'actividad' => new ActividadResource($actividad),
+            'actividad' => $payload,
         ], 201);
     }
 
+    /**
+     * GET /api/actividades/{actividad}
+     */
     public function show(Actividad $actividad): JsonResponse
     {
+        $payload = (new ActividadResource($actividad))->resolve();
+        $payload['tecnica'] = $this->findTecnicaShallow($payload['tecnica_id'] ?? null);
+
         return response()->json([
-            'actividad' => new ActividadResource($actividad),
+            'actividad' => $payload,
         ], 200);
     }
 
+    /**
+     * PUT /api/actividades/{actividad}
+     */
     public function update(ActividadRequest $request, Actividad $actividad): JsonResponse
     {
         $data = $request->validated();
 
-        // Mantén fechaAsignacion si no se envía
+        // Mantener fechaAsignacion si no llega
         $data['fechaAsignacion'] = $data['fechaAsignacion'] ?? $actividad->fechaAsignacion;
         $data['docente_id']      = (string) $data['docente_id'];
         $data['tecnica_id']      = (string) $data['tecnica_id'];
@@ -128,7 +166,7 @@ class ActividadController extends Controller
             $data['participantes'] = array_values(array_map(function ($p) {
                 return [
                     'user_id' => (string) ($p['user_id'] ?? ''),
-                    'estado'  => in_array(($p['estado'] ?? 'Pendiente'), ['Pendiente', 'Completado', 'Omitido'], true)
+                    'estado'  => in_array(($p['estado'] ?? 'Pendiente'), ['Pendiente','Completado','Omitido'], true)
                         ? $p['estado'] : 'Pendiente',
                 ];
             }, $data['participantes']));
@@ -136,12 +174,18 @@ class ActividadController extends Controller
 
         $actividad->update($data);
 
+        $payload = (new ActividadResource($actividad))->resolve();
+        $payload['tecnica'] = $this->findTecnicaShallow($payload['tecnica_id'] ?? null);
+
         return response()->json([
             'mensaje'   => 'Actividad actualizada correctamente.',
-            'actividad' => new ActividadResource($actividad),
+            'actividad' => $payload,
         ], 200);
     }
 
+    /**
+     * DELETE /api/actividades/{actividad}
+     */
     public function destroy(Actividad $actividad): JsonResponse
     {
         $actividad->delete();
@@ -164,23 +208,23 @@ class ActividadController extends Controller
 
             $cohortes = [];
 
-            // 1) Embebido en user.persona
+            // (1) Embebido en user.persona
             $raw = $u->persona->cohorte ?? $u->persona['cohorte'] ?? null;
             if ($raw) {
                 if (is_array($raw)) {
-                    foreach ($raw as $c) { $s = trim((string)$c); if ($s !== '') $cohortes[] = $s; }
+                    foreach ($raw as $c) { $s = trim((string) $c); if ($s !== '') $cohortes[] = $s; }
                 } elseif (is_string($raw)) {
                     $s = trim($raw); if ($s !== '') $cohortes[] = $s;
                 }
             }
 
-            // 2) Relación persona
+            // (2) Fallback a documento Persona
             if (empty($cohortes) && !empty($u->persona_id)) {
                 $p = Persona::find($u->persona_id);
                 if ($p) {
                     $raw = $p->cohorte ?? null;
                     if (is_array($raw)) {
-                        foreach ($raw as $c) { $s = trim((string)$c); if ($s !== '') $cohortes[] = $s; }
+                        foreach ($raw as $c) { $s = trim((string) $c); if ($s !== '') $cohortes[] = $s; }
                     } elseif (is_string($raw)) {
                         $s = trim($raw); if ($s !== '') $cohortes[] = $s;
                     }
@@ -203,22 +247,19 @@ class ActividadController extends Controller
             $u = auth('api')->user();
             if (!$u) return response()->json(['alumnos' => []], 200);
 
-            // 1) Cohortes del profe
             $cohortes = $this->cohortesDe($u);
 
-            // 2) Filtro opcional exacto
-            $fCoh = trim((string)$request->query('cohorte', ''));
+            // filtro exacto opcional
+            $fCoh = trim((string) $request->query('cohorte', ''));
             if ($fCoh !== '') {
-                $cohortes = array_values(array_filter($cohortes, fn($c) => strcasecmp($c, $fCoh) === 0));
+                $cohortes = array_values(array_filter($cohortes, fn ($c) => strcasecmp($c, $fCoh) === 0));
             }
 
             if (empty($cohortes)) return response()->json(['alumnos' => []], 200);
 
-            // 3) Alumnos en cualquiera de esas cohortes (string o array)
             $usersQ = User::query()
                 ->whereIn('rol', ['estudiante','alumno'])
                 ->where(function ($w) use ($cohortes) {
-                    // $in sobre persona.cohorte (match si el campo es string == valor o array que contiene valor)
                     $w->whereIn('persona.cohorte', $cohortes);
                 });
 
@@ -241,23 +282,35 @@ class ActividadController extends Controller
         }
     }
 
-    /* -------------------- helper privado local -------------------- */
+    /* -------------------- helpers privados -------------------- */
+
     private function cohortesDe(User $u): array
     {
         $out = [];
         $raw = $u->persona->cohorte ?? $u->persona['cohorte'] ?? null;
         if ($raw) {
-            if (is_array($raw)) { foreach ($raw as $c) { $s = trim((string)$c); if ($s!=='') $out[]=$s; } }
-            elseif (is_string($raw)) { $s=trim($raw); if($s!=='') $out[]=$s; }
+            if (is_array($raw)) { foreach ($raw as $c) { $s = trim((string) $c); if ($s !== '') $out[] = $s; } }
+            elseif (is_string($raw)) { $s = trim($raw); if ($s !== '') $out[] = $s; }
         }
         if (empty($out) && !empty($u->persona_id)) {
             $p = Persona::find($u->persona_id);
             if ($p) {
                 $raw = $p->cohorte ?? null;
-                if (is_array($raw)) { foreach ($raw as $c) { $s = trim((string)$c); if ($s!=='') $out[]=$s; } }
-                elseif (is_string($raw)) { $s=trim($raw); if($s!=='') $out[]=$s; }
+                if (is_array($raw)) { foreach ($raw as $c) { $s = trim((string) $c); if ($s !== '') $out[] = $s; } }
+                elseif (is_string($raw)) { $s = trim($raw); if ($s !== '') $out[] = $s; }
             }
         }
         return array_values(array_unique($out));
+    }
+
+    private function findTecnicaShallow($id)
+    {
+        if (!$id) return null;
+        try {
+            $oid = $id instanceof ObjectId ? $id : new ObjectId((string) $id);
+        } catch (\Throwable $e) {
+            return null;
+        }
+        return Tecnica::where('_id', $oid)->first(['_id','nombre','categoria']);
     }
 }

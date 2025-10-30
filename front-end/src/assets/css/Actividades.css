@@ -1,0 +1,222 @@
+:root { --ink:#1b3b6f; --ink-2:#2c4c86; --sky:#eaf3ff; --card-b:#f8fbff; --stroke:#e6eefc; --chip:#eef6ff; --chip-ink:#2c4c86; }
+.fw-600 { font-weight: 600; }
+
+.filter-label { font-size:.9rem; color:var(--ink-2); font-weight:600; }
+
+/* Selectores modernos */
+.modern-select { position: relative; }
+.btn-select {
+  border:1px solid var(--stroke);
+  background:#fff; color:#223; border-radius:999px;
+  display:flex; align-items:center; gap:.5rem;
+  padding:.35rem .75rem;
+  max-width: 260px;
+}
+.btn-select .text-truncate { max-width: 150px; }
+.btn-select:hover { background:#f9fbff; }
+
+.select-panel{
+  position:absolute; z-index: 5; top: calc(100% + 6px); left:0;
+  min-width: 280px; width:max-content; max-width: 360px;
+  background:#fff; border:1px solid var(--stroke); border-radius:12px;
+  box-shadow: 0 10px 24px rgba(15,22,48,.12);
+}
+.select-search{
+  display:flex; align-items:center; gap:.5rem; padding:.5rem .6rem;
+  border-bottom:1px solid var(--stroke);
+}
+.select-search i { opacity:.7; }
+.select-search .form-control{ border:0; box-shadow:none; }
+.btn-clear{ border:0; background:transparent; padding:.2rem .25rem; }
+
+.select-list{ max-height: 260px; overflow:auto; padding:.35rem; }
+.select-group{
+  font-size:.75rem; text-transform:uppercase; letter-spacing:.04em;
+  color:#6b7a99; padding:.35rem .5rem .2rem;
+}
+.select-item{
+  width:100%; text-align:left; background:#fff; border:0;
+  padding:.55rem .65rem; border-radius:10px; display:flex; justify-content:space-between; align-items:center;
+}
+.select-item:hover{ background:#f5f8ff; }
+.select-item.active{ background:#eaf2ff; outline:1px solid #d7e6ff; }
+.select-item .title{ font-size:.92rem; }
+
+/* Fila de fechas */
+.filters-row{ display:flex; align-items:center; gap:.75rem; }
+.filters-labels small{ white-space:nowrap; }
+.filters-controls{ display:flex; gap:.5rem; }
+.filters-controls .form-control{ min-width: 10.5rem; }
+
+/* CTA */
+.gradient-card { background: linear-gradient(135deg, #6a8dff, #7b5cff); border-radius: 16px; }
+.btn-gradient { background: linear-gradient(135deg, #6a8dff, #7b5cff); color:#fff; border:0; }
+.btn-gradient:hover { filter: brightness(.95); color:#fff; }
+
+/* Chips */
+.chip{
+  display:inline-flex; align-items:center; gap:.5rem; padding:.35rem .65rem;
+  border-radius:999px; font-size:.84rem; background:#fff; border:1px solid var(--stroke);
+}
+.chip-info { background:var(--chip); color:var(--chip-ink); border-color:#d8e6ff; }
+.chip .chip-x{ border:0; background:transparent; padding:0; margin-left:.25rem; line-height:0; color:inherit; cursor:pointer; }
+
+/* Tabla */
+.table td, .table th { vertical-align: middle; }
+
+/* ======== SweetAlert: overlay y popup ======== */
+:deep(.swal2-container.swal2-pt){
+  padding-top: 5.5rem !important;
+  backdrop-filter: blur(4px);
+  background-color: rgba(10,16,28,.28) !important;
+}
+:deep(.swal2-popup.swal2-rounded){ border-radius: 18px !important; }
+:deep(.sw-actions){ display: flex; align-items: center; justify-content: flex-end; }
+:deep(.swal2-confirm.btn.btn-gradient){
+  background: linear-gradient(135deg, #6a8dff, #7b5cff) !important;
+  border: 0 !important; color:#fff !important;
+  padding: .5rem 1rem !important; border-radius: 999px !important;
+}
+:deep(.swal2-cancel.btn.btn-outline-secondary){ border-radius: 999px !important; }
+:deep(.swal2-close.swal2-close-pt){ box-shadow:none !important; opacity:.7; }
+:deep(.swal2-close.swal2-close-pt):hover{ opacity:1; }
+
+/* ======== Formulario SweetAlert ======== */
+.sw-card{ border:1px solid var(--stroke); border-radius: 16px; background: #fff; }
+.sw-card-header{
+  position: relative;
+  display:flex; align-items:center; justify-content:flex-start;
+  gap:.75rem; padding:.75rem 1rem;
+  background:#fff; border-bottom:1px solid var(--stroke);
+  border-top-left-radius:16px; border-top-right-radius:16px;
+}
+.sw-card-header h6{ display:flex; align-items:center; gap:.5rem; margin:0; }
+.sw-toggle-top{
+  position:absolute; right:12px; top:50%; transform:translateY(-50%);
+}
+
+/* ====== Barra de búsqueda tipo 'pill' ====== */
+.sw-search-group{
+  display:flex; align-items:center; gap:.5rem;
+  border:1px solid var(--stroke); border-radius:999px; padding:.35rem .6rem; background:#fff;
+  box-shadow: inset 0 0 0 2px rgba(122,153,255,.06);
+  white-space:nowrap;
+}
+.sw-search-group .input-icon{ display:flex; align-items:center; opacity:.65; }
+.sw-search-input{ border:0 !important; box-shadow:none !important; flex:1 1 auto; min-width:0; height:38px; }
+.icon-btn{
+  border:0; background:transparent; display:flex; align-items:center; justify-content:center;
+  width:32px; height:32px; border-radius:999px; padding:0;
+}
+.icon-btn:hover{ background:#f2f6ff; }
+.tecnica-list, .sw-list { max-height: 280px; overflow:auto; }
+
+/* Responsive */
+@media (max-width: 576px){
+  .sw-search-group{ padding:.25rem .45rem; }
+  .sw-card-header h6{ font-size: .96rem; }
+}
+
+/* Lista con bordes suaves */
+:deep(.sw-form .sw-list .list-group-item){ border-radius: 10px; margin-bottom:.35rem; }
+
+/* ===== Calendarios bonitos (inputs date) ===== */
+.panel-wrapper input[type="date"]{
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  border:1px solid var(--stroke);
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%232c4c86' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='4.5' width='18' height='16' rx='2'/><line x1='16' y1='2.5' x2='16' y2='6.5'/><line x1='8' y1='2.5' x2='8' y2='6.5'/><line x1='3' y1='9.5' x2='21' y2='9.5'/></svg>") no-repeat 12px 50%,
+    #fff;
+  color: var(--ink);
+  border-radius: 999px;
+  padding: .5rem 1rem .5rem 2.4rem; /* espacio para el ícono */
+  height: 38px;
+  line-height: 1;
+  font-size: .92rem;
+  transition: box-shadow .18s ease, border-color .18s ease, background-color .18s ease;
+  box-shadow: inset 0 0 0 2px rgba(122,153,255,.06);
+}
+
+.panel-wrapper input[type="date"]:hover{
+  background-color: var(--card-b);
+  border-color: #dbe6ff;
+}
+
+.panel-wrapper input[type="date"]:focus{
+  outline: none;
+  border-color: #c8d8ff;
+  box-shadow: 0 0 0 4px rgba(120,148,255,.15);
+}
+
+/* Indicador nativo: lo dejamos clickeable pero invisible para usar nuestro ícono */
+.panel-wrapper input[type="date"]::-webkit-calendar-picker-indicator{
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+/* Ajustes tipográficos internos (WebKit) para que el texto no se vea comprimido */
+.panel-wrapper input[type="date"]::-webkit-datetime-edit,
+.panel-wrapper input[type="date"]::-webkit-datetime-edit-fields-wrapper{
+  padding: 0;
+}
+
+.panel-wrapper input[type="date"]::-webkit-datetime-edit{
+  color: var(--ink);
+}
+
+.panel-wrapper input[type="date"]::-webkit-datetime-edit-year-field,
+.panel-wrapper input[type="date"]::-webkit-datetime-edit-month-field,
+.panel-wrapper input[type="date"]::-webkit-datetime-edit-day-field{
+  padding: 0 .05rem;
+}
+
+/* Placeholder/fondo cuando no hay valor (Firefox muestra texto tenue) */
+.panel-wrapper input[type="date"]:invalid{
+  color: #7a8aaa;
+}
+
+/* Compacto en móviles */
+@media (max-width: 576px){
+  .panel-wrapper input[type="date"]{
+    height: 36px;
+    font-size: .9rem;
+    padding-left: 2.2rem;
+  }
+}
+
+/* Opcional: chip para fechas mostradas en tabla (armoniza con tu diseño) */
+.date-chip{
+  display:inline-flex; align-items:center; gap:.4rem;
+  background: var(--sky);
+  color: var(--ink-2);
+  border:1px solid var(--stroke);
+  padding: .25rem .55rem;
+  border-radius: 999px;
+  font-size: .82rem;
+}
+.date-chip i{ opacity:.7; }
+
+/* Ícono de calendario: que sí sea clickeable y no tape el input */
+.panel-wrapper input[type="date"],
+.sw-form input[type="date"]{
+  padding-right: 2.4rem; /* espacio para el picker real a la derecha */
+  background-position: calc(100% - 12px) 50%, #fff; /* tu ícono visual también a la derecha */
+}
+
+/* Mantén el picker nativo invisible pero clickeable, tamaño solo en el borde derecho */
+.panel-wrapper input[type="date"]::-webkit-calendar-picker-indicator,
+.sw-form input[type="date"]::-webkit-calendar-picker-indicator{
+  opacity: 0;               /* oculta el ícono nativo */
+  position: absolute;
+  right: 8px;               /* área clickeable al borde derecho */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+}
+
