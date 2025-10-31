@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\TestController;
 use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\UserPointsController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\DashboardAlumnoController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Api\ActividadesAsignadasController;
 use App\Http\Controllers\Api\ReporteController;
@@ -159,11 +160,11 @@ Route::middleware(['auth:api'])->group(function () {
 
         });
 
-
+        // ===== Alumno con controlador dedicado =====
         Route::prefix('alumno')->group(function () {
-            Route::get('/overview',     [DashboardController::class, 'alumnoOverview']);
-            Route::get('/bienestar',    [DashboardController::class, 'alumnoBienestarSemanal']);
-            Route::get('/asignaciones', [DashboardController::class, 'alumnoAsignaciones']);
+            Route::get('/overview',     [DashboardAlumnoController::class, 'overview']);
+            Route::get('/bienestar',    [DashboardAlumnoController::class, 'bienestarSemanal']);
+            Route::get('/asignaciones', [DashboardAlumnoController::class, 'asignaciones']);
         });
         
     });
