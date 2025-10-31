@@ -214,6 +214,13 @@ export async function fetchActividadesPorGrupoProfesor() {
   }
 }
 
+// Añade junto a los demás exports
+export async function fetchActividadesAsignadas(params = {}) {
+   // usa `api`, que ya mete Authorization: Bearer <token>
+  const { data } = await api.get("/alumno/actividades", { params });
+   return data || { registros: [], enlaces: {} };
+}
+
 /** ========= Export por defecto (incluye profesor) ========= */
 export default {
   // Admin / comunes

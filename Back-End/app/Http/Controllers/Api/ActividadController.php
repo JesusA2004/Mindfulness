@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use MongoDB\BSON\ObjectId;
+use MongoDB\BSON\Regex;
 
 class ActividadController extends Controller
 {
@@ -86,6 +87,73 @@ class ActividadController extends Controller
         $registros = $registros->map(function (array $a) use ($tecnicas) {
             $key = (string) ($a['tecnica_id'] ?? '');
             $a['tecnica'] = ($key && isset($tecnicas[$key])) ? $tecnicas[$key] : null;
+            return $a;
+        })->values();
+
+        return response()->json([
+            'registros' => $registros,
+            'enlaces'   => [
+                'primero'   => $paginator->url(1),
+                'ultimo'    => $paginator->url($paginator->lastPage()),
+                'anterior'  => $paginator->previousPageUrl(),
+                'siguiente' => $paginator->nextPageUrl(),
+            ],
+        ], 200);
+    }
+
+    // GET /api/actividades/asignadas  (solo las del usuario autenticado)
+    public function asignadas(Request $request): JsonResponse
+    {
+        $u = auth('api')->user();
+        if (!$u) return response()->json(['message' => 'No autenticado'], 401);
+
+        $uid = (string)($u->_id ?? $u->id ?? '');
+
+        $q = Actividad::query();
+
+        // participantes puede estar como ARRAY o quedó STRING en algunos docs → cubrir ambos
+        $q->where(function ($w) use ($uid) {
+            $w->where('participantes', 'elemMatch', ['user_id' => $uid])
+            ->orWhere('participantes', 'regex', new Regex('"user_id":"'.preg_quote($uid, '/').'"', 'i'));
+        });
+
+        // filtro opcional ?estado=Pendiente|Completado|Omitido
+        if ($estado = $request->query('estado')) {
+            $estado = ucfirst(strtolower($estado));
+            if (in_array($estado, ['Pendiente','Completado','Omitido'], true)) {
+                $q->where(function ($w) use ($uid, $estado) {
+                    $w->where('participantes', 'elemMatch', ['user_id' => $uid, 'estado' => $estado])
+                    ->orWhere('participantes', 'regex', new Regex('"user_id":"'.preg_quote($uid, '/').'"[^}]*"estado":"'.$estado.'"', 'i'));
+                });
+            }
+        }
+
+        $q->orderBy('fechaAsignacion', 'desc')->orderBy('_id', 'desc');
+
+        $perPage   = (int)($request->integer('perPage') ?: 12);
+        $paginator = $q->paginate($perPage)->appends($request->query());
+
+        // enriquecer con técnica (coincide con tu modelo Tecnica)
+        $registros = collect(ActividadResource::collection($paginator)->resolve());
+        $ids = $registros->pluck('tecnica_id')->filter()->unique()->values();
+
+        $tecnicas = $ids->isEmpty()
+            ? collect()
+            : Tecnica::whereIn('_id', $ids)
+                ->get(['_id','nombre','categoria','dificultad','duracion','recursos'])
+                ->keyBy(fn($t) => (string)$t->_id);
+
+        $registros = $registros->map(function(array $a) use ($tecnicas){
+            // técnica
+            $k = (string)($a['tecnica_id'] ?? '');
+            $a['tecnica'] = $k && isset($tecnicas[$k]) ? $tecnicas[$k] : null;
+            // participantes: string -> array
+            $p = $a['participantes'] ?? [];
+            if (is_string($p)) {
+                $dec = json_decode($p, true);
+                $p = is_array($dec) ? $dec : [];
+            }
+            $a['participantes'] = $p;
             return $a;
         })->values();
 

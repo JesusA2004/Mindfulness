@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\UserPointsController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Auth\PasswordResetController;
+use App\Http\Controllers\Api\ActividadesAsignadasController;
 
 /*
 |--------------------------------------------------------------------------
@@ -71,6 +72,10 @@ Route::middleware(['auth:api'])->group(function () {
     Route::apiResource('recompensas', RecompensaController::class);
     Route::apiResource('tecnicas', TecnicaController::class);
     Route::apiResource('tests', TestController::class);
+
+    Route::prefix('alumno')->group(function () {
+        Route::get('/actividades', [ActividadesAsignadasController::class, 'index']);
+    });
 
     // Rutas especiales (acciones de responder)
     Route::put('encuestas/{encuesta}/responder', [EncuestaController::class, 'responder']);
