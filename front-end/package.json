@@ -17,6 +17,7 @@
     "bootstrap": "^5.3.6",
     "chart.js": "^4.5.1",
     "core-js": "^3.42.0",
+    "dayjs": "^1.11.18",
     "laravel-echo": "^2.2.4",
     "pusher-js": "^8.4.0",
     "sweetalert2": "^11.22.0",

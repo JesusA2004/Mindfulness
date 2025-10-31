@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\UserPointsController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Api\ActividadesAsignadasController;
+use App\Http\Controllers\Api\ReporteController;
 
 /*
 |--------------------------------------------------------------------------
@@ -83,6 +84,22 @@ Route::middleware(['auth:api'])->group(function () {
 
     // Subidas
     Route::post('/uploads', [UploadController::class, 'store']);
+
+    // Reportes (solo consulta). Opcional: agrega tu middleware de rol/policy si aplica.
+    // ->middleware('can:reportes.consultar')  // ejemplo con Gate/Policy
+    Route::prefix('reportes')->group(function () {
+        Route::get('/top-tecnicas',            [ReporteController::class, 'topTecnicas']);
+        Route::get('/actividades-por-alumno',  [ReporteController::class, 'actividadesPorAlumno']);
+        Route::get('/citas-por-alumno',        [ReporteController::class, 'citasPorAlumno']);
+        Route::get('/bitacoras-por-alumno',    [ReporteController::class, 'bitacorasPorAlumno']);
+        Route::get('/encuestas-resultados',    [ReporteController::class, 'encuestasResultados']);
+        Route::get('/recompensas-canjeadas',   [ReporteController::class, 'recompensasCanjeadas']);
+
+        // Descargas
+        Route::get('/export', [ReporteController::class, 'export']); 
+
+        Route::get('/suggest-alumnos', [ReporteController::class, 'suggestAlumnos']);
+    });
 
     // Backups
     Route::get('backups/export', [BackupController::class, 'export']);
