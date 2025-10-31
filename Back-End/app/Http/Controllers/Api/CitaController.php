@@ -13,6 +13,9 @@ use App\Events\CitaEstadoCambiado;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use MongoDB\BSON\ObjectId as MongoObjectId;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\CitaCreadaMail;
+use App\Mail\CitaEstadoMail;
 
 class CitaController extends Controller
 {
@@ -36,6 +39,65 @@ class CitaController extends Controller
                 'siguiente' => $citas->nextPageUrl(),
             ],
         ]);
+    }
+
+    /* ===================== Emails ===================== */
+
+    private function emailCreacion(Cita $cita): void
+    {
+        $alumno  = User::find((string)$cita->alumno_id);
+        $docente = User::find((string)$cita->docente_id);
+
+        if (!$alumno || empty($alumno->email)) return;
+
+        $payload = [
+            'alumno_nombre'  => $alumno->name  ?? $alumno->nombre  ?? 'Alumno',
+            'docente_nombre' => $docente->name ?? $docente->nombre ?? 'Profesor',
+            'fecha_cita'     => $this->toIso($cita->fecha_cita),
+            'fecha_pretty'   => $this->pretty($cita->fecha_cita),
+            'modalidad'      => $cita->modalidad,
+            'motivo'         => $cita->motivo,
+            'estado'         => $cita->estado,
+        ];
+
+        Mail::to($alumno->email)
+            ->cc(array_filter([ $docente->email ?? null ])) // Quita CC si no quieres
+            ->send(new CitaCreadaMail($payload));
+    }
+
+    /** Devuelve un formato legible tipo “30 oct 2025, 2:30 p.m.” */
+    private function pretty($fecha): string
+    {
+        if (!$fecha) return '—';
+        try {
+            $d = new \DateTime($fecha);
+            return $d->format('d M Y, h:i a');
+        } catch (\Throwable $e) {
+            return (string)$fecha;
+        }
+    }
+
+
+    private function emailCambioEstado(Cita $cita): void
+    {
+        $alumno  = User::find((string)$cita->alumno_id);
+        $docente = User::find((string)$cita->docente_id);
+        if (!$alumno || empty($alumno->email)) return;
+
+        $actor = Auth::user();
+        $payload = [
+            'alumno_nombre'  => $alumno->name  ?? $alumno->nombre  ?? 'Alumno',
+            'docente_nombre' => $docente->name ?? $docente->nombre ?? 'Profesor',
+            'estado'         => (string)$cita->estado,
+            'fecha_cita' => $this->toIso($cita->fecha_cita),
+            'fecha_pretty'   => $this->pretty($cita->fecha_cita),
+            'observaciones'  => $cita->observaciones,
+            'actor_nombre'   => $actor->name ?? $actor->nombre ?? 'Profesor',
+        ];
+
+        Mail::to($alumno->email)
+            ->cc(array_filter([ $docente->email ?? null ]))
+            ->send(new CitaEstadoMail($payload));
     }
 
     /**
@@ -80,6 +142,11 @@ class CitaController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+        }
+
+        // ==== Email de creación (al alumno y CC opcional al docente) ====
+        try { $this->emailCreacion($cita); } catch (\Throwable $e) {
+            Log::error('Email cita.store falló', ['error'=>$e->getMessage()]);
         }
 
         return response()->json([
@@ -134,6 +201,10 @@ class CitaController extends Controller
                     'trace' => $e->getTraceAsString(),
                 ]);
             }
+            // ==== Email de cambio de estado ====
+            try { $this->emailCambioEstado($cita); } catch (\Throwable $e) {
+                Log::error('Email cita.update falló', ['error'=>$e->getMessage()]);
+            }
         }
 
         return response()->json([
@@ -175,6 +246,11 @@ class CitaController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+        }
+
+        // ==== Email de cambio de estado ====
+        try { $this->emailCambioEstado($cita); } catch (\Throwable $e) {
+            Log::error('Email cita.update falló', ['error'=>$e->getMessage()]);
         }
 
         return response()->json([

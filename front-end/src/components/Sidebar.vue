@@ -302,7 +302,8 @@ const menusPorRol = {
     { to: '/app/estudiante/encuestas',   text: 'Encuestas',    icon: 'bi-clipboard-data'    },
     { to: '/app/estudiante/recompensas', text: 'Recompensas',  icon: 'bi-trophy'            },
     { to: '/app/estudiante/tecnicas',    text: 'Técnicas',     icon: 'bi-book'              },
-    { to: '/app/estudiante/tests',       text: 'Tests',        icon: 'bi-file-earmark-text' }
+    { to: '/app/estudiante/tests',       text: 'Tests',        icon: 'bi-file-earmark-text' },
+    { to: '/app/estudiante/seguimiento', text: 'Seguimiento',  icon: 'bi-activity'          }
   ],
   profesor: [
     { to: '/app/profesor/dashboard',   text: 'Inicio',       icon: 'bi-house'             },
@@ -311,7 +312,8 @@ const menusPorRol = {
     { to: '/app/profesor/encuestas',   text: 'Encuestas',    icon: 'bi-clipboard-data'    },
     { to: '/app/profesor/recompensas', text: 'Recompensas',  icon: 'bi-trophy'            },
     { to: '/app/profesor/tecnicas',    text: 'Técnicas',     icon: 'bi-book'              },
-    { to: '/app/profesor/tests',       text: 'Tests',        icon: 'bi-file-earmark-text' }
+    { to: '/app/profesor/tests',       text: 'Tests',        icon: 'bi-file-earmark-text' },
+    { to: '/app/profesor/seguimiento', text: 'Seguimiento',  icon: 'bi-activity'          }
   ],
   admin: [
     { to: '/app/admin/dashboard',   text: 'Inicio',       icon: 'bi-house'             },
@@ -323,7 +325,8 @@ const menusPorRol = {
     { to: '/app/admin/tecnicas',    text: 'Técnicas',     icon: 'bi-book'              },
     { to: '/app/admin/tests',       text: 'Tests',        icon: 'bi-file-earmark-text' },
     { to: '/app/admin/respaldo',    text: 'Respaldo',     icon: 'bi-file-earmark-text' },
-    { to: '/app/admin/reportes',    text: 'Reportes',     icon: 'bi-file-earmark-text' }
+    { to: '/app/admin/reportes',    text: 'Reportes',     icon: 'bi-file-earmark-text' },
+    { to: '/app/admin/seguimiento', text: 'Seguimiento',  icon: 'bi-activity'          }
   ]
 }
 const navItems = computed(() => menusPorRol[user.value?.rol] || [])

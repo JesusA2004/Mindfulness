@@ -13,6 +13,11 @@ import ProfesorLayout from '@/layouts/ProfesorLayout.vue'
 import EstudianteLayout from '@/layouts/EstudianteLayout.vue'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 
+// Seguimiento
+import SeguimientoEstudiante from '@/views/estudiante/Seguimiento.vue'
+import SeguimientoProfesor from '@/views/profesor/Seguimiento.vue'
+import SeguimientoAdmin from '@/views/administrador/Seguimiento.vue'
+
 // Públicas
 import Index         from '@/views/Index.vue'
 import Login         from '@/views/Login.vue'
@@ -88,6 +93,7 @@ const routes = [
           { path: 'recompensas', name: 'RecompensasP',   component: RecompensasP },
           { path: 'tecnicas',    name: 'TecnicasP',      component: TecnicasP },
           { path: 'tests',       name: 'TestsP',         component: TestsP },
+          { path: 'seguimiento',       name: 'SeguimientoProfesor',         component: SeguimientoProfesor }
         ]
       },
 
@@ -106,7 +112,8 @@ const routes = [
           { path: 'recompensas', name: 'RecompensasE',   component: RecompensasE },
           { path: 'tecnicas',    name: 'TecnicasE',      component: TecnicasE },
           { path: 'tests',       name: 'TestsE',         component: TestsE },
-          { path: 'crud',        name: 'CrudPage',       component: Crud }
+          { path: 'crud',        name: 'CrudPage',       component: Crud },
+          { path: 'seguimiento',       name: 'SeguimientoEstudiante',         component: SeguimientoEstudiante }
         ]
       },
 
@@ -126,7 +133,8 @@ const routes = [
           { path: 'tecnicas',    name: 'TecnicasA',         component: TecnicasA },
           { path: 'tests',       name: 'TestsA',            component: TestsA },
           { path: 'respaldo',    name: 'RespaldoA',         component: RespaldoA },
-          { path: 'reportes',    name: 'ReportesA',         component: ReportesA }
+          { path: 'reportes',    name: 'ReportesA',         component: ReportesA },
+          { path: 'seguimiento',       name: 'SeguimientoAdmin',         component: SeguimientoAdmin }
         ]
       }
     ]

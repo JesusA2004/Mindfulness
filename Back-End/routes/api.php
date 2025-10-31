@@ -65,10 +65,16 @@ Route::middleware(['auth:api'])->group(function () {
         Route::get('mis-cohortes', [ActividadController::class, 'misCohortes']);
         Route::get('mis-alumnos',  [ActividadController::class, 'misAlumnos']);
     });
-    Route::apiResource('actividades', ActividadController::class); // <- corregido (antes: actividads)
+
+    Route::apiResource('actividades', ActividadController::class); 
+    Route::patch('actividades/{id}/estado', [ActividadController::class, 'patchEstado']);
+
     Route::apiResource('bitacoras', BitacoraController::class);
     Route::post('/bitacoras/remind-today', [BitacoraController::class, 'remindToday']);
+    
     Route::apiResource('citas', CitaController::class);
+    Route::patch('citas/{id}/estado', [CitaController::class, 'updateEstado']);
+
     Route::apiResource('encuestas', EncuestaController::class);
     Route::apiResource('recompensas', RecompensaController::class);
     Route::apiResource('tecnicas', TecnicaController::class);

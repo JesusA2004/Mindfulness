@@ -1,0 +1,90 @@
+/* ===== Evitar que el navbar tape el contenido =====
+   Ajusta el offset con la var global --navbar-h si la tienes en tu layout.
+*/
+.avoid-navbar { padding-top: clamp(0px, var(--navbar-h, 72px) - 72px, 0px); }
+
+/* ===== Tonos y helpers ===== */
+.shadow-xs { box-shadow: 0 6px 18px rgba(16,24,40,.06); }
+.hover-raise { transition: transform .08s ease, box-shadow .18s ease; }
+.hover-raise:hover { transform: translateY(-1px); box-shadow: 0 12px 30px rgba(16,24,40,.12); }
+.clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.clamp-3 { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+
+.modal-header-gradient { background: linear-gradient(90deg, #2563eb, #7c3aed); color: #fff; }
+
+/* ===== Chips / botones ===== */
+.chip-btn { border-radius: 999px; padding: .35rem .7rem; }
+.btn-outline-purple { border-color: #7c3aed; color: #7c3aed; }
+.btn-outline-purple:hover { background: #f5f3ff; border-color:#7c3aed; color:#5b21b6; }
+
+/* ===== Search pill ===== */
+.search-group .form-control { border: none; }
+.search-group .input-group-text { background:#fff; border:none; }
+
+/* ===== Fila por estado ===== */
+.estado-rows { display: grid; gap: 16px; }
+.estado-row { border-radius: 14px; overflow: hidden; }
+.estado-dot { width: 10px; height: 10px; border-radius: 50%; display:inline-block; }
+.k-pendiente { background:#f59e0b; }  .k-aceptada { background:#10b981; }
+.k-rechazada { background:#ef4444; }  .k-finalizada { background:#6b7280; }
+
+.cards-scroller { overflow-x: auto; padding-bottom: 6px; }
+.cards-track { display: grid; grid-auto-flow: column; gap: 12px; }
+.cita-card { min-width: 300px; width: 300px; border-radius: 14px; }
+
+/* ===== Calendar ===== */
+.calendar-wrap { border-radius: 14px; overflow: hidden; position: relative; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; padding: 12px; }
+.calendar-head { text-align: center; font-weight: 700; padding: 8px 0; color: #334155; }
+.calendar-cell {
+  background: #ffffff; border: 1px solid #eef2f7; border-radius: 10px;
+  min-height: 86px; padding: 6px; position: relative; cursor: pointer;
+  transition: box-shadow .15s ease, transform .05s ease;
+}
+.calendar-cell:hover { box-shadow: 0 8px 24px rgba(16,24,40,.08); transform: translateY(-1px); }
+.calendar-cell.is-muted { background: #f8fafc; color: #94a3b8; }
+.calendar-cell.is-today { border-color:#93c5fd; box-shadow: inset 0 0 0 2px #bfdbfe; }
+.cell-top { display: flex; justify-content: space-between; align-items: center; }
+.day-number { font-weight: 700; font-size: 0.95rem; }
+.cell-dots { display:flex; gap:4px; margin-top:6px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display:inline-block; }
+.dot.k-pendiente { background:#f59e0b; } .dot.k-aceptada { background:#10b981; }
+.dot.k-rechazada { background:#ef4444; } .dot.k-finalizada { background:#6b7280; }
+.cell-total { position:absolute; right:6px; bottom:6px; background:#111827; color:#fff; font-size:.7rem;
+  padding:2px 6px; border-radius:999px; opacity:.9; }
+
+/* Day panel */
+.day-panel {
+  position: fixed; right: 16px; bottom: 16px; top: calc(var(--navbar-h, 64px) + 16px);
+  width: min(420px, 92vw); background:#fff; border-radius: 16px; overflow:auto; z-index: 1050;
+  border: 1px solid #eef2f7;
+}
+.day-panel-head { position: sticky; top:0; background: #ffffff; padding: 10px 12px; border-bottom: 1px solid #eef2f7; }
+.day-panel-body { padding: 12px; }
+.legend { display: inline-flex; align-items: center; gap: 6px; }
+.legend .legend-dot { width: 10px; height: 10px; border-radius: 50%; display:inline-block; }
+.legend .k-pendiente { background:#f59e0b; } .legend .k-aceptada { background:#10b981; }
+.legend .k-rechazada { background:#ef4444; } .legend .k-finalizada { background:#6b7280; }
+
+/* ===== Transiciones ===== */
+.fade-enter-active, .fade-leave-active { transition: opacity .18s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.stagger-enter-active { transition: all .25s ease; }
+.stagger-enter-from { opacity: 0; transform: translateY(6px); }
+
+.slide-x-enter-active, .slide-x-leave-active { transition: transform .18s ease, opacity .18s ease; }
+.slide-x-enter-from { transform: translateX(12px); opacity: 0; }
+.slide-x-leave-to { transform: translateX(12px); opacity: 0; }
+
+/* ===== Responsive ===== */
+@media (max-width: 1399.98px){
+  .cards-track { gap: 10px; }
+}
+@media (max-width: 1199.98px){
+  .cita-card { min-width: 280px; width: 280px; }
+}
+@media (max-width: 575.98px){
+  .calendar-grid { gap: 4px; padding: 8px; }
+  .calendar-cell { min-height: 74px; }
+}
