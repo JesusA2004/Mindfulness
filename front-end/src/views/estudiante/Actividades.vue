@@ -1,4 +1,3 @@
-<!-- src/views/alumno/Actividades.vue -->
 <template>
   <main class="container-lg py-4 student-activities">
 
@@ -81,22 +80,50 @@
       <div v-else class="row g-3 g-lg-4">
         <div v-for="a in registrosAlumno" :key="a._id || a.id" class="col-12 col-md-6 col-xl-4">
           <article class="card activity-card border-0 shadow-sm h-100 animate__animated animate__fadeInUp">
-            <!-- Preview (video/imagen/audio) -->
-            <div v-if="previewOf(a)" class="preview-wrap">
-              <img v-if="previewOf(a)?.type==='image'" class="preview-img" :src="previewOf(a).src" alt="preview" />
-              <div v-else-if="previewOf(a)?.type==='video'" class="preview-video">
-                <img class="preview-img" :src="previewOf(a).src" alt="video-thumb" />
-                <span class="play-badge"><i class="bi bi-play-fill"></i></span>
+
+            <!-- ====== Media estilo “hero card” con overlay ====== -->
+            <div class="media-hero position-relative">
+              <img
+                class="media-img"
+                :src="currentPreviewSrc(a)"
+                :alt="`preview-${a.nombre}`"
+                @error="handleImgError(a)"
+              />
+
+              <!-- Overlay con info compacta + CTA -->
+              <div class="media-overlay">
+                <div class="media-titles">
+                  <div class="media-sub text-truncate">
+                    {{ tecnicaFull(a).nombre || 'Técnica' }}
+                  </div>
+                  <div class="media-title text-truncate">
+                    {{ a.nombre }}
+                  </div>
+                </div>
+                <div class="media-ctas">
+                  <button class="btn btn-sm btn-ghost" @click.stop="verTecnica(a)">
+                    Leer técnica
+                  </button>
+                  <button class="btn btn-sm btn-ghost-strong" @click.stop="iniciarTecnica(a)">
+                    Iniciar
+                  </button>
+                </div>
               </div>
-              <div v-else-if="previewOf(a)?.type==='audio'" class="preview-audio">
-                <i class="bi bi-music-note-beamed me-2"></i> Audio
+
+              <!-- Dots del carrusel (solo si hay >1 y NO hay fallback) -->
+              <div v-if="!isFallback(a) && previewsOf(a).length > 1" class="dots">
+                <button
+                  v-for="(p,idx) in previewsOf(a)" :key="idx"
+                  :class="['dot', sliderIndex(a)===idx ? 'active' : '']"
+                  @click.stop="setSliderIndex(a, idx)"
+                  aria-label="Cambiar recurso"
+                ></button>
               </div>
             </div>
 
+            <!-- ====== Meta compacta debajo del media ====== -->
             <div class="card-body d-flex flex-column">
               <div class="d-flex align-items-start justify-content-between">
-                <h5 class="mb-1 fw-bold text-dark">{{ a.nombre }}</h5>
-
                 <span class="badge estado"
                       :class="{
                         'bg-success-subtle text-success border': estado(a)==='Completado',
@@ -105,65 +132,34 @@
                       }">
                   {{ estado(a) }}
                 </span>
+
+                <div class="small text-muted">
+                  <i class="bi bi-clock me-1"></i>
+                  {{ tecnicaFull(a).duracion ? (tecnicaFull(a).duracion + ' min') : '—' }}
+                </div>
               </div>
 
-              <!-- Técnica / meta -->
-              <div class="small text-muted mb-2 meta-line">
-                <i class="bi bi-flower3 me-1"></i>
-                {{ tecnicaFull(a).nombre }}
+              <div class="small text-muted mt-2">
+                <i class="bi bi-calendar-week me-1"></i>
+                Límite: <strong>{{ fmt(a.fechaMaxima) }}</strong>
               </div>
 
-              <div class="d-flex flex-wrap gap-2 mb-3">
+              <!-- Chips -->
+              <div class="d-flex flex-wrap gap-2 mt-3">
                 <span class="chip" v-if="tecnicaFull(a).categoria">
                   <i class="bi bi-tag me-1"></i>
-                  Categoría: <strong>{{ tecnicaFull(a).categoria }}</strong></span>
+                  {{ tecnicaFull(a).categoria }}
+                </span>
                 <span class="chip" v-if="tecnicaFull(a).dificultad">
                   <i class="bi bi-bar-chart me-1"></i>
-                  Dificultad: <strong>{{ tecnicaFull(a).dificultad }}</strong></span>
-                <span class="chip" v-if="tecnicaFull(a).duracion">
-                  <i class="bi bi-clock me-1"></i>
-                  Duración: <strong>{{ tecnicaFull(a).duracion }}</strong></span>
-              </div>
-
-              <!-- Descripción con etiqueta -->
-              <div v-if="a.descripcion" class="mb-3 text-muted">
-                <div class="desc-label mb-1">
-                  <i class="bi bi-info-circle me-1"></i> Descripción
-                </div>
-                <p class="mb-0">{{ a.descripcion }}</p>
-              </div>
-
-              <!-- Recursos preview (hasta 3) -->
-              <div class="rec-preview mb-3" v-if="tecRecursos(a).length">
-                <a v-for="(r, idx) in tecRecursos(a).slice(0,3)"
-                   :key="idx" class="rec-pill"
-                   :href="r.url" target="_blank" rel="noopener"
-                   :title="r.titulo || r.descripcion || 'Recurso'">
-                  <img :alt="r.tipo" :src="recursoIcon(r)" width="16" height="16"/>
-                  <span class="text-truncate">{{ r.titulo || r.descripcion || r.tipo }}</span>
-                </a>
-                <span v-if="tecRecursos(a).length > 3" class="rec-more">
-                  +{{ tecRecursos(a).length - 3 }} más
+                  {{ tecnicaFull(a).dificultad }}
                 </span>
               </div>
 
-              <div class="d-flex align-items-center justify-content-between mt-auto">
-                <span class="small text-muted">
-                  <i class="bi bi-calendar-week me-1"></i>
-                  Límite: <strong>{{ fmt(a.fechaMaxima) }}</strong>
-                </span>
-
-                <div class="d-flex gap-2">
-                  <button class="btn btn-sm btn-outline-primary rounded-pill px-3"
-                          @click="verTecnica(a)">
-                    <i class="bi bi-list-ul me-1"></i> Leer técnica
-                  </button>
-                  <button class="btn btn-sm btn-primary rounded-pill px-3 btn-grad"
-                          @click="iniciarTecnica(a)">
-                    <i class="bi bi-stopwatch me-1"></i> Iniciar técnica
-                  </button>
-                </div>
-              </div>
+              <!-- Descripción (compacta) -->
+              <p v-if="a.descripcion" class="text-muted mt-3 mb-0 small two-lines">
+                {{ a.descripcion }}
+              </p>
             </div>
           </article>
         </div>
@@ -188,19 +184,53 @@
 
 <script>
 /**
- * Vista Alumno con mejoras visuales y “Iniciar técnica” (cronómetro por duración)
+ * - Temporizador que deshabilita "Finalizar" hasta llegar a 00:00.
+ * - PATCH /api/actividades/{id}/estado marcando estado=Completado SOLO para el alumno en sesión.
+ * - Sin cambios de diseño en las cards.
  */
 import controller from "@/assets/js/actividades.controller";
 import { getCurrentUser, fetchTecnicas, fetchActividadesAsignadas } from "@/composables/actividades";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
+import axios from "axios";
+
+const FALLBACK_IMG = "/img/placeholders/actividad-default.jpg";
+
+/* ====== Base URL + Token (compatibles con Vue CLI) ====== */
+const RAW_API_URL =
+  process.env.VUE_APP_API_URL ||
+  (process.env.VUE_APP_API_BASE
+    ? String(process.env.VUE_APP_API_BASE).replace(/\/+$/, "") + "/api"
+    : "/api");
+
+const API_BASE = String(RAW_API_URL).replace(/\/+$/, "");
+
+function readToken() {
+  const keys = ["token", "auth_token", "jwt", "access_token"];
+  for (const k of keys) {
+    const v = localStorage.getItem(k);
+    if (v) return v.replace(/^"|"$/g, "");
+  }
+  return null;
+}
+
+function authHeaders() {
+  const t = readToken();
+  return t ? { Authorization: `Bearer ${t}` } : {};
+}
 
 export default {
   name: "ActividadesAlumno",
   mixins: [controller],
 
+  data() {
+    return {
+      sliderState: {},     // { [actividadId]: index }
+      fallbackState: {},   // { [actividadId]: true }
+    };
+  },
+
   computed: {
-    // Cohorte(s) del alumno desde usuario (normalizado)
     cohortesVisibles() {
       const norm = (v) => String(v || "").replace(/\s+/g, " ").trim();
       const c = this.usuario?.persona?.cohorte;
@@ -212,24 +242,34 @@ export default {
       return this.cohortesVisibles.length ? this.cohortesVisibles.join(", ") : "—";
     },
 
-    // Solo actividades PARA el alumno
     registrosAlumno() {
-      const id = String(this.myId || "");
-      const norm = (p) => Array.isArray(p) ? p
-        : (typeof p === "string" ? (()=>{ try{return JSON.parse(p)}catch{return []} })() : []);
-      return (this.registros || []).filter(a => norm(a?.participantes).some(p => String(p.user_id) === id));
+      const ids = this.getCurrentUserIds();
+      const norm = (p) =>
+        Array.isArray(p)
+          ? p
+          : typeof p === "string"
+          ? (() => { try { return JSON.parse(p); } catch { return []; } })()
+          : [];
+      return (this.registros || []).filter((a) =>
+        norm(a?.participantes).some((p) => ids.includes(String(p.user_id || "").trim()))
+      );
     },
-    // Progreso (solo del alumno)
+
     totalAsignadas() {
       return this.registrosAlumno.length;
     },
     completadas() {
-      const id = String(this.myId || "");
-      return this.registrosAlumno.filter(a => {
+      const ids = this.getCurrentUserIds();
+      return this.registrosAlumno.filter((a) => {
         const part = Array.isArray(a?.participantes)
           ? a.participantes
-          : (typeof a?.participantes === "string" ? (()=>{ try{return JSON.parse(a.participantes)}catch{return []} })() : []);
-        return part.some(p => String(p.user_id) === id && String(p.estado).toLowerCase() === "completado");
+          : typeof a?.participantes === "string"
+          ? (() => { try { return JSON.parse(a.participantes); } catch { return []; } })()
+          : [];
+        return part.some(
+          (p) => ids.includes(String(p.user_id || "").trim()) &&
+                 String(p.estado || "").toLowerCase() === "completado"
+        );
       }).length;
     },
     progressPct() {
@@ -240,9 +280,9 @@ export default {
 
   methods: {
     async bootstrap() {
-      this.usuario = await getCurrentUser() || this.usuario || null;
+      this.usuario = (await getCurrentUser()) || this.usuario || null;
       await this.ensurePersonaOnUser?.();
-      this.tecnicas = await fetchTecnicas() || [];
+      this.tecnicas = (await fetchTecnicas()) || [];
       await this.cargarSoloAsignadas();
     },
 
@@ -264,19 +304,46 @@ export default {
       this.totalPaginas = last || (this.enlaces.siguiente ? this.paginaActual + 1 : this.paginaActual);
     },
 
-    // Estado del alumno actual en la actividad
+    /* ========= IDs posibles del usuario actual ========= */
+    getCurrentUserIds() {
+      const ids = new Set();
+      const u = this.usuario || {};
+      const add = (v) => { if (v === undefined || v === null) return; const s = String(v).trim().replace(/^"|"$/g, ""); if (s) ids.add(s); };
+
+      // Objeto en memoria
+      add(u._id); add(u.id); add(u?.usuario_id);
+
+      // localStorage serializado
+      try {
+        const raw = localStorage.getItem("user") || localStorage.getItem("usuario");
+        if (raw) {
+          const o = JSON.parse(raw);
+          add(o?._id); add(o?.id); add(o?.usuario_id);
+        }
+      } catch {}
+
+      // Claves sueltas usuales
+      add(localStorage.getItem("user_id"));
+      add(localStorage.getItem("uid"));
+
+      return Array.from(ids);
+    },
+
+    // ===== Estado mostrado en la tarjeta =====
     estado(a) {
-      const myKey = String(this.myId || "");
-      const part = Array.isArray(a?.participantes) ? a.participantes
-        : (typeof a?.participantes === "string" ? (()=>{ try{return JSON.parse(a.participantes)}catch{return []} })() : []);
-      const row = part.find(p => String(p.user_id) === myKey);
+      const ids = this.getCurrentUserIds();
+      const toArr = (p) =>
+        Array.isArray(p) ? p :
+        typeof p === "string" ? (() => { try { return JSON.parse(p); } catch { return []; } })() : [];
+      const part = toArr(a?.participantes);
+      const row = part.find((p) => ids.includes(String(p.user_id || "").trim()));
       return row?.estado || "Pendiente";
     },
 
-    // Técnica (con fallback)
+    // ===== Técnica (con fallback) =====
     tecnicaFull(a) {
       const id = String(a?.tecnica_id || "");
-      const fromList = (this.tecnicas || []).find(t => String(t._id || t.id) === id) || {};
+      const fromList = (this.tecnicas || []).find((t) => String(t._id || t.id) === id) || {};
       const fromPayload = a?.tecnica || {};
       return {
         nombre: fromPayload.nombre || fromList.nombre || "Técnica",
@@ -284,12 +351,71 @@ export default {
         dificultad: fromPayload.dificultad ?? fromList.dificultad ?? null,
         duracion: fromPayload.duracion ?? fromList.duracion ?? null,
         recursos: Array.isArray(fromPayload.recursos) ? fromPayload.recursos
-          : (Array.isArray(fromList.recursos) ? fromList.recursos : []),
+               : Array.isArray(fromList.recursos) ? fromList.recursos : [],
       };
     },
+    tecRecursos(a) { return this.tecnicaFull(a).recursos || []; },
 
-    tecRecursos(a) {
-      return this.tecnicaFull(a).recursos || [];
+    // ===== Helpers de previews (carrusel) =====
+    youtubeIdFromUrl(url = "") {
+      try {
+        const u = new URL(url);
+        if (u.hostname.includes("youtu.be")) return u.pathname.slice(1);
+        if (u.hostname.includes("youtube.com")) return u.searchParams.get("v");
+      } catch {}
+      return null;
+    },
+    buildPreviewFromRecurso(r) {
+      if (!r || !r.url) return null;
+      const t = String(r.tipo || "").toLowerCase();
+      const url = String(r.url);
+
+      const yt = this.youtubeIdFromUrl(url);
+      if (yt) return { type: "video", src: `https://i.ytimg.com/vi/${yt}/hqdefault.jpg` };
+
+      if (/\.(png|jpg|jpeg|webp|gif)$/i.test(url) || t.includes("imagen") || t.includes("image")) {
+        return { type: "image", src: url };
+      }
+      if (t.includes("video") || /\.(mp4|webm|mov|m4v)$/i.test(url)) {
+        return { type: "video", src: "https://i.imgur.com/8wqKJ3G.png" };
+      }
+      if (t.includes("audio") || /\.(mp3|wav|ogg)$/i.test(url)) {
+        return { type: "audio", src: FALLBACK_IMG, audio: true };
+      }
+      return null;
+    },
+    previewsOf(a) {
+      const recs = this.tecRecursos(a);
+      if (!Array.isArray(recs) || !recs.length) return [];
+      return recs.map(this.buildPreviewFromRecurso).filter(Boolean);
+    },
+    activityKey(a) { return String(a._id || a.id || JSON.stringify(a)); },
+    sliderIndex(a) {
+      const k = this.activityKey(a);
+      return Number.isInteger(this.sliderState[k]) ? this.sliderState[k] : 0;
+    },
+    setSliderIndex(a, idx) {
+      const k = this.activityKey(a);
+      this.$set ? this.$set(this.sliderState, k, idx) : (this.sliderState[k] = idx);
+    },
+    isFallback(a) {
+      const k = this.activityKey(a);
+      return !!this.fallbackState[k];
+    },
+    currentPreviewSrc(a) {
+      const list = this.previewsOf(a);
+      if (list.length) {
+        const p = list[this.sliderIndex(a) % list.length];
+        return p?.src || FALLBACK_IMG;
+      }
+      const k = this.activityKey(a);
+      this.fallbackState[k] = true;
+      return FALLBACK_IMG;
+    },
+    handleImgError(a) {
+      const k = this.activityKey(a);
+      this.fallbackState[k] = true;
+      this.$forceUpdate?.();
     },
 
     recursoIcon(r) {
@@ -300,47 +426,7 @@ export default {
       return "https://img.icons8.com/ios-glyphs/30/link.png";
     },
 
-    // ========= Previews pequeños en las tarjetas =========
-    youtubeIdFromUrl(url = "") {
-      try {
-        const u = new URL(url);
-        if (u.hostname.includes("youtu.be")) return u.pathname.slice(1);
-        if (u.hostname.includes("youtube.com")) return u.searchParams.get("v");
-      } catch {}
-      return null;
-    },
-    firstResource(a) {
-      const recs = this.tecRecursos(a);
-      return Array.isArray(recs) && recs.length ? recs[0] : null;
-    },
-    previewOf(a) {
-      const r = this.firstResource(a);
-      if (!r || !r.url) return null;
-      const t = String(r.tipo || "").toLowerCase();
-      const url = String(r.url);
-
-      // Youtube → miniatura
-      const yt = this.youtubeIdFromUrl(url);
-      if (yt) return { type: "video", src: `https://i.ytimg.com/vi/${yt}/hqdefault.jpg` };
-
-      // Imagen por extensión
-      if (/\.(png|jpg|jpeg|webp|gif)$/i.test(url) || t.includes("imagen") || t.includes("image")) {
-        return { type: "image", src: url };
-      }
-
-      // Video simple → placeholder
-      if (t.includes("video") || /\.(mp4|webm|mov|m4v)$/i.test(url)) {
-        return { type: "video", src: "https://i.imgur.com/8wqKJ3G.png" }; // thumb neutra
-      }
-
-      // Audio → placeholder
-      if (t.includes("audio") || /\.(mp3|wav|ogg)$/i.test(url)) {
-        return { type: "audio" };
-      }
-      return null;
-      },
-
-    // ========= Modal “Leer técnica” =========
+    // ========= Modal “Leer técnica”
     async verTecnica(a) {
       const tec = this.tecnicaFull(a);
       const recs = tec.recursos.length
@@ -353,13 +439,13 @@ export default {
         : `<div class="text-muted">Sin recursos adicionales.</div>`;
 
       const html = `
-        <div class="text-start">
-          <div class="d-flex flex-wrap gap-2 mb-2">
-            ${tec.categoria ? `<span class="chip"><i class='bi bi-tag me-1'></i>Categoría: <strong>${this.escape(tec.categoria)}</strong></span>` : ""}
-            ${tec.dificultad ? `<span class="chip"><i class='bi bi-bar-chart me-1'></i>Dificultad: <strong>${this.escape(tec.dificultad)}</strong></span>` : ""}
-            ${tec.duracion ? `<span class="chip"><i class='bi bi-clock me-1'></i>Duración: <strong>${this.escape(tec.duracion)}</strong></span>` : ""}
+        <div class="sa-body text-start">
+          <div class="sa-chips mb-3">
+            ${tec.categoria ? `<span class="chip"><i class='bi bi-tag me-1'></i>${this.escape(tec.categoria)}</span>` : ""}
+            ${tec.dificultad ? `<span class="chip"><i class='bi bi-bar-chart me-1'></i>${this.escape(tec.dificultad)}</span>` : ""}
+            ${tec.duracion ? `<span class="chip"><i class='bi bi-clock me-1'></i>${this.escape(tec.duracion)} min</span>` : ""}
           </div>
-          ${a.descripcion ? `<div class="mb-2 text-muted"><strong><i class='bi bi-info-circle me-1'></i>Descripción:</strong> ${this.escape(a.descripcion)}</div>` : ""}
+          ${a.descripcion ? `<p class="sa-desc text-muted">${this.escape(a.descripcion)}</p>` : ""}
           <div class="rec-grid">${recs}</div>
         </div>
       `;
@@ -369,20 +455,21 @@ export default {
         html,
         width: 860,
         confirmButtonText: "Cerrar",
-        customClass: { container: "swal2-pt", popup: "swal2-rounded" },
+        customClass: { container: "swal2-pt aurora", popup: "swal2-rounded aurora-popup", title: "sa-title" },
       });
     },
 
-    // ========= Modal “Iniciar técnica” con cuenta regresiva =========
+    /* ===========================================================
+     * MODAL "Iniciar técnica" con temporizador + Finalizar (PATCH)
+     * =========================================================== */
     async iniciarTecnica(a) {
       const tec = this.tecnicaFull(a);
-      const totalMin = parseInt(tec.duracion || 0, 10) || 5; // fallback 5 min
+      const totalMin = parseInt(tec.duracion || 0, 10) || 5;
       const totalSec = totalMin * 60;
       let remaining = totalSec;
       let timer = null;
 
-      // Embed si es YouTube
-      const r = this.firstResource(a);
+      const r = (this.tecRecursos(a) || [])[0];
       const yt = r ? this.youtubeIdFromUrl(r.url || "") : null;
       const media = yt
         ? `<div class="yt-embed">
@@ -395,8 +482,8 @@ export default {
         : "";
 
       const html = `
-        <div class="text-start">
-          <div class="d-flex flex-wrap gap-2 mb-3">
+        <div class="sa-body text-start">
+          <div class="sa-chips mb-3">
             ${tec.categoria ? `<span class="chip"><i class='bi bi-tag me-1'></i>${this.escape(tec.categoria)}</span>` : ""}
             <span class="chip"><i class="bi bi-clock me-1"></i>${totalMin} min</span>
           </div>
@@ -413,20 +500,23 @@ export default {
           </div>
 
           <div class="small text-muted mt-2">
-            <i class="bi bi-bell me-1"></i> Te avisaré cuando termine el tiempo. Puedes cerrar el video y seguir los recursos.
+            <i class="bi bi-bell me-1"></i>
+            El botón <strong>Finalizar</strong> se activará cuando el tiempo llegue a 00:00.
           </div>
         </div>
       `;
 
-      const pad = (n)=>String(n).padStart(2,"0");
+      const pad = (n) => String(n).padStart(2, "0");
       const render = () => {
-        const m = Math.floor(remaining/60), s = remaining%60;
-        const pct = Math.min(100, Math.round(((totalSec-remaining)/totalSec)*100));
+        const m = Math.floor(remaining / 60), s = remaining % 60;
+        const pct = Math.min(100, Math.round(((totalSec - remaining) / totalSec) * 100));
         const el = document.getElementById("tmr");
         const bar = document.getElementById("tmrBar");
         if (el) el.textContent = `${pad(m)}:${pad(s)}`;
         if (bar) bar.style.width = pct + "%";
       };
+
+      const self = this;
 
       await Swal.fire({
         title: `Iniciando • ${this.escape(tec.nombre)}`,
@@ -435,23 +525,66 @@ export default {
         showCancelButton: true,
         cancelButtonText: "Cancelar",
         confirmButtonText: "Finalizar",
+        allowOutsideClick: () => remaining === 0,
         didOpen: () => {
+          // Deshabilitar botón Confirmar hasta 00:00
+          const btn = Swal.getConfirmButton();
+          if (btn) { btn.disabled = true; btn.classList.add("disabled"); }
+
           remaining = totalSec;
           render();
           timer = setInterval(() => {
             remaining = Math.max(0, remaining - 1);
             render();
             if (remaining === 0) {
-              clearInterval(timer);
-              Swal.clickConfirm();
+              const cbtn = Swal.getConfirmButton();
+              if (cbtn) { cbtn.disabled = false; cbtn.classList.remove("disabled"); cbtn.focus(); }
             }
           }, 1000);
         },
-        willClose: () => {
-          if (timer) clearInterval(timer);
+        willClose: () => { if (timer) clearInterval(timer); },
+        customClass: { container: "swal2-pt aurora", popup: "swal2-rounded aurora-popup", title: "sa-title" },
+
+        preConfirm: async () => {
+          try {
+            if (remaining > 0) throw new Error("Aún no termina el temporizador.");
+            await self.finalizarActividad(a); // ← PATCH
+          } catch (err) {
+            const msg = err?.response?.data?.message || err?.message || "No se pudo marcar como Completado.";
+            Swal.showValidationMessage(msg);
+            return false;
+          }
+          return true;
         },
-        customClass: { container: "swal2-pt", popup: "swal2-rounded" },
+      }).then(async (res) => {
+        if (res.isConfirmed) {
+          await self.cargarSoloAsignadas({ page: self.paginaActual });
+          await Swal.fire({
+            icon: "success",
+            title: "¡Listo!",
+            text: "La actividad se marcó como Completado.",
+            confirmButtonText: "OK",
+            customClass: { container: "swal2-pt aurora", popup: "swal2-rounded aurora-popup" },
+          });
+        }
       });
+    },
+
+    /* ============================================
+     *   PATCH /api/actividades/{id}/estado
+     * ============================================ */
+    async finalizarActividad(a) {
+      const actId = String(a._id || a.id || "").trim();
+      if (!actId) throw new Error("Actividad inválida.");
+
+      // Log básico para depurar rápido en consola
+      // console.log('PATCH URL', `${API_BASE}/actividades/${actId}/estado`, 'TOKEN?', !!readToken());
+
+      await axios.patch(
+        `${API_BASE}/actividades/${actId}/estado`,
+        { estado: "Completado" },
+        { headers: { ...authHeaders() } }
+      );
     },
 
     // Utilidades
@@ -475,6 +608,15 @@ export default {
   --brand-2:#7b5cff;
   --chip:#eef2ff;
   --chip-b:#c7d2fe;
+
+  /* Aurora para SweetAlert */
+  --aurora-a:#c7b8ff;
+  --aurora-b:#a0d1ff;
+  --aurora-c:#ffd2e7;
+  --aurora-bg: radial-gradient(120% 120% at 20% 15%, rgba(199,184,255,.55) 0%, rgba(199,184,255,.15) 40%, transparent 60%),
+               radial-gradient(120% 120% at 85% 60%, rgba(160,209,255,.55) 0%, rgba(160,209,255,.10) 45%, transparent 65%),
+               radial-gradient(100% 100% at 50% 100%, rgba(255,210,231,.50) 0%, rgba(255,210,231,.10) 55%, transparent 70%),
+               #f7f8ff;
 }
 
 /* ===== Hero ===== */
@@ -519,65 +661,78 @@ export default {
 .activity-card:hover{ transform: translateY(-2px); box-shadow: 0 16px 34px rgba(23,32,58,.08); }
 .badge.estado{ font-weight:600; }
 
-/* Preview area */
-.preview-wrap{ position: relative; background:#f5f7ff; aspect-ratio: 16/9; overflow:hidden; }
-.preview-img{ width:100%; height:100%; object-fit: cover; display:block; }
-.preview-video .play-badge{
-  position:absolute; inset:auto auto 10px 10px; background:#fff; color:#4f46e5;
-  border-radius:999px; width:34px; height:34px; display:grid; place-items:center;
-  box-shadow:0 8px 20px rgba(0,0,0,.12);
+/* ===== Media hero con overlay ===== */
+.media-hero{ aspect-ratio: 16/10; background:#f5f7ff; overflow: hidden; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.media-img{ width:100%; height:100%; object-fit: cover; display:block; }
+
+.media-overlay{
+  position:absolute; inset:auto 12px 12px 12px; display:flex; align-items:center; justify-content:space-between;
+  gap:10px; padding:10px 12px; border-radius:14px;
+  background: linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.45));
+  backdrop-filter: blur(2px); color:#fff;
 }
-.preview-audio{ display:flex; align-items:center; height:100%; padding:0 14px; color:#4b5563; }
+.media-titles .media-sub{ font-size:.8rem; opacity:.9; }
+.media-titles .media-title{ font-weight:700; line-height:1.1; }
 
-/* Información secundaria */
-.meta-line{ display:flex; align-items:center; gap:.25rem; }
+.btn-ghost{
+  background: rgba(255,255,255,.35); color:#212121; border:none; border-radius:999px; padding:.35rem .7rem;
+  backdrop-filter: blur(3px);
+}
+.btn-ghost:hover{ background: rgba(255,255,255,.55); }
+.btn-ghost-strong{
+  background: rgba(255,255,255,.8); color:#111827; border:none; border-radius:999px; padding:.35rem .9rem; font-weight:600;
+}
+.btn-ghost-strong:hover{ background: #fff; }
 
-/* Chips / recursos */
+/* Dots carrusel */
+.dots{
+  position:absolute; left:12px; right:12px; bottom:12px; display:flex; justify-content:center; gap:10px; pointer-events:auto;
+}
+.dot{
+  width:10px; height:10px; border-radius:50%; opacity:.45; background:#fff; border:none;
+}
+.dot.active{ opacity:1; box-shadow: 0 0 0 2px rgba(255,255,255,.35) inset; }
+
+/* Info inferior */
+.two-lines{
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
+
+/* Chips */
 .chip{
   display:inline-flex; align-items:center; gap:.35rem; font-size:.82rem;
   background: var(--chip); color:#3a2e8f; border:1px solid var(--chip-b);
   padding:.25rem .55rem; border-radius:999px;
 }
-.desc-label{ font-weight:600; color:#2c2f48; }
-
-.rec-preview{ display:flex; align-items:center; flex-wrap:wrap; gap:.4rem; }
-.rec-pill{
-  display:inline-flex; align-items:center; gap:.35rem; padding:.40rem .65rem;
-  border:1px dashed #e6eaff; border-radius: 999px; text-decoration:none; color:#2c2f48; max-width: 100%;
-  transition: background-color .2s ease, transform .15s ease, border-color .2s ease;
-}
-.rec-pill:hover{ background:#f7f7ff; transform: translateY(-1px); border-color:#d7dbff; }
-.rec-pill img{ opacity:.85; }
-.rec-more{ color:#6b6f86; font-size:.85rem; }
-
-/* Botón gradiente */
-.btn-grad{
-  background: linear-gradient(90deg, var(--brand), var(--brand-2));
-  border: none;
-}
-.btn-grad:hover{ filter: brightness(1.03); transform: translateY(-1px); }
 
 /* Empty */
 .empty-state{ border-radius: 16px; }
 
-/* SweetAlert */
-:deep(.swal2-container.swal2-pt){
-  padding-top: 5.5rem !important; backdrop-filter: blur(4px);
-  background-color: rgba(10,16,28,.28) !important;
+/* ===== SweetAlert aurora ===== */
+:deep(.swal2-container.swal2-pt.aurora){
+  padding-top: 5.5rem !important;
+  backdrop-filter: blur(4px);
+  background: rgba(10,16,28,.28) !important;
 }
-:deep(.swal2-popup.swal2-rounded){ border-radius: 18px !important; }
-
-/* Recursos en modales */
+:deep(.swal2-popup.aurora-popup){
+  border-radius: 18px !important;
+  background: var(--aurora-bg) !important;
+  box-shadow: 0 20px 60px rgba(24, 32, 72, .18) !important;
+}
+:deep(.swal2-title.sa-title){
+  color:#0f172a !important; font-weight:800 !important;
+}
+.sa-body{ color:#17203a; }
+.sa-desc{ margin-bottom:.75rem; }
 .rec-grid{ display:grid; grid-template-columns: 1fr; gap:.5rem; }
 .rec-item{
-  display:flex; align-items:center; gap:.5rem; padding:.5rem .65rem;
+  display:flex; align-items:center; gap:.5rem; padding:.55rem .7rem;
   border:1px dashed #e6eaff; border-radius: 10px; text-decoration:none; color:#2c2f48;
   transition: background-color .2s ease, transform .15s ease;
 }
 .rec-item:hover{ background:#fafaff; transform: translateY(-1px); }
 
 /* Timer */
-.timer-wrap{ }
 .timer-face{
   display:grid; place-items:center; width:130px; height:130px; margin:auto; margin-bottom:.5rem;
   border-radius:50%; background:radial-gradient(circle at 30% 30%, #f0efff, #ffffff);
@@ -585,9 +740,7 @@ export default {
 }
 .timer-face #tmr{ font-weight:800; font-size:2rem; color:#4838ff; letter-spacing:.5px; }
 .tmr-progress{ height: 8px; border-radius:999px; background:#eef1f7; overflow:hidden; }
-.tmr-progress .progress-bar{
-  background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .6s ease;
-}
+.tmr-progress .progress-bar{ background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .6s ease; }
 
 /* Youtube iframe */
 .yt-embed{ border-radius: 14px; overflow: hidden; box-shadow: 0 12px 30px rgba(0,0,0,.08); }

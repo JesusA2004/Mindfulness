@@ -12,6 +12,8 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Log;
 use MongoDB\BSON\ObjectId;
 use MongoDB\BSON\Regex;
 
@@ -263,91 +265,61 @@ class ActividadController extends Controller
         ], 200);
     }
 
-    /* ======================= ENDPOINTS PROFESOR ======================= */
-
+    /* ======================= PATCH SOLO-ESTADO (alumno en sesión) ======================= */
     /**
-     * GET /api/actividades/mis-cohortes
+     * PATCH /api/actividades/{id}/estado
+     * Body: { "estado": "Pendiente|Completado|Omitido" }
+     * Afecta únicamente al participante = usuario autenticado (por _id/id).
      */
-    public function misCohortes(Request $request): JsonResponse
+    public function patchEstado(Request $request, string $id): JsonResponse
     {
-        try {
-            $u = auth('api')->user();
-            if (!$u) return response()->json(['cohortes' => []], 200);
-
-            $cohortes = [];
-
-            // (1) Embebido en user.persona
-            $raw = $u->persona->cohorte ?? $u->persona['cohorte'] ?? null;
-            if ($raw) {
-                if (is_array($raw)) {
-                    foreach ($raw as $c) { $s = trim((string) $c); if ($s !== '') $cohortes[] = $s; }
-                } elseif (is_string($raw)) {
-                    $s = trim($raw); if ($s !== '') $cohortes[] = $s;
-                }
-            }
-
-            // (2) Fallback a documento Persona
-            if (empty($cohortes) && !empty($u->persona_id)) {
-                $p = Persona::find($u->persona_id);
-                if ($p) {
-                    $raw = $p->cohorte ?? null;
-                    if (is_array($raw)) {
-                        foreach ($raw as $c) { $s = trim((string) $c); if ($s !== '') $cohortes[] = $s; }
-                    } elseif (is_string($raw)) {
-                        $s = trim($raw); if ($s !== '') $cohortes[] = $s;
-                    }
-                }
-            }
-
-            $cohortes = array_values(array_unique($cohortes));
-            return response()->json(['cohortes' => $cohortes], 200);
-        } catch (\Throwable $e) {
-            return response()->json(['cohortes' => []], 200);
+        $user = auth('api')->user();
+        if (!$user) {
+            return response()->json(['message' => 'No autenticado'], 401);
         }
-    }
 
-    /**
-     * GET /api/actividades/mis-alumnos?cohorte=...
-     */
-    public function misAlumnos(Request $request): JsonResponse
-    {
-        try {
-            $u = auth('api')->user();
-            if (!$u) return response()->json(['alumnos' => []], 200);
+        $validated = $request->validate([
+            'estado' => ['required','string', Rule::in(['Pendiente','Completado','Omitido'])],
+        ]);
 
-            $cohortes = $this->cohortesDe($u);
+        Log::info('[PATCH estado] intento', [
+            'actividad_id' => $id,
+            'user' => (string)($user->_id ?? $user->id ?? '')
+        ]);
 
-            // filtro exacto opcional
-            $fCoh = trim((string) $request->query('cohorte', ''));
-            if ($fCoh !== '') {
-                $cohortes = array_values(array_filter($cohortes, fn ($c) => strcasecmp($c, $fCoh) === 0));
-            }
-
-            if (empty($cohortes)) return response()->json(['alumnos' => []], 200);
-
-            $usersQ = User::query()
-                ->whereIn('rol', ['estudiante','alumno'])
-                ->where(function ($w) use ($cohortes) {
-                    $w->whereIn('persona.cohorte', $cohortes);
-                });
-
-            $students = $usersQ->get(['_id','id','name','email','matricula','rol','persona']);
-            $alumnos = $students->map(function ($u) {
-                return [
-                    '_id'       => (string)($u->_id ?? $u->id ?? ''),
-                    'id'        => (string)($u->id ?? $u->_id ?? ''),
-                    'name'      => (string)($u->name ?? ''),
-                    'email'     => (string)($u->email ?? ''),
-                    'matricula' => (string)($u->matricula ?? ''),
-                    'rol'       => (string)($u->rol ?? ''),
-                    'persona'   => is_array($u->persona) ? $u->persona : (array)($u->persona ?? []),
-                ];
-            })->values()->all();
-
-            return response()->json(['alumnos' => $alumnos], 200);
-        } catch (\Throwable $e) {
-            return response()->json(['alumnos' => []], 200);
+        $actividad = $this->findActividadById($id);
+        if (!$actividad) {
+            Log::warning('[PATCH estado] Actividad no encontrada', ['actividad_id' => $id]);
+            return response()->json(['message' => 'Actividad no encontrada'], 404);
         }
+
+        $uid = (string)($user->_id ?? $user->id ?? '');
+
+        $participantes = $this->normalizeParticipantes($actividad->participantes);
+        // elimina duplicados del mismo alumno
+        $participantes = array_values(array_filter($participantes, fn($p) => (string)($p['user_id'] ?? '') !== $uid));
+        // inserta el estado nuevo
+        $participantes[] = ['user_id' => $uid, 'estado' => $validated['estado']];
+
+        $actividad->participantes = $participantes;
+
+        if ($validated['estado'] === 'Completado') {
+            $actividad->fechaFinalizacion = now('America/Mexico_City')->toDateString();
+        }
+
+        $actividad->save();
+
+        Log::info('[PATCH estado] OK', [
+            'actividad_id' => (string)($actividad->_id ?? $actividad->id ?? ''),
+            'estado'       => $validated['estado']
+        ]);
+
+        return response()->json([
+            'mensaje'      => 'Estado actualizado.',
+            'actividad_id' => (string)($actividad->_id ?? $actividad->id ?? ''),
+            'user_id'      => $uid,
+            'estado'       => $validated['estado'],
+        ], 200);
     }
 
     /* -------------------- helpers privados -------------------- */
@@ -380,5 +352,28 @@ class ActividadController extends Controller
             return null;
         }
         return Tecnica::where('_id', $oid)->first(['_id','nombre','categoria']);
+    }
+
+    private function findActividadById(string $id): ?Actividad
+    {
+        try {
+            if (preg_match('/^[a-f0-9]{24}$/i', $id)) {
+                $oid = new ObjectId($id);
+                if ($found = Actividad::where('_id', $oid)->first()) return $found;
+            }
+        } catch (\Throwable $e) {}
+
+        if ($found = Actividad::where('_id', $id)->orWhere('id', $id)->first()) return $found;
+        return Actividad::find($id) ?: null;
+    }
+
+    private function normalizeParticipantes($p): array
+    {
+        if (is_array($p)) return $p;
+        if (is_string($p) && $p !== '') {
+            $dec = json_decode($p, true);
+            return is_array($dec) ? $dec : [];
+        }
+        return [];
     }
 }
