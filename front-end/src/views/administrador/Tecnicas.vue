@@ -1,4 +1,4 @@
-<!-- src/views/tecnicas/CrudPanel.vue -->
+<!-- src/views/administrador/Tecnicas.vue -->
 <template>
   <main class="panel-wrapper">
     <!-- ======= Toolbar: Búsqueda + Nuevo ======= -->
@@ -89,7 +89,7 @@
             </div>
 
             <div class="card-footer bg-transparent border-0 pt-0 pb-3 px-3">
-              <div class="d-flex flex-column flex-md-row gap-2">
+              <div class="d-flex flex-column flex-md-row flex-wrap gap-2">
                 <button
                   class="btn btn-outline-secondary btn-sm flex-fill btn-with-label"
                   @click="openView(item)"
@@ -113,6 +113,16 @@
                 >
                   <i class="bi bi-trash me-1"></i>
                   <span>Eliminar</span>
+                </button>
+
+                <!-- Botón de Calificaciones -->
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary btn-sm flex-fill btn-with-label"
+                  @click="openRatings(item)"
+                  title="Ver calificaciones"
+                >
+                  <i class="bi bi-star-half me-1"></i> Calificaciones
                 </button>
               </div>
             </div>
@@ -162,9 +172,7 @@
       </div>
     </div>
 
-    <!-- ======= Modales ======= -->
-
-    <!-- Modal: Consulta -->
+    <!-- ======= Modales (Consulta y Formulario) ======= -->
     <div class="modal fade" ref="viewModalRef" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-xl modal-fit">
         <div class="modal-content modal-flex border-0 shadow-lg">
@@ -213,7 +221,6 @@
                 <div class="resource-grid">
                   <div v-for="(r, i) in (selected?.recursos || [])" :key="r._id || i" class="resource-card">
                     <div class="resource-thumb">
-                      <!-- Embed soportado -->
                       <template v-if="isEmbeddable(r.url)">
                         <iframe
                           :src="toEmbedUrl(r.url)"
@@ -224,8 +231,6 @@
                           style="width:100%;height:100%;border:0"
                         ></iframe>
                       </template>
-
-                      <!-- Si no es embed, usar elementos nativos -->
                       <template v-else-if="isImage(r.url)">
                         <img :src="r.url" alt="" />
                       </template>
@@ -489,6 +494,254 @@ const {
   addRecurso, removeRecurso, toggleRecurso, onUrlChange,
   onSubmit, confirmDelete, modifyFromView, deleteFromView,
 } = useTecnicasCrud();
+
+import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
+import axios from 'axios';
+
+// === Base URL compatible con Vue CLI (VUE_APP_API_URL / VUE_APP_API_BASE) ===
+const RAW_API_URL =
+  process.env.VUE_APP_API_URL ||
+  (process.env.VUE_APP_API_BASE
+    ? String(process.env.VUE_APP_API_BASE).replace(/\/+$/, '') + '/api'
+    : '/api');
+
+const API_BASE = String(RAW_API_URL).replace(/\/+$/, '');
+
+function readToken() {
+  const keys = ['token', 'auth_token', 'jwt', 'access_token'];
+  for (const k of keys) {
+    const v = localStorage.getItem(k);
+    if (v) return v.replace(/^"|"$/g, '');
+  }
+  return null;
+}
+function authHeaders() {
+  const t = readToken();
+  return t ? { Authorization: `Bearer ${t}` } : {};
+}
+function escapeHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/** ===== Fecha: acepta 'YYYY-MM-DD' o 'DD/MM/YYYY' y muestra 'DD/MM/YYYY' ===== */
+function toDDMMYYYY(val) {
+  const s = String(val || '').trim();
+  if (!s) return '—';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y, m, d] = s.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+  const dt = new Date(s);
+  if (!isNaN(dt)) {
+    const dd = String(dt.getDate()).padStart(2, '0');
+    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+    const yy = String(dt.getFullYear());
+    return `${dd}/${mm}/${yy}`;
+  }
+  return s;
+}
+
+/** ===== Resolver nombres por usuario_id (Persona -> User fallback) ===== */
+async function fetchPersonaName(id) {
+  try {
+    const { data } = await axios.get(`${API_BASE}/personas/${id}`, { headers: { ...authHeaders() } });
+    const p = data?.persona || data;
+    const nom = [p?.nombre, p?.apellidoPaterno, p?.apellidoMaterno].filter(Boolean).join(' ').trim();
+    if (nom) return nom;
+  } catch {}
+  try {
+    const { data } = await axios.get(`${API_BASE}/users/${id}`, { headers: { ...authHeaders() } });
+    const u = data?.user || data;
+    if (u?.name) return u.name;
+    if (u?.nombre) return u.nombre;
+  } catch {}
+  return 'Usuario';
+}
+
+/** ====== Modal de Calificaciones (responsive + toggle sin choques) ====== */
+async function openRatings(itemOrRow) {
+  try {
+    const id =
+      (itemOrRow && getId(itemOrRow)) ||
+      (selected?.value ? getId(selected.value) : null);
+
+    if (!id) {
+      await Swal.fire({ icon: 'info', title: 'Sin técnica', text: 'No hay una técnica seleccionada.' });
+      return;
+    }
+
+    // Traer técnica fresca
+    const { data } = await axios.get(`${API_BASE}/tecnicas/${id}`, { headers: { ...authHeaders() } });
+    const tec = data?.tecnica || {};
+    const raw = Array.isArray(tec.calificaciones) ? tec.calificaciones : [];
+
+    // Mapear nombres (evita mostrar IDs)
+    const ids = [...new Set(raw.map(c => c.usuario_id).filter(Boolean))];
+    const nameMap = {};
+    await Promise.all(ids.map(async uid => { nameMap[uid] = await fetchPersonaName(uid); }));
+
+    // Normalizar lista
+    const califs = raw.map(c => {
+      const fechaDMY = toDDMMYYYY(c.fecha);
+      const fechaISO = /^\d{2}\/\d{2}\/\d{4}$/.test(fechaDMY)
+        ? `${fechaDMY.slice(6,10)}-${fechaDMY.slice(3,5)}-${fechaDMY.slice(0,2)}`
+        : String(c.fecha || '');
+      return {
+        ...c,
+        __name: nameMap[c.usuario_id] || 'Usuario',
+        __fecha_dmy: fechaDMY,
+        __fecha_iso: fechaISO,
+      };
+    });
+
+    // Helpers
+    const avgOf = (list) => list.length
+      ? (list.reduce((s,c)=> s + Number(c.puntaje || 0), 0) / list.length).toFixed(2)
+      : '—';
+
+    const buildCards = (list) => {
+      if (!list.length) return `<div class="text-muted small">Sin comentarios.</div>`;
+      const sorted = [...list].sort((a,b) => String(b.__fecha_iso||'').localeCompare(String(a.__fecha_iso||'')));
+      return sorted.map(c => `
+        <div class="c-card">
+          <div class="c-score">${Number(c.puntaje || 0)}</div>
+          <div class="c-meta">
+            <div class="c-user">${escapeHtml(c.__name)}</div>
+            <div class="c-date">${escapeHtml(c.__fecha_dmy)}</div>
+            <div class="c-com">${escapeHtml(c.comentario || '')}</div>
+          </div>
+        </div>
+      `).join('');
+    };
+
+    const buildRows = (list) => {
+      if (!list.length) return `<tr><td colspan="4" class="text-center text-muted">Sin calificaciones.</td></tr>`;
+      return list.map(c => `
+        <tr>
+          <td class="text-truncate" title="${escapeHtml(c.__name)}">${escapeHtml(c.__name)}</td>
+          <td class="text-center fw-semibold">${Number(c.puntaje || 0)}</td>
+          <td>${escapeHtml(c.comentario || '—')}</td>
+          <td class="text-nowrap">${escapeHtml(c.__fecha_dmy)}</td>
+        </tr>
+      `).join('');
+    };
+
+    const render = (list) => `
+      <style>
+        /* —— Layout responsive del toolbar —— */
+        .ratings-wrap{width:100%}
+        .ratings-toolbar{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-bottom:.75rem}
+        .ratings-toolbar .form-control{min-width:220px;flex:1 1 240px}
+        .view-toggle{display:flex;flex-wrap:wrap;gap:.5rem}
+        .view-toggle .btn{padding:.25rem .7rem;border-radius:.6rem}
+        .c-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.75rem}
+        .c-card{border:1px solid rgba(122,0,184,.12);border-radius:.75rem;padding:.6rem;display:flex;gap:.6rem;background:#fff}
+        .c-score{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;border:1px solid #e5e7eb;font-weight:700}
+        .c-meta{min-width:0}
+        .c-user{font-weight:600}
+        .c-com{font-size:.9rem;color:#334155}
+        .d-none{display:none !important}
+        @media (max-width: 576px){
+          .ratings-toolbar .badge{order:3}
+          .view-toggle{order:4;width:100%;justify-content:flex-start}
+        }
+      </style>
+
+      <div class="ratings-wrap text-start">
+        <div class="ratings-toolbar">
+          <input id="flt" class="form-control" placeholder="Filtrar por usuario, comentario, fecha o puntaje…" />
+          <span id="ttl" class="badge bg-primary-subtle text-primary">Total: ${list.length}</span>
+          <span id="avg" class="badge bg-success-subtle text-success">Media: ${avgOf(list)}</span>
+
+          <!-- Toggle accesible (sin btn-group para permitir wrap) -->
+          <div class="ms-sm-auto view-toggle" role="group" aria-label="Vista">
+            <button id="btnCards" type="button" class="btn btn-outline-secondary active" aria-pressed="true">Tarjetas</button>
+            <button id="btnTable" type="button" class="btn btn-outline-secondary" aria-pressed="false">Tabla</button>
+          </div>
+        </div>
+
+        <div id="cardsWrap" class="mb-2">${buildCards(list)}</div>
+
+        <div id="tableWrap" class="table-responsive d-none">
+          <table class="table align-middle table-sm">
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th class="text-center">Puntaje</th>
+                <th>Comentario</th>
+                <th>Fecha</th>
+              </tr>
+            </thead>
+            <tbody id="rows">${buildRows(list)}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    const filterFn = (q) => {
+      const s = String(q || '').toLowerCase().trim();
+      if (!s) return califs;
+      return califs.filter(c => {
+        const blob = `${c.__name||''} ${c.comentario||''} ${c.__fecha_dmy||''} ${c.__fecha_iso||''}`.toLowerCase();
+        return blob.includes(s) || String(c.puntaje||'').includes(s);
+      });
+    };
+
+    await Swal.fire({
+      title: `Calificaciones`,
+      html: render(califs),
+      width: 900,
+      focusConfirm: false,
+      confirmButtonText: 'Cerrar',
+      customClass: { popup: 'swal2-rounded aurora-popup' },
+      didOpen: () => {
+        const $inp = document.getElementById('flt');
+        const $rows = document.getElementById('rows');
+        const $cardsWrap = document.getElementById('cardsWrap');
+        const $tableWrap = document.getElementById('tableWrap');
+        const $ttl = document.getElementById('ttl');
+        const $avg = document.getElementById('avg');
+        const $btnCards = document.getElementById('btnCards');
+        const $btnTable = document.getElementById('btnTable');
+
+        const update = (list) => {
+          if ($rows) $rows.innerHTML = buildRows(list);
+          if ($cardsWrap) $cardsWrap.innerHTML = buildCards(list);
+          if ($ttl) $ttl.textContent = `Total: ${list.length}`;
+          if ($avg) $avg.textContent = `Media: ${(
+            list.length ? list.reduce((s,c)=> s + Number(c.puntaje || 0), 0) / list.length : 0
+          ).toFixed(list.length ? 2 : 0) || '—'}`;
+        };
+
+        if ($inp) $inp.addEventListener('input', (e) => update(filterFn(e.target.value)));
+
+        // Toggle de vista (solo una visible; evita “duplicados”)
+        if ($btnCards && $btnTable && $cardsWrap && $tableWrap) {
+          const setActive = (isCards) => {
+            if (isCards) {
+              $btnCards.classList.add('active'); $btnCards.setAttribute('aria-pressed', 'true');
+              $btnTable.classList.remove('active'); $btnTable.setAttribute('aria-pressed', 'false');
+              $cardsWrap.classList.remove('d-none'); $tableWrap.classList.add('d-none');
+            } else {
+              $btnTable.classList.add('active'); $btnTable.setAttribute('aria-pressed', 'true');
+              $btnCards.classList.remove('active'); $btnCards.setAttribute('aria-pressed', 'false');
+              $tableWrap.classList.remove('d-none'); $cardsWrap.classList.add('d-none');
+            }
+          };
+          $btnCards.addEventListener('click', () => setActive(true));
+          $btnTable.addEventListener('click', () => setActive(false));
+        }
+      }
+    });
+
+  } catch (err) {
+    const msg = err?.response?.data?.message || err?.message || 'No fue posible cargar las calificaciones.';
+    await Swal.fire({ icon: 'error', title: 'Ups…', text: msg });
+  }
+}
 </script>
 
 <style scoped>
@@ -529,6 +782,4 @@ const {
   max-width:100%; max-height:300px; object-fit:contain;
 }
 .resource-preview audio{ width:100%; }
-
-/* Botón flotante eliminado (no hay archivos locales que limpiar) */
 </style>

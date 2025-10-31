@@ -558,14 +558,14 @@ export default {
         },
       }).then(async (res) => {
         if (res.isConfirmed) {
+          // refresca la lista en la página actual
           await self.cargarSoloAsignadas({ page: self.paginaActual });
-          await Swal.fire({
-            icon: "success",
-            title: "¡Listo!",
-            text: "La actividad se marcó como Completado.",
-            confirmButtonText: "OK",
-            customClass: { container: "swal2-pt aurora", popup: "swal2-rounded aurora-popup" },
-          });
+
+          // 👉 NUEVO: abrir flujo de calificación
+          await self.calificarTecnica(a);
+
+          // refresco opcional por si cambió algo más
+          await self.cargarSoloAsignadas({ page: self.paginaActual });
         }
       });
     },
@@ -576,9 +576,6 @@ export default {
     async finalizarActividad(a) {
       const actId = String(a._id || a.id || "").trim();
       if (!actId) throw new Error("Actividad inválida.");
-
-      // Log básico para depurar rápido en consola
-      // console.log('PATCH URL', `${API_BASE}/actividades/${actId}/estado`, 'TOKEN?', !!readToken());
 
       await axios.patch(
         `${API_BASE}/actividades/${actId}/estado`,
@@ -593,163 +590,144 @@ export default {
       if (s == null) return "";
       return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     },
+
+    async calificarTecnica(a) {
+      try {
+        const tecId = String(a?.tecnica_id || "").trim();
+        if (!tecId) return;
+
+        // Técnica + recursos visibles en la tarjeta
+        const tec = this.tecnicaFull(a);
+        const recursos = Array.isArray(tec.recursos) ? tec.recursos : [];
+
+        // Construir pasos de calificación (1..5). Si no hay recursos, se califica la técnica en general.
+        const steps = [];
+        if (recursos.length > 0) {
+          recursos.forEach((r, idx) => {
+            const titulo = String(r?.titulo || r?.descripcion || r?.tipo || `Recurso ${idx + 1}`);
+            steps.push({
+              title: `Califica el recurso`,
+              html: `
+                <div class="text-start">
+                  <div class="mb-2 small text-muted">Técnica: <strong>${this.escape(tec.nombre)}</strong></div>
+                  <div class="mb-2">Recurso: <strong>${this.escape(titulo)}</strong></div>
+                  <label class="form-label">Puntaje (1 a 5)</label>
+                </div>
+              `,
+              input: 'range',
+              inputAttributes: { min: 1, max: 5, step: 1 },
+              inputValue: 5,
+              showCancelButton: true,
+              confirmButtonText: (idx === recursos.length - 1) ? "Guardar" : "Siguiente",
+              cancelButtonText: "Cancelar",
+              customClass: { popup: "swal2-rounded aurora-popup" }
+            });
+          });
+        } else {
+          // Sin recursos: una sola calificación para la técnica
+          steps.push({
+            title: "Califica la técnica",
+            html: `
+              <div class="text-start">
+                <div class="mb-2 small text-muted">Técnica:</div>
+                <div class="mb-2"><strong>${this.escape(tec.nombre)}</strong></div>
+                <label class="form-label">Puntaje (1 a 5)</label>
+              </div>
+            `,
+            input: 'range',
+            inputAttributes: { min: 1, max: 5, step: 1 },
+            inputValue: 5,
+            showCancelButton: true,
+            confirmButtonText: "Guardar",
+            cancelButtonText: "Cancelar",
+            customClass: { popup: "swal2-rounded aurora-popup" }
+          });
+        }
+
+        // Lanzar la cola de pasos
+        const Queue = Swal.mixin({
+          progressSteps: steps.map((_, i) => String(i + 1)),
+          progressStepsDistance: '45px',
+          reverseButtons: true,
+          showClass: { popup: 'swal2-noanimation' },
+          hideClass: { popup: '' },
+        });
+
+        const results = [];
+        for (let i = 0; i < steps.length; i++) {
+          const r = await Queue.fire(steps[i]);
+          if (!r.isConfirmed) {
+            // Si cancela en cualquier punto, aborta sin guardar nada
+            return;
+          }
+          results.push(Number(r.value));
+        }
+
+        // Preparar payload de actualización de Técnica
+        // 1) Obtener la técnica actual para cumplir con las reglas de TecnicaRequest (nombre, etc. son requeridos)
+        const { data } = await axios.get(`${API_BASE}/tecnicas/${tecId}`, { headers: { ...authHeaders() } });
+        const current = data?.tecnica || {};
+        const existentes = Array.isArray(current.calificaciones) ? current.calificaciones : [];
+
+        // 2) Construir calificaciones nuevas (una por recurso o una sola si no hay recursos)
+        const uid = (this.getCurrentUserIds()[0] || "").trim();
+        const hoy = new Date().toISOString().slice(0, 10);
+
+        let nuevas = [];
+        if (recursos.length > 0) {
+          nuevas = recursos.map((r, i) => {
+            const t = String(r?.titulo || r?.descripcion || r?.tipo || `Recurso ${i + 1}`);
+            return {
+              usuario_id: uid,
+              puntaje: Number(results[i] || 0),
+              comentario: `Recurso: ${t}`,
+              fecha: hoy
+            };
+          });
+        } else {
+          nuevas = [{
+            usuario_id: uid,
+            puntaje: Number(results[0] || 0),
+            comentario: null,
+            fecha: hoy
+          }];
+        }
+
+        // 3) PUT con TODOS los campos requeridos por TecnicaRequest + arrays reemplazados
+        const payload = {
+          nombre: current.nombre,
+          descripcion: current.descripcion,
+          dificultad: current.dificultad,
+          duracion: current.duracion,
+          categoria: current.categoria,
+          recursos: current.recursos || [],
+          calificaciones: [...existentes, ...nuevas],
+        };
+
+        await axios.put(`${API_BASE}/tecnicas/${tecId}`, payload, { headers: { ...authHeaders() } });
+
+        await Swal.fire({
+          icon: "success",
+          title: "¡Gracias!",
+          text: "Tus calificaciones se han guardado.",
+          confirmButtonText: "OK",
+          customClass: { popup: "swal2-rounded aurora-popup" }
+        });
+      } catch (e) {
+        const msg = e?.response?.data?.message || e?.message || "No fue posible guardar tu calificación.";
+        await Swal.fire({
+          icon: "error",
+          title: "Ups…",
+          text: msg,
+          confirmButtonText: "Entendido",
+          customClass: { popup: "swal2-rounded aurora-popup" }
+        });
+      }
+    },
+
   },
 };
 </script>
 
-<style scoped>
-/* ===== Paleta ===== */
-:root{
-  --ink:#17203a;
-  --muted:#6b7280;
-  --stroke:#e5e7eb;
-  --soft:#f7f9fc;
-  --brand:#6a8dff;
-  --brand-2:#7b5cff;
-  --chip:#eef2ff;
-  --chip-b:#c7d2fe;
+<style scoped src="@/assets/css/ActividadesAlumno.css"></style>
 
-  /* Aurora para SweetAlert */
-  --aurora-a:#c7b8ff;
-  --aurora-b:#a0d1ff;
-  --aurora-c:#ffd2e7;
-  --aurora-bg: radial-gradient(120% 120% at 20% 15%, rgba(199,184,255,.55) 0%, rgba(199,184,255,.15) 40%, transparent 60%),
-               radial-gradient(120% 120% at 85% 60%, rgba(160,209,255,.55) 0%, rgba(160,209,255,.10) 45%, transparent 65%),
-               radial-gradient(100% 100% at 50% 100%, rgba(255,210,231,.50) 0%, rgba(255,210,231,.10) 55%, transparent 70%),
-               #f7f8ff;
-}
-
-/* ===== Hero ===== */
-.hero-card{ border-radius: 18px; background: #fff; overflow: hidden; }
-.title{ color: var(--ink); position: relative; }
-.title-deco{
-  display:inline-block; width:10px; height:10px; border-radius:50%;
-  background: radial-gradient(circle at 30% 30%, var(--brand), var(--brand-2));
-  margin-right:.5rem; transform: translateY(-4px);
-}
-.hero-progress{ height: 8px; border-radius: 999px; background:#eef1f7; overflow: hidden; }
-.hero-progress .progress-bar{
-  background: linear-gradient(90deg, var(--brand), var(--brand-2));
-  border-radius:999px; transition: width .45s ease;
-}
-
-/* Círculo “breathing” */
-.breathe-wrap{ position: relative; width: 320px; max-width: 100%; aspect-ratio: 1/1; display:grid; place-items:center; }
-.breathe-core{
-  position: relative; width: 68%; aspect-ratio:1/1; border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(123,92,255,.18), transparent 70%);
-  animation: breathe 4.8s ease-in-out infinite;
-}
-.breathe-ring{ position:absolute; inset:-24% -24% -24% -24%; border-radius:50%; border:1px solid rgba(123,92,255,.18); }
-.breathe-ring.ring-2{ inset:-14% -14% -14% -14%; }
-.breathe-ring.ring-3{ inset:-4% -4% -4% -4%; }
-@keyframes breathe { 0%,100% { transform: scale(0.92); filter: drop-shadow(0 0 0 rgba(123,92,255,.0)); } 50% { transform: scale(1.03); filter: drop-shadow(0 10px 24px rgba(123,92,255,.25)); } }
-
-/* Bienvenida destacada separada */
-.welcome-panel{
-  margin-top: 18px; display:flex; align-items:center; gap:12px;
-  padding:12px 14px; border:1px dashed #eae7ff; border-radius: 14px; background: #fafaff;
-}
-.welcome-icon{
-  width:36px; height:36px; border-radius:10px; display:grid; place-items:center;
-  background: linear-gradient(180deg, #efe9ff, #f7f4ff);
-  color:#6b5cff; box-shadow: 0 6px 18px rgba(123,92,255,.15);
-}
-
-/* ===== Tarjetas ===== */
-.activity-card{ border-radius: 16px; background:#fff; transition: transform .18s ease, box-shadow .18s ease; overflow: hidden; }
-.activity-card:hover{ transform: translateY(-2px); box-shadow: 0 16px 34px rgba(23,32,58,.08); }
-.badge.estado{ font-weight:600; }
-
-/* ===== Media hero con overlay ===== */
-.media-hero{ aspect-ratio: 16/10; background:#f5f7ff; overflow: hidden; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
-.media-img{ width:100%; height:100%; object-fit: cover; display:block; }
-
-.media-overlay{
-  position:absolute; inset:auto 12px 12px 12px; display:flex; align-items:center; justify-content:space-between;
-  gap:10px; padding:10px 12px; border-radius:14px;
-  background: linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.45));
-  backdrop-filter: blur(2px); color:#fff;
-}
-.media-titles .media-sub{ font-size:.8rem; opacity:.9; }
-.media-titles .media-title{ font-weight:700; line-height:1.1; }
-
-.btn-ghost{
-  background: rgba(255,255,255,.35); color:#212121; border:none; border-radius:999px; padding:.35rem .7rem;
-  backdrop-filter: blur(3px);
-}
-.btn-ghost:hover{ background: rgba(255,255,255,.55); }
-.btn-ghost-strong{
-  background: rgba(255,255,255,.8); color:#111827; border:none; border-radius:999px; padding:.35rem .9rem; font-weight:600;
-}
-.btn-ghost-strong:hover{ background: #fff; }
-
-/* Dots carrusel */
-.dots{
-  position:absolute; left:12px; right:12px; bottom:12px; display:flex; justify-content:center; gap:10px; pointer-events:auto;
-}
-.dot{
-  width:10px; height:10px; border-radius:50%; opacity:.45; background:#fff; border:none;
-}
-.dot.active{ opacity:1; box-shadow: 0 0 0 2px rgba(255,255,255,.35) inset; }
-
-/* Info inferior */
-.two-lines{
-  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
-}
-
-/* Chips */
-.chip{
-  display:inline-flex; align-items:center; gap:.35rem; font-size:.82rem;
-  background: var(--chip); color:#3a2e8f; border:1px solid var(--chip-b);
-  padding:.25rem .55rem; border-radius:999px;
-}
-
-/* Empty */
-.empty-state{ border-radius: 16px; }
-
-/* ===== SweetAlert aurora ===== */
-:deep(.swal2-container.swal2-pt.aurora){
-  padding-top: 5.5rem !important;
-  backdrop-filter: blur(4px);
-  background: rgba(10,16,28,.28) !important;
-}
-:deep(.swal2-popup.aurora-popup){
-  border-radius: 18px !important;
-  background: var(--aurora-bg) !important;
-  box-shadow: 0 20px 60px rgba(24, 32, 72, .18) !important;
-}
-:deep(.swal2-title.sa-title){
-  color:#0f172a !important; font-weight:800 !important;
-}
-.sa-body{ color:#17203a; }
-.sa-desc{ margin-bottom:.75rem; }
-.rec-grid{ display:grid; grid-template-columns: 1fr; gap:.5rem; }
-.rec-item{
-  display:flex; align-items:center; gap:.5rem; padding:.55rem .7rem;
-  border:1px dashed #e6eaff; border-radius: 10px; text-decoration:none; color:#2c2f48;
-  transition: background-color .2s ease, transform .15s ease;
-}
-.rec-item:hover{ background:#fafaff; transform: translateY(-1px); }
-
-/* Timer */
-.timer-face{
-  display:grid; place-items:center; width:130px; height:130px; margin:auto; margin-bottom:.5rem;
-  border-radius:50%; background:radial-gradient(circle at 30% 30%, #f0efff, #ffffff);
-  box-shadow: inset 0 0 0 8px #f2f3ff, 0 10px 28px rgba(123,92,255,.15);
-}
-.timer-face #tmr{ font-weight:800; font-size:2rem; color:#4838ff; letter-spacing:.5px; }
-.tmr-progress{ height: 8px; border-radius:999px; background:#eef1f7; overflow:hidden; }
-.tmr-progress .progress-bar{ background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .6s ease; }
-
-/* Youtube iframe */
-.yt-embed{ border-radius: 14px; overflow: hidden; box-shadow: 0 12px 30px rgba(0,0,0,.08); }
-
-/* ===== Responsive ===== */
-@media (min-width: 576px){
-  .rec-grid{ grid-template-columns: 1fr 1fr; }
-}
-@media (min-width: 992px){
-  .rec-grid{ grid-template-columns: 1fr 1fr 1fr; }
-}
-</style>

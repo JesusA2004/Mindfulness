@@ -75,8 +75,12 @@ class TecnicaController extends Controller
      */
     public function show(Tecnica $tecnica): JsonResponse
     {
+        $arr = (new TecnicaResource($tecnica))->resolve();
+        if (!array_key_exists('calificaciones', $arr)) {
+            $arr['calificaciones'] = $tecnica->calificaciones ?? [];
+        }
         return response()->json([
-            'tecnica' => new TecnicaResource($tecnica),
+            'tecnica' => $arr,
         ], 200);
     }
 
