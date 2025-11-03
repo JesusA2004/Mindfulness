@@ -1,8 +1,4 @@
-# 🚀 Mindfulness 404 & Layouts
-
-![Mindfulness 404](/assets/images/errorBG.png)
-
-> Una experiencia de usuario en Vue 3 + Bootstrap 5 centrada en la serenidad y la claridad de diseño.
+# 🚀 Mindfulness 
 
 ---
 
