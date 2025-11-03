@@ -4,7 +4,7 @@
 
 ## ✨ Descripción
 
-`Mindfulness404` es un proyecto de ejemplo para una página de error **404** integrando **Vue 3**, **Vue Router**, y **Bootstrap 5**, con un enfoque en:
+`Mindfulness404` es un proyecto integrando **Vue 3**, **Vue Router**, y **Bootstrap 5**, con un enfoque en:
 
 * 🎨 **Diseño calmado** y animado: degradados suaves, transiciones fluidas y animaciones sutiles.
 * 🔧 **Arquitectura modular**: Layouts públicos, autenticados y específicos por rol.
@@ -47,7 +47,7 @@
 * 📦 **Vue 3**
 * 🔄 **Vue Router**
 * 🎨 **Bootstrap 5**
-* 🎨 **CSS3** (degradados, keyframes, `backdrop-filter`)
+* 🎨 **CSS3**
 * ⚙️ **Axios** para llamadas HTTP
 
 ---
