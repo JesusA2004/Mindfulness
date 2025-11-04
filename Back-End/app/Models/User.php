@@ -76,7 +76,8 @@ class User extends Authenticatable implements JWTSubject
     // JWT
     public function getJWTIdentifier()
     {
-        return $this->getKey(); // _id en Mongo
+        // Asegura string para Mongo ObjectId
+        return (string) ($this->_id ?? $this->getKey());
     }
 
     public function getJWTCustomClaims()

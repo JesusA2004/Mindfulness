@@ -1,3 +1,4 @@
+<!-- src/views/auth/Recuperar.vue -->
 <template>
   <div class="login-page">
     <section class="login-hero position-relative overflow-hidden" ref="heroRef">
@@ -37,11 +38,13 @@
                   height="64"
                   loading="lazy"
                 />
-                <h1 class="title-hero h4 fw-extrabold mt-2 mb-1">Ingresa a tu cuenta</h1>
-                <p class="subtitle-hero text-muted mb-0">Bienvenido a Mindora</p>
+                <h1 class="title-hero h4 fw-extrabold mt-2 mb-1">Recuperar contraseña</h1>
+                <p class="subtitle-hero text-muted mb-0">
+                  Ingresa el correo asociado a tu cuenta para enviarte el enlace.
+                </p>
               </div>
 
-              <form @submit.prevent="login" novalidate class="needs-validation" :class="{ 'was-validated': triedSubmit }">
+              <form @submit.prevent="submit" novalidate :class="{ 'was-validated': triedSubmit }">
                 <!-- Email -->
                 <div class="mb-3">
                   <label for="email" class="form-label">Correo electrónico</label>
@@ -54,64 +57,30 @@
                       class="form-control"
                       placeholder="usuario@ejemplo.com"
                       required
-                      autocomplete="username"
+                      autocomplete="email"
                       @focus="pulseIcon($event)"
                     />
                     <div class="invalid-feedback">Ingresa un correo válido.</div>
                   </div>
                 </div>
 
-                <!-- Password (ahora con inputType/iconClass) -->
-                <div class="mb-3">
-                  <label for="password" class="form-label">Contraseña</label>
-                  <div class="input-group input-group-lg">
-                    <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
-                    <input
-                      :type="inputType"
-                      v-model="password"
-                      id="password"
-                      class="form-control"
-                      placeholder="Tu contraseña"
-                      required
-                      minlength="6"
-                      autocomplete="current-password"
-                      @focus="pulseIcon($event)"
-                      @keydown.enter.prevent="login"
-                    />
-                    <button
-                      class="btn btn-outline-secondary password-toggle"
-                      type="button"
-                      @click="togglePasswordVisibility"
-                      :disabled="isLoading"
-                      aria-label="Mostrar u ocultar contraseña"
-                    >
-                      <i :class="iconClass"></i>
-                    </button>
-                    <div class="invalid-feedback">La contraseña es obligatoria (mínimo 6 caracteres).</div>
-                  </div>
-                </div>
-
-                <!-- Recordarme / Olvidaste -->
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="remember" v-model="remember" />
-                    <label class="form-check-label enlace" for="remember">Recordarme</label>
-                  </div>
-                  <router-link class="link-secondary small enlace" to="/recuperar">¿Olvidaste tu contraseña?</router-link>
-                </div>
-
-                <!-- Botón -->
                 <button
-                  ref="loginBtn"
+                  ref="sendBtn"
                   class="btn btn-success btn-lg w-100 btn-login animate__animated animate__fadeInUp"
                   type="submit"
                   :disabled="isLoading"
                   @click="ripple"
                 >
-                  <span v-if="!isLoading"><i class="bi bi-box-arrow-in-right me-2"></i>Entrar</span>
-                  <span v-else><span class="spinner-border spinner-border-sm me-2"></span>Validando…</span>
+                  <span v-if="!isLoading"><i class="bi bi-send me-2"></i>Enviar enlace</span>
+                  <span v-else><span class="spinner-border spinner-border-sm me-2"></span>Procesando…</span>
                 </button>
               </form>
+
+              <div class="text-center mt-3">
+                <router-link class="enlace small" :to="{ name: 'LoginPage' }">
+                  <i class="bi bi-arrow-left-short"></i> Volver al inicio de sesión
+                </router-link>
+              </div>
 
               <p class="text-center mt-4 mb-0 text-muted small">
                 © <span>{{ year }}</span> Mindfulness. Todos los derechos reservados.
@@ -128,51 +97,33 @@
 <script setup>
 import 'animate.css'
 import Swal from 'sweetalert2'
-import { validarCamposLogin } from '@/assets/js/Login.js'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
 import axios from 'axios'
 
-/* Recursos */
+/* Recursos (idénticos al login) */
 const heroVideo = new URL('@/assets/media/videoIndex.mp4', import.meta.url).href
 const brandSrc  = new URL('@/assets/images/logoDark.png', import.meta.url).href
 
-/* ===== Estado de login (nueva lógica) ===== */
+/* Estado */
 const email = ref('')
-const password = ref('')
-const remember = ref(true)
-const isLoading = ref(false)
 const triedSubmit = ref(false)
+const isLoading = ref(false)
 const year = new Date().getFullYear()
 
-/* Mostrar/ocultar contraseña */
-const isPasswordVisible = ref(false)
-const inputType = computed(() => (isPasswordVisible.value ? 'text' : 'password'))
-const iconClass = computed(() => (isPasswordVisible.value ? 'bi bi-eye' : 'bi bi-eye-slash'))
-const togglePasswordVisibility = () => { isPasswordVisible.value = !isPasswordVisible.value }
-
-/* Router */
-const router = useRouter()
-
-/* URL API (respeta VUE_APP_API_URL del proyecto con Vue CLI) */
+/* API */
 const API = (process.env.VUE_APP_API_URL || '').replace(/\/+$/, '')
+const forgotUrl = API + '/password/forgot'
+// opcional (ver sección backend de abajo). Activar con VUE_APP_STRICT_EMAIL_CHECK=1
+const checkEmailUrl = API + '/auth/check-email'
+const useStrictCheck = String(process.env.VUE_APP_STRICT_EMAIL_CHECK || '') === '1'
 
-const loginUrl = API + '/auth/login'
-
-/* ===== Refs DOM para la UI que ya tenías ===== */
+/* Refs DOM / animaciones (mismos helpers del login) */
 const starsCanvas = ref(null)
 const cardRef     = ref(null)
 const videoRef    = ref(null)
 const heroRef     = ref(null)
-const loginBtn    = ref(null)
+const sendBtn     = ref(null)
 
-/* ===== Helpers de UI existentes (sin cambios) ===== */
-function setNavHeightVar () {
-  const nav = document.querySelector('.custom-navbar')
-  const h = nav ? nav.offsetHeight : 56
-  document.documentElement.style.setProperty('--nav-h', `${h}px`)
-}
-const togglePassword = () => {} // ya no se usa, lo dejamos vacío por compatibilidad de eventos si existían
 function pulseIcon (evt) {
   const group = evt.target.closest('.input-group')
   const icon = group?.querySelector('.input-group-text i')
@@ -214,7 +165,7 @@ function bindParallax () {
   }
 }
 function ripple (e) {
-  const btn = loginBtn.value || e.currentTarget
+  const btn = sendBtn.value || e.currentTarget
   const rect = btn.getBoundingClientRect()
   const circle = document.createElement('span')
   const d = Math.max(rect.width, rect.height)
@@ -265,101 +216,58 @@ function paintStars () {
 let offParallax = null
 onMounted(() => {
   document.body.classList.add('has-hero')
-  setNavHeightVar()
-  window.addEventListener('resize', setNavHeightVar, { passive: true })
   offParallax = bindParallax()
   paintStars()
   document.addEventListener('visibilitychange', handleVisibility)
 })
 onBeforeUnmount(() => {
   document.body.classList.remove('has-hero')
-  window.removeEventListener('resize', setNavHeightVar)
   cancelAnimationFrame(starsRAF)
   document.removeEventListener('visibilitychange', handleVisibility)
   if (offParallax) offParallax()
 })
 
-async function login () {
+/* Submit */
+async function submit () {
   triedSubmit.value = true
-
-  const { valid, message } = validarCamposLogin(email.value, password.value)
-  if (!valid) {
-    shakeCard()
-    Swal.fire({ icon: 'warning', title: 'Campos inválidos', text: message, confirmButtonColor: '#28a745' })
-    return
-  }
+  if (!email.value) return
 
   isLoading.value = true
   try {
-    // NO lanzar excepción en 4xx: validateStatus => true
-    const resp = await axios.post(
-      loginUrl,                                  // p.ej. http://127.0.0.1:8000/api/auth/login
-      { email: String(email.value).trim(), password: String(password.value) },
-      { timeout: 12000, validateStatus: () => true }
-    )
-
-    const { status, data } = resp
-
-    // === Credenciales inválidas (flujo inmediato, sin quedarse colgado) ===
-    if (status === 401) {
-      // Password incorrecta
-      shakeCard()
-      Swal.fire({ icon: 'error', title: 'Error de acceso', text: data?.error || 'Contraseña incorrecta.', confirmButtonColor: '#dc3545' })
-      return
+    // (Opcional) Validación estricta de existencia:
+    if (useStrictCheck) {
+      const chk = await axios.post(checkEmailUrl, { email: String(email.value).trim() }, { validateStatus: () => true, timeout: 12000 })
+      if (chk.status === 404) {
+        shakeCard()
+        Swal.fire({ icon: 'error', title: 'Correo no encontrado', text: 'No existe una cuenta con ese correo.', confirmButtonColor: '#dc3545' })
+        return
+      }
+      if (chk.status !== 200) {
+        shakeCard()
+        Swal.fire({ icon: 'error', title: 'Validación no disponible', text: 'Inténtalo de nuevo en unos minutos.', confirmButtonColor: '#dc3545' })
+        return
+      }
     }
-    if (status === 404) {
-      // Correo no registrado
+
+    // Flujo real: enviar enlace (tu controlador ya lo hace)
+    const resp = await axios.post(forgotUrl, { email: String(email.value).trim() }, { validateStatus: () => true, timeout: 12000 })
+    if (resp.status === 200) {
+      Swal.fire({
+        icon: 'success',
+        title: 'Revisa tu correo',
+        text: 'Te enviamos un enlace para restablecer tu contraseña.',
+        confirmButtonColor: '#22c55e'
+      })
+    } else if (resp.status === 422) {
+      const msg = (resp?.data?.errors && Object.values(resp.data.errors).flat()[0]) || resp?.data?.message || 'Datos inválidos.'
       shakeCard()
-      Swal.fire({ icon: 'error', title: 'Error de acceso', text: data?.error || 'No existe un usuario registrado con ese correo.', confirmButtonColor: '#dc3545' })
-      return
-    }
-    if (status === 422) {
-      // Email mal formado u otra validación
-      shakeCard()
-      const msg = (data?.errors && Object.values(data.errors).flat()[0]) || data?.message || 'Datos inválidos.'
       Swal.fire({ icon: 'warning', title: 'Validación', text: msg, confirmButtonColor: '#f59e0b' })
-      return
-    }
-    if (status !== 200) {
-      // Cualquier otro fallo controlado
+    } else {
       shakeCard()
-      Swal.fire({ icon: 'error', title: 'Error de acceso', text: data?.error || data?.message || 'Servicio no disponible.', confirmButtonColor: '#dc3545' })
-      return
+      Swal.fire({ icon: 'error', title: 'No se pudo enviar', text: resp?.data?.message || 'Intenta más tarde.', confirmButtonColor: '#dc3545' })
     }
-
-    // === Éxito (200) ===
-    const payload = data
-    const accessToken = payload.access_token || payload.token
-    const tokenType   = payload.token_type || 'Bearer'
-    if (accessToken) {
-      localStorage.setItem('token', accessToken)
-      localStorage.setItem('token_type', tokenType)
-      axios.defaults.headers.common.Authorization = `${tokenType} ${accessToken}`
-    }
-    if (payload.user)       localStorage.setItem('user', JSON.stringify(payload.user))
-    if (payload.expires_at) localStorage.setItem('expires_at', payload.expires_at)
-
-    const nombreUsuario = payload.user?.name || 'Usuario'
-    Swal.fire({
-      icon: 'success',
-      title: `Hola de nuevo, ${nombreUsuario}`,
-      text: 'Tu sesión ha sido iniciada con éxito.',
-      confirmButtonColor: '#28a745',
-      timer: 1200,
-      showConfirmButton: false
-    })
-
-    const rol = String(payload.user?.rol || payload.user?.tipoUsuario || '').toLowerCase()
-    const destino =
-      rol === 'admin'      ? '/app/admin/dashboard' :
-      rol === 'profesor'   ? '/app/profesor/dashboard' :
-      rol === 'estudiante' ? '/app/estudiante/dashboard' : '/'
-
-    setTimeout(() => { router.push(destino) }, 800)
-
-  } catch (err) {
-    // Solo entrarás aquí por errores de red/timeout reales
-    console.error(err)
+  } catch (e) {
+    console.error(e)
     shakeCard()
     Swal.fire({ icon: 'error', title: 'Error de red', text: 'No se pudo contactar al servidor.', confirmButtonColor: '#dc3545' })
   } finally {
@@ -378,4 +286,5 @@ function shakeCard () {
 }
 </script>
 
+<!-- Reusa los mismos estilos base del login -->
 <style scoped src="@/assets/css/Login.css"></style>

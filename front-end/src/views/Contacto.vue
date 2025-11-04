@@ -1,22 +1,20 @@
 <template>
   <main class="contacto-page">
-
-    <section class="contacto-hero sobre-hero">
+    <!-- ===== HERO ===== -->
+    <section class="contacto-hero">
       <div class="container position-relative">
         <div class="row align-items-center g-4">
           <div class="col-lg-7">
-            <h1 class="hero-title animate__animated animate__fadeInDown">
-              Hablemos
-            </h1>
+            <h1 class="hero-title animate__animated animate__fadeInDown">Hablemos</h1>
             <p class="hero-subtitle animate__animated animate__fadeIn animate__delay-1s">
               Cuéntanos tu caso y te responderemos a la brevedad. También puedes contactarnos por correo o WhatsApp.
             </p>
 
             <div class="d-flex flex-wrap gap-3 mt-3 animate__animated animate__fadeInUp animate__delay-2s">
-              <a href="mailto:contacto@tu-dominio.com" class="btn-pill btn-light-elev">
-                <i class="bi bi-envelope me-2"></i> contacto@tu-dominio.com
+              <a href="mailto:contacto@mindfulness.com" class="btn-pill btn-light-elev">
+                <i class="bi bi-envelope me-2"></i> contacto@mindfulness.com
               </a>
-              <a href="https://wa.me/5215555555555" target="_blank" class="btn-pill btn-outline-elev ripple">
+              <a href="https://wa.me/5217774428209" target="_blank" class="btn-pill btn-outline-elev ripple">
                 <i class="bi bi-whatsapp me-2"></i> WhatsApp
               </a>
             </div>
@@ -28,25 +26,19 @@
               <div class="row g-0 text-center align-items-stretch">
                 <div class="col-4 border-end">
                   <div class="p-3">
-                    <div class="stat-value">
-                      <span>24/7</span>
-                    </div>
+                    <div class="stat-value"><span>24/7</span></div>
                     <div class="stat-label">Recepción</div>
                   </div>
                 </div>
                 <div class="col-4 border-end">
                   <div class="p-3">
-                    <div class="stat-value">
-                      <span class="count" data-target="2">0</span><small> h</small>
-                    </div>
+                    <div class="stat-value"><span class="count" data-target="2">0</span><small> h</small></div>
                     <div class="stat-label">Tiempo de respuesta</div>
                   </div>
                 </div>
                 <div class="col-4">
                   <div class="p-3">
-                    <div class="stat-value">
-                      +<span class="count" data-target="100">0</span>
-                    </div>
+                    <div class="stat-value">+<span class="count" data-target="100">0</span></div>
                     <div class="stat-label">Consultas/mes</div>
                   </div>
                 </div>
@@ -56,18 +48,18 @@
           </div>
         </div>
       </div>
-      <!-- Glows -->
+
+      <!-- Decor -->
       <div class="hero-glow"></div>
       <div class="hero-vignette"></div>
-      <!-- wave separadora -->
       <div class="wave-sep">
         <svg viewBox="0 0 1440 120" preserveAspectRatio="none" class="w-100">
-          <path d="M0,64L72,58.7C144,53,288,43,432,58.7C576,75,720,117,864,117.3C1008,117,1152,75,1296,58.7C1440,43,1584,53,1728,69.3L1728,160L0,160Z" fill="#fff"></path>
+          <path d="M0,64L72,58.7C144,53,288,43,432,58.7C576,75,720,117,864,117.3C1008,117,1152,75,1296,58.7C1440,43,1584,53,1728,69.3L1728,160L0,160Z" />
         </svg>
       </div>
     </section>
 
-    <!-- CONTENIDO -->
+    <!-- ===== CONTENIDO ===== -->
     <section class="contacto-main py-5">
       <div class="container">
         <div class="row g-4 justify-content-center">
@@ -79,11 +71,7 @@
                 <h2 class="h4 mb-0 fw-semibold text-ink">Envíanos un mensaje</h2>
               </div>
 
-              <div
-                v-if="alert.type"
-                :class="['alert', alertClass, 'animate__animated', 'animate__fadeIn']"
-                role="alert"
-              >
+              <div v-if="alert.type" :class="['alert', alertClass, 'animate__animated', 'animate__fadeIn']" role="alert">
                 {{ alert.message }}
               </div>
 
@@ -95,11 +83,13 @@
                   <input
                     v-model.trim="form.name"
                     type="text"
+                    name="name"
                     class="form-control"
                     id="name"
-                    placeholder="Tu nombre"
+                    placeholder=" "
                     :class="{ 'is-invalid': errors.name }"
                     maxlength="100"
+                    autocomplete="name"
                     required
                   />
                   <label for="name"><i class="bi bi-person me-1"></i> Nombre completo</label>
@@ -110,11 +100,13 @@
                   <input
                     v-model.trim="form.email"
                     type="email"
+                    name="email"
                     class="form-control"
                     id="email"
-                    placeholder="usuario@ejemplo.com"
+                    placeholder=" "
                     :class="{ 'is-invalid': errors.email }"
                     maxlength="120"
+                    autocomplete="email"
                     required
                   />
                   <label for="email"><i class="bi bi-envelope me-1"></i> Correo electrónico</label>
@@ -125,9 +117,10 @@
                   <input
                     v-model.trim="form.subject"
                     type="text"
+                    name="subject"
                     class="form-control"
                     id="subject"
-                    placeholder="¿En qué podemos ayudarte?"
+                    placeholder=" "
                     :class="{ 'is-invalid': errors.subject }"
                     maxlength="150"
                     required
@@ -140,8 +133,9 @@
                   <textarea
                     v-model.trim="form.message"
                     id="message"
+                    name="message"
                     class="form-control"
-                    placeholder="Escribe tu mensaje aquí..."
+                    placeholder=" "
                     style="height: 180px"
                     :class="{ 'is-invalid': errors.message }"
                     required
@@ -182,15 +176,17 @@
           <!-- CONTACT CARD -->
           <div class="col-12 col-lg-5">
             <div class="card p-3 p-lg-4 shadow-sm h-100 contact-card" data-animate="fade-right">
-              <h3 class="h5 mb-3 fw-semibold text-ink"><i class="bi bi-geo-alt me-2 text-primary"></i> Información de contacto</h3>
+              <h3 class="h5 mb-3 fw-semibold text-ink">
+                <i class="bi bi-geo-alt me-2 text-primary"></i> Información de contacto
+              </h3>
               <ul class="list-unstyled mb-4">
                 <li class="d-flex align-items-start mb-2 text-ink-2">
                   <i class="bi bi-telephone text-primary me-2"></i>
-                  <span>+52 55 5555 5555</span>
+                  <span>+52 777 442 8209</span>
                 </li>
                 <li class="d-flex align-items-start mb-2 text-ink-2">
                   <i class="bi bi-envelope-open text-primary me-2"></i>
-                  <span>contacto@tu-dominio.com</span>
+                  <span>contacto@mindfulness.com</span>
                 </li>
                 <li class="d-flex align-items-start mb-2 text-ink-2">
                   <i class="bi bi-clock text-primary me-2"></i>
@@ -202,12 +198,10 @@
                 </li>
               </ul>
 
-              <!-- MAPA: OpenStreetMap (iframe) con altura garantizada -->
               <div class="map-wrap rounded border" data-animate="fade-up">
                 <iframe
                   class="map-iframe"
                   src="https://www.openstreetmap.org/export/embed.html?bbox=-99.300%2C18.85%2C-99.10%2C18.99&layer=mapnik&marker=18.920%2C-99.200"
-                  style="border:0"
                   loading="lazy"
                   referrerpolicy="no-referrer-when-downgrade"
                 ></iframe>
@@ -233,36 +227,33 @@ import { reactive, ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import axios from 'axios'
 import 'animate.css'
 
-/* ======= Integración con NAVBAR FIJO ======= */
 onMounted(() => {
   document.body.classList.add('has-hero')
 
-  // asegura --nav-h correcta
   requestAnimationFrame(() => {
     const nav = document.querySelector('.custom-navbar')
     if (nav) document.documentElement.style.setProperty('--nav-h', nav.offsetHeight + 'px')
   })
 
-  // Animaciones por dirección
+  // Aparece por scroll
   const items = document.querySelectorAll('[data-animate]')
   const io = new IntersectionObserver((entries) => {
     entries.forEach((e) => {
       if (!e.isIntersecting) return
       const dir = e.target.getAttribute('data-animate') || 'fade-up'
       const delay = +e.target.getAttribute('data-delay') || 0
-      const base = ['animate__animated']
       const fx = dir === 'fade-left'
         ? 'animate__fadeInLeft'
         : dir === 'fade-right'
         ? 'animate__fadeInRight'
         : 'animate__fadeInUp'
-      setTimeout(() => e.target.classList.add(...base, fx), delay)
+      setTimeout(() => e.target.classList.add('animate__animated', fx), delay)
       io.unobserve(e.target)
     })
   }, { threshold: 0.15 })
   items.forEach((el) => io.observe(el))
 
-  // CountUp cuando stats visible
+  // Contadores
   const counters = document.querySelectorAll('.count')
   const ioStats = new IntersectionObserver((entries) => {
     entries.forEach((e) => {
@@ -275,16 +266,11 @@ onMounted(() => {
   }, { threshold: 0.6 })
   counters.forEach((c) => ioStats.observe(c))
 
-  // Parallax suave del hero
+  // Parallax suave
   const hero = document.querySelector('.contacto-hero')
-  const onScroll = () => {
-    const y = window.scrollY * 0.25
-    hero.style.setProperty('--hero-shift', Math.min(y, 120) + 'px')
-  }
-  window.addEventListener('scroll', onScroll, { passive: true })
-  onScroll()
+  const onScroll = () => hero && hero.style.setProperty('--hero-shift', Math.min(window.scrollY * 0.25, 120) + 'px')
+  window.addEventListener('scroll', onScroll, { passive: true }); onScroll()
 
-  // Limpieza
   onBeforeUnmount(() => {
     document.body.classList.remove('has-hero')
     window.removeEventListener('scroll', onScroll)
@@ -293,7 +279,6 @@ onMounted(() => {
   })
 })
 
-/* ======= Estado ======= */
 const form = reactive({
   name: localStorage.getItem('contact_name') || '',
   email: localStorage.getItem('contact_email') || '',
@@ -305,12 +290,9 @@ const form = reactive({
 const errors = reactive({ name: '', email: '', subject: '', message: '', privacy: '' })
 const loading = ref(false)
 const alert = reactive({ type: '', message: '' })
-const alertClass = computed(() =>
-  alert.type === 'success' ? 'alert-success' : alert.type === 'error' ? 'alert-danger' : 'alert-secondary'
-)
+const alertClass = computed(() => alert.type === 'success' ? 'alert-success' : alert.type === 'error' ? 'alert-danger' : 'alert-secondary')
 
-/* ======= Validaciones ======= */
-function validate() {
+function validate () {
   let ok = true
   errors.name = errors.email = errors.subject = errors.message = errors.privacy = ''
 
@@ -324,8 +306,7 @@ function validate() {
   return ok
 }
 
-/* ======= Submit ======= */
-async function onSubmit() {
+async function onSubmit () {
   if (loading.value) return
   if (!validate()) { scrollToFirstError(); return }
 
@@ -336,8 +317,10 @@ async function onSubmit() {
     localStorage.setItem('contact_name', form.name)
     localStorage.setItem('contact_email', form.email)
 
-    const base = (process.env.VUE_APP_API_BASE || process.env.VUE_APP_API_URL || '').replace(/\/+$/, '')
-    const url = base ? `${base}/contacto` : '/api/contacto'
+    // Base URL robusta para Vue CLI (agrega /api si hace falta)
+    const raw = (process.env.VUE_APP_API_BASE || process.env.VUE_APP_API_URL || 'http://127.0.0.1:8000/api').trim()
+    const base = raw.endsWith('/api') ? raw : (raw.replace(/\/+$/,'') + '/api')
+    const url = `${base}/contacto`
 
     await axios.post(url, {
       nombre: form.name,
@@ -359,37 +342,31 @@ async function onSubmit() {
   }
 }
 
-/* ======= Helpers UI ======= */
-function setAlert(type, message) {
-  alert.type = type
-  alert.message = message
+/* Helpers UI */
+function setAlert (type, message) {
+  alert.type = type; alert.message = message
   if (type) setTimeout(() => { alert.type = ''; alert.message = '' }, 6000)
 }
-function scrollToFirstError() {
+function scrollToFirstError () {
   const field = document.querySelector('.is-invalid')
-  if (field) {
-    field.focus({ preventScroll: true })
-    field.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }
+  if (field) { field.focus({ preventScroll: true }); field.scrollIntoView({ behavior: 'smooth', block: 'center' }) }
 }
-function animateFlash(selector) {
+function animateFlash (selector) {
   const el = document.querySelector(selector)
   if (!el) return
-  el.classList.remove('animate__animated', 'animate__headShake')
-  void el.offsetWidth
+  el.classList.remove('animate__animated', 'animate__headShake'); void el.offsetWidth
   el.classList.add('animate__animated', 'animate__headShake')
 }
-function animateCount(el, target, duration = 800) {
-  const start = 0
-  const t0 = performance.now()
+function animateCount (el, target, duration = 900) {
+  const start = 0, t0 = performance.now()
   const step = (now) => {
     const p = Math.min((now - t0) / duration, 1)
-    el.textContent = Math.floor(start + (target - start) * easeOutCubic(p))
+    el.textContent = Math.floor(start + (target - start) * (1 - Math.pow(1 - p, 3)))
     if (p < 1) requestAnimationFrame(step)
   }
   requestAnimationFrame(step)
 }
-function easeOutCubic(x) { return 1 - Math.pow(1 - x, 3) }
 </script>
 
+<!-- Estilos dedicados -->
 <style scoped src="@/assets/css/Contacto.css"></style>

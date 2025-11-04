@@ -3,8 +3,10 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 // 404
 import ComponenteNoEncontrado from '@/views/NoEncontrado.vue'
+
 // Cambiar contraseña
 import ResetPassword from '@/views/ResetPasword.vue'
+import PedirCorreo from '@/views/Recuperar.vue'
 
 // Layouts
 import PublicLayout from '@/layouts/PublicLayout.vue'
@@ -14,7 +16,6 @@ import EstudianteLayout from '@/layouts/EstudianteLayout.vue'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 
 // Seguimiento
-import SeguimientoEstudiante from '@/views/estudiante/Seguimiento.vue'
 import SeguimientoProfesor from '@/views/profesor/Seguimiento.vue'
 import SeguimientoAdmin from '@/views/administrador/Seguimiento.vue'
 
@@ -26,7 +27,6 @@ import Contacto      from '@/views/Contacto.vue'
 
 // Comunes protegidas
 import Perfil        from '@/views/Perfil.vue'
-import Crud          from '@/views/Crud.vue'
 
 // Dashboards
 import ProfesorHome      from '@/views/profesor/Home.vue'
@@ -47,7 +47,6 @@ import BitacorasE   from '@/views/estudiante/Bitacoras.vue'
 import CitasE       from '@/views/estudiante/Citas.vue'
 import EncuestasE   from '@/views/estudiante/Encuestas.vue'
 import RecompensasE from '@/views/estudiante/Recompensas.vue'
-import TecnicasE    from '@/views/estudiante/Tecnicas.vue'
 import TestsE       from '@/views/estudiante/Tests.vue'
 
 // Admin
@@ -110,10 +109,7 @@ const routes = [
           { path: 'citas',       name: 'CitasE',         component: CitasE },
           { path: 'encuestas',   name: 'EncuestasE',     component: EncuestasE },
           { path: 'recompensas', name: 'RecompensasE',   component: RecompensasE },
-          { path: 'tecnicas',    name: 'TecnicasE',      component: TecnicasE },
-          { path: 'tests',       name: 'TestsE',         component: TestsE },
-          { path: 'crud',        name: 'CrudPage',       component: Crud },
-          { path: 'seguimiento',       name: 'SeguimientoEstudiante',         component: SeguimientoEstudiante }
+          { path: 'tests',       name: 'TestsE',         component: TestsE }
         ]
       },
 
@@ -143,6 +139,12 @@ const routes = [
     path: '/reset-password',
     name: 'ResetPassword',    
     component: ResetPassword 
+  }
+  ,
+  {
+    path: '/recuperar',
+    name: 'PedirCorreo',    
+    component: PedirCorreo 
   }
   ,
   { path: '/:pathMatch(.*)*', component: ComponenteNoEncontrado }

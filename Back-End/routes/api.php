@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\DashboardAlumnoController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Api\ActividadesAsignadasController;
 use App\Http\Controllers\Api\ReporteController;
+use App\Http\Controllers\Api\ContactoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -48,7 +49,10 @@ Route::prefix('auth')->group(function () {
 Route::post('personas', [PersonaController::class, 'store']);
 
 Route::post('/password/forgot', [PasswordResetController::class, 'forgot']);
+
 Route::post('/password/reset',  [PasswordResetController::class, 'reset']);
+
+Route::post('/contacto', [ContactoController::class, 'store']);
 
 /*
 |--------------------------------------------------------------------------

@@ -1,38 +1,35 @@
-/* ==================== PALETA DARK PURPLE + BLUE/GREEN ==================== */
+/* ==================== PALETA DARK AURORA ==================== */
 .contacto-page{
-  /* Morados */
-  --primary:#7c3aed;    /* violeta 600 */
-  --primary-2:#6d28d9;  /* violeta 700 */
-  --primary-3:#4c1d95;  /* violeta 900 */
+  /* Principales */
+  --ink:#e9f1ff;
+  --ink-2:#c9d6ff;
+  --muted:#9fb0d1;
+
+  /* Primarios (azul/índigo/violeta) */
+  --p1:#2563eb;   /* azul */
+  --p2:#4f46e5;   /* índigo */
+  --p3:#7c3aed;   /* violeta */
 
   /* Acentos */
-  --accent-blue:#2563eb;   /* azul fuerte */
-  --accent-green:#10b981;  /* verde esmeralda */
+  --a1:#22d3ee;   /* cyan */
+  --a2:#10b981;   /* verde */
 
-  /* Texto y superficies */
-  --ink:#0a0a0b;        /* casi negro */
-  --ink-2:#c4b5fd;      /* lila claro */
-  --muted:#a1a1aa;      /* gris zinc 400 */
-  --card:#0f0f14;       /* tarjeta oscura */
-  --glass:rgba(20,16,29,.55);
-  --stroke:rgba(124,58,237,.22);
+  /* Superficies */
+  --card:#0e1018;
+  --glass:rgba(16,18,30,.55);
+  --stroke:rgba(124,58,237,.24);
 
-  /* Fondo hero (morado-indigo con ligero teal) */
-  --hero-start:#2a153b;
-  --hero-mid:#1d224c;
-  --hero-end:#0b0b10;
+  /* Fondo hero */
+  --hero-start:#0b0f1c;
+  --hero-mid:#101a3a;
+  --hero-end:#0b0b12;
 
-  /* Color de la ola (debajo del hero) */
-  --wave-fill: var(--hero-end); /* usa #0b0b10; si prefieres transparente: transparent */
+  --wave-fill: var(--hero-end);
 
   background:
-    radial-gradient(1600px 900px at 12% -10%, #101017 0%, #0b0b10 58%, #050508 100%);
-  color:#eae9f5;
+    radial-gradient(1600px 900px at 10% -10%, #0c0f1a 0%, #0b0b12 60%, #07070c 100%);
+  color:var(--ink);
 }
-
-/* Mejora de utilidades Bootstrap dentro de la página */
-.contacto-page .text-primary{ color: var(--accent-blue) !important; }
-.contacto-page .bg-primary{ background-color: var(--accent-blue) !important; }
 
 /* ==================== HERO ==================== */
 .contacto-hero{
@@ -40,204 +37,115 @@
   padding-top: calc(var(--nav-h,72px) + clamp(48px, 5vw, 96px));
   padding-bottom: clamp(36px, 6vw, 96px);
   background:
-    radial-gradient(1200px 700px at 10% -10%, var(--hero-start) 0%, var(--hero-mid) 38%, var(--hero-end) 100%),
-    radial-gradient(600px 280px at 86% -8%, rgba(16,185,129,.12), transparent 60%);
+    radial-gradient(1200px 700px at 8% -12%, var(--hero-start) 0%, var(--hero-mid) 40%, var(--hero-end) 100%),
+    radial-gradient(700px 320px at 86% -8%, rgba(34,211,238,.12), transparent 60%);
   transform: translateY(calc(var(--hero-shift, 0px)));
-  color:#fff;
   overflow:hidden;
   isolation:isolate;
 }
-
-/* Contenido por encima de decoraciones */
-.contacto-hero > *:not(.hero-glow):not(.hero-vignette):not(.wave-sep){
-  position: relative;
-  z-index: 3;
-}
-
-/* Links en el hero SIN subrayado siempre */
-.contacto-hero a,
-.contacto-hero a:hover,
-.contacto-hero a:focus{
-  text-decoration: none !important;
-}
-
 .hero-title{
-  font-weight: 800;
-  font-size: clamp(34px, 4.6vw, 64px);
-  letter-spacing: .2px;
-  text-shadow: 0 8px 40px rgba(0,0,0,.45);
+  font-weight: 900;
+  font-size: clamp(34px, 4.8vw, 64px);
+  letter-spacing:.3px;
+  background: linear-gradient(180deg,#fff,#e8eaff 65%,#bcd3ff);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  text-shadow: 0 10px 40px rgba(0,0,0,.45);
 }
-
 .hero-subtitle{
-  color: rgba(255,255,255,.92);
+  color: rgba(235,240,255,.92);
   max-width: 56ch;
   text-shadow: 0 4px 24px rgba(0,0,0,.28);
 }
-
-/* Botones redondeados */
-.btn-pill{
-  border-radius: 999px;
-  padding:.9rem 1.25rem;
-  font-weight: 700;
-  letter-spacing: .2px;
-  transition: transform .18s ease, box-shadow .25s ease, filter .2s ease, background .25s ease, color .25s ease, border-color .25s ease;
-}
-
-/* Botón claro elevado (correo) */
+.btn-pill{ border-radius:999px; padding:.9rem 1.25rem; font-weight:700; letter-spacing:.2px; transition: transform .18s, box-shadow .25s, filter .2s, background .25s, color .25s, border-color .25s; }
 .btn-light-elev{
-  background:#ffffff;
-  color: var(--primary-3);
-  border:1px solid rgba(255,255,255,.5);
+  background:#ffffff; color:#0b1540; border:1px solid rgba(255,255,255,.5);
   box-shadow: 0 10px 30px rgba(0,0,0,.35);
 }
-.btn-light-elev:hover{
-  transform: translateY(-2px);
-  filter: brightness(1.03);
-  box-shadow: 0 14px 36px rgba(0,0,0,.45);
-}
-
-/* Botón outline (WhatsApp) con borde blanco y halo verde */
+.btn-light-elev:hover{ transform: translateY(-2px); filter: brightness(1.04); box-shadow: 0 14px 36px rgba(0,0,0,.45); }
 .btn-outline-elev{
-  color:#ffffff;
-  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+  color:#ffffff; background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
   border:1.5px solid rgba(255,255,255,.85);
-  box-shadow: 0 0 0 rgba(0,0,0,0);
 }
 .btn-outline-elev:hover{
   background: rgba(16,185,129,.14);
-  border-color: rgba(255,255,255,.9);
+  border-color: rgba(255,255,255,.95);
   transform: translateY(-2px);
   box-shadow: 0 8px 26px rgba(16,185,129,.25);
 }
+.wave-sep{ position:absolute; left:0; right:0; bottom:-1px; z-index: 2; pointer-events:none; }
+.wave-sep path{ fill: var(--wave-fill) !important; }
+.hero-glow{ position:absolute; inset:0; background:
+  radial-gradient(900px 360px at -10% 110%, rgba(79,70,229,.18), transparent 60%),
+  radial-gradient(700px 260px at 85% -10%, rgba(37,99,235,.16), transparent 60%);
+  pointer-events:none; z-index:1; }
+.hero-vignette{ position:absolute; inset:0; background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.22) 78%, rgba(0,0,0,.32) 100%); z-index:2; }
 
-/* Ola separadora — SIN BLANCO */
-.wave-sep{
-  position:absolute; left:0; right:0; bottom:-1px;
-  z-index: 2;
-  pointer-events:none;
-}
-.wave-sep svg{ display:block; width:100%; height:auto; }
-.wave-sep path{ fill: var(--wave-fill) !important; } /* ⬅️ anula el #fff inline */
-
-/* Decoraciones */
-.hero-glow{
-  position:absolute; inset:0;
-  background:
-    radial-gradient(700px 260px at 85% -10%, rgba(255,255,255,.16), transparent 60%),
-    radial-gradient(900px 360px at -10% 110%, rgba(37,99,235,.10), transparent 60%);
-  pointer-events:none; z-index:1;
-}
-.hero-vignette{
-  position:absolute; inset:0;
-  background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.22) 78%, rgba(0,0,0,.34) 100%);
-  pointer-events:none; z-index:2;
-}
-
-/* ==================== CUERPO DESPUÉS DEL HERO ==================== */
+/* ==================== CUERPO ==================== */
 .contacto-main{
   background:
     radial-gradient(1400px 800px at 50% -200px, rgba(124,58,237,.12), transparent 60%),
     radial-gradient(1400px 800px at -10% 120%, rgba(37,99,235,.10), transparent 60%),
-    linear-gradient(180deg, #0b0b10 0%, #08080c 100%);
+    linear-gradient(180deg, #0b0b12 0%, #090912 100%);
 }
 
-/* ==================== TARJETA STATS ==================== */
+/* ==================== STATS ==================== */
 .stats-card{
-  background: linear-gradient(180deg, #12121a, #0f0f14);
+  background: linear-gradient(180deg, #111426, #0e111e);
   border-radius: 18px;
   border:1px solid var(--stroke);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.03), 0 14px 40px rgba(10,10,20,.35);
-  transition: transform .2s ease, box-shadow .3s ease, border-color .25s ease, filter .25s ease;
+  transition: transform .2s, box-shadow .3s, border-color .25s, filter .25s;
 }
-.stats-card:hover{
-  transform: translateY(-4px);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 20px 60px rgba(10,10,20,.5);
-  border-color: rgba(124, 58, 237, .35);
-  filter: saturate(1.05);
-}
-.stat-value{
-  font-size: clamp(24px, 3.2vw, 34px);
-  font-weight: 900;
-  color: #e9ddff;
-  text-shadow: 0 6px 28px rgba(124,58,237,.35);
-}
-.stat-label{
-  font-size: .92rem;
-  color: var(--muted);
-}
+.stats-card:hover{ transform: translateY(-4px); box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 20px 60px rgba(10,10,20,.5); border-color: rgba(124,58,237,.35); filter: saturate(1.05); }
+.stat-value{ font-size: clamp(24px, 3.2vw, 34px); font-weight: 900; color: #e9efff; text-shadow: 0 6px 28px rgba(37,99,235,.35); }
+.stat-label{ font-size: .92rem; color: var(--muted); }
 
 /* ==================== CARDS / FORM ==================== */
 .glass{
   background: var(--glass);
-  backdrop-filter: blur(10px) saturate(1.05);
+  backdrop-filter: blur(10px) saturate(1.06);
   border:1px solid var(--stroke);
   border-radius: 20px;
   box-shadow: 0 10px 30px rgba(5,5,12,.35);
-  transition: transform .2s ease, box-shadow .3s ease, border-color .25s ease, background-color .25s ease;
+  transition: transform .2s, box-shadow .3s, border-color .25s, background-color .25s;
 }
-.glass:hover{
-  transform: translateY(-3px);
-  box-shadow: 0 16px 50px rgba(5,5,12,.5);
-  border-color: rgba(124,58,237,.35);
-}
-
+.glass:hover{ transform: translateY(-3px); box-shadow: 0 16px 50px rgba(5,5,12,.5); border-color: rgba(124,58,237,.35); }
 .contact-card{
   border-radius: 20px;
-  background: linear-gradient(180deg, #12121a, #0f0f14);
+  background: linear-gradient(180deg, #121528, #0f1322);
   border:1px solid var(--stroke);
   box-shadow: 0 10px 30px rgba(5,5,12,.35);
 }
-
-.text-ink{ color:#f0eaff; }
+.text-ink{ color:#f2f5ff; }
 .text-ink-2{ color: var(--ink-2); }
 
-/* ===== Inputs y placehoders (ALTO CONTRASTE) ===== */
+/* ===== Inputs / focus ===== */
 .form-control, .form-select, .form-check-input{
-  border-radius: 12px;
-  background:#0f0f14;
+  border-radius: 14px;
+  background:#0f1322;
   border:1px solid rgba(255,255,255,.10);
-  color:#f5f6ff;
-  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
-}
-.form-control::placeholder{
-  color: rgba(228,232,255,.68) !important;
-  opacity: 1; /* Safari */
-}
-.form-floating > label{
-  color: rgba(228,232,255,.72);
+  color:#f6f8ff;
+  transition: border-color .2s, box-shadow .2s, background .2s;
 }
 .form-control:focus, .form-select:focus{
-  background:#13131a;
-  border-color: rgba(37,99,235,.6); /* azul */
-  box-shadow: 0 0 0 .2rem rgba(37,99,235,.25), 0 0 0 .05rem rgba(16,185,129,.15); /* azul + verde */
+  background:#121735;
+  border-color: rgba(79,70,229,.7);
+  box-shadow: 0 0 0 .22rem rgba(79,70,229,.22), 0 0 0 .05rem rgba(34,211,238,.15);
   color:#fff;
 }
 
 /* Checkbox */
-.form-check-input{
-  background-color:#0f0f14;
-  border-color: rgba(255,255,255,.18);
-}
-.form-check-input:checked{
-  background-color: var(--accent-green);
-  border-color: var(--accent-green);
-}
+.form-check-input{ background-color:#0f1322; border-color: rgba(255,255,255,.18); }
+.form-check-input:checked{ background-color: var(--a2); border-color: var(--a2); }
 
-/* Botón principal (enviar) */
+/* Botón principal */
 .btn-primary-elev{
-  background: linear-gradient(180deg, var(--primary) 0%, var(--accent-blue) 100%);
-  border:none;
-  color:#fff;
-  border-radius:14px;
-  transition: transform .16s ease, box-shadow .25s ease, filter .22s ease, letter-spacing .18s ease;
-  box-shadow: 0 10px 26px rgba(37,99,235,.35);
+  background: linear-gradient(90deg, var(--p1), var(--p2) 50%, var(--p3));
+  border:none; color:#fff; border-radius:14px;
+  box-shadow: 0 12px 30px rgba(79,70,229,.35);
+  transition: transform .16s, box-shadow .25s, filter .22s, letter-spacing .18s;
 }
-.btn-primary-elev:hover{
-  transform: translateY(-2px);
-  filter: brightness(1.05) saturate(1.05);
-  box-shadow: 0 16px 40px rgba(16,185,129,.35);
-  letter-spacing:.2px;
-}
+.btn-primary-elev:hover{ transform: translateY(-2px); filter: brightness(1.05) saturate(1.05); box-shadow: 0 16px 44px rgba(34,211,238,.28); letter-spacing:.2px; }
 .btn-primary-elev:active{ transform: translateY(0); }
 
 /* Ripple */
@@ -247,102 +155,61 @@
   background: radial-gradient(circle, rgba(255,255,255,.45) 10%, transparent 11%) center/0 0 no-repeat;
   transition: background-size .45s, opacity .6s;
 }
-.ripple:active:after{
-  background-size: 12000% 12000%;
-  opacity: 0;
-  transition: 0s;
-}
-
-/* ==================== LINKS (WhatsApp / Gmail) ==================== */
-.link-contact{
-  display:inline-flex; align-items:center; gap:.5rem;
-  padding:.65rem 1rem; border-radius:999px;
-  text-decoration:none !important; /* ⬅️ sin subrayado */
-  font-weight:700;
-  background: rgba(255,255,255,.08);
-  border:1px solid rgba(255,255,255,.16);
-  color:#fff;
-  transition: transform .18s ease, box-shadow .25s ease, background .25s ease, border-color .25s ease;
-  position:relative; z-index:4;
-}
-.link-contact:hover{
-  transform: translateY(-2px);
-  background: rgba(255,255,255,.12);
-  box-shadow: 0 10px 28px rgba(0,0,0,.35);
-  border-color: rgba(255,255,255,.26);
-}
-.link-contact i{ opacity:.95; }
-
-.link-wapp{ background: rgba(16,185,129,.14); border-color: rgba(16,185,129,.25); }
-.link-wapp:hover{ background: rgba(16,185,129,.20); }
-.link-mail{ background: rgba(37,99,235,.14); border-color: rgba(37,99,235,.25); }
-.link-mail:hover{ background: rgba(37,99,235,.20); }
-
-/* === Asegura que NINGÚN link del hero tenga subrayado === */
-.contacto-hero .btn-pill,
-.contacto-hero .btn-pill:hover,
-.contacto-hero .btn-pill:focus{ text-decoration:none !important; }
+.ripple:active:after{ background-size: 12000% 12000%; opacity: 0; transition: 0s; }
 
 /* ==================== MAPA ==================== */
 .map-wrap{
-  position: relative;
-  overflow: hidden;
-  border-radius: 16px;
-  background:#0f0f14;
-  border:1px solid var(--stroke);
+  position: relative; overflow: hidden; border-radius: 16px;
+  background:#0f1322; border:1px solid var(--stroke);
   box-shadow: 0 10px 30px rgba(5,5,12,.35);
-  transition: transform .2s ease, box-shadow .3s ease, border-color .25s ease, filter .25s ease;
+  transition: transform .2s, box-shadow .3s, border-color .25s, filter .25s;
 }
-.map-wrap:hover{
-  transform: translateY(-2px);
-  box-shadow: 0 16px 50px rgba(5,5,12,.5);
-  border-color: rgba(124,58,237,.35);
-  filter: saturate(1.03);
-}
-.map-iframe{
-  display:block;
-  width:100%;
-  height:360px;
-  border:0;
-}
+.map-wrap:hover{ transform: translateY(-2px); box-shadow: 0 16px 50px rgba(5,5,12,.5); border-color: rgba(124,58,237,.35); filter: saturate(1.03); }
+.map-iframe{ display:block; width:100%; height:360px; border:0; }
 .map-link{
-  position:absolute; right:10px; bottom:8px;
-  background:#1a1a22cc;
-  padding:.35rem .6rem;
-  border-radius:10px;
-  color:#e7e3ff;
-  border:1px solid rgba(255,255,255,.16);
-  backdrop-filter: blur(6px);
-  z-index:4;
-  transition: transform .18s ease, background .2s ease, border-color .2s ease;
+  position:absolute; right:10px; bottom:8px; background:#121735cc;
+  padding:.35rem .6rem; border-radius:10px; color:#e7e9ff; border:1px solid rgba(255,255,255,.16);
+  backdrop-filter: blur(6px); z-index:4; transition: transform .18s, background .2s, border-color .2s;
 }
-.map-link:hover{
-  transform: translateY(-2px);
-  background:#232333e6;
-  border-color: rgba(255,255,255,.26);
-}
-
-/* ==================== UTILIDADES ==================== */
-.py-lg-6{ padding-top:5rem !important; padding-bottom:5rem !important; }
-.shadow-soft{ box-shadow: 0 8px 26px rgba(0,0,0,.28); }
-.border-gradient{
-  border:1px solid transparent;
-  background:
-    linear-gradient(#0f0f14, #0f0f14) padding-box,
-    linear-gradient(135deg,
-      rgba(124,58,237,.5),
-      rgba(37,99,235,.45),
-      rgba(16,185,129,.35)
-    ) border-box;
-  border-radius:18px;
-}
+.map-link:hover{ transform: translateY(-2px); background:#18204ae6; border-color: rgba(255,255,255,.26); }
 
 /* ==================== RESPONSIVO ==================== */
 @media (max-width: 991.98px){
-  .hero-title{ font-size: clamp(30px, 8vw, 42px); }
+  .hero-title{ font-size: clamp(30px, 8vw, 44px); }
   .map-iframe{ height:320px; }
 }
 @media (max-width: 575.98px){
   .btn-pill{ width:100%; justify-content:center; }
-  .link-contact{ width:100%; justify-content:center; }
+}
+
+/* ============ FIX: Floating labels sin texto amontonado (inputs y TEXTAREA) ============ */
+/* Oculta placeholder (necesario para form-floating) */
+.form-floating > .form-control::placeholder,
+.form-floating > textarea.form-control::placeholder { color: transparent !important; opacity: 0 !important; }
+
+/* Padding extra arriba para que el label tenga espacio */
+.form-floating > .form-control,
+.form-floating > textarea.form-control { padding-top: 1.35rem; padding-bottom: .55rem; }
+
+/* Estado flotante cuando hay valor o focus */
+.form-floating > .form-control:not(:placeholder-shown) ~ label,
+.form-floating > textarea.form-control:not(:placeholder-shown) ~ label,
+.form-floating > .form-control:focus ~ label,
+.form-floating > textarea.form-control:focus ~ label {
+  transform: scale(.85) translateY(-.6rem) translateX(.15rem);
+  opacity: .95;
+  color: #cfe3ff;
+}
+
+/* Chrome autofill */
+.form-floating > .form-control:-webkit-autofill,
+.form-floating > textarea.form-control:-webkit-autofill{
+  -webkit-text-fill-color: #fff;
+  box-shadow: 0 0 0 30px #121735 inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+.form-floating > .form-control:-webkit-autofill ~ label,
+.form-floating > textarea.form-control:-webkit-autofill ~ label{
+  transform: scale(.85) translateY(-.6rem) translateX(.15rem);
+  opacity: .95;
 }

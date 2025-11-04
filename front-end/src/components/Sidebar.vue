@@ -301,9 +301,7 @@ const menusPorRol = {
     { to: '/app/estudiante/citas',       text: 'Citas',        icon: 'bi-calendar-event'    },
     { to: '/app/estudiante/encuestas',   text: 'Encuestas',    icon: 'bi-clipboard-data'    },
     { to: '/app/estudiante/recompensas', text: 'Recompensas',  icon: 'bi-trophy'            },
-    { to: '/app/estudiante/tecnicas',    text: 'Técnicas',     icon: 'bi-book'              },
-    { to: '/app/estudiante/tests',       text: 'Tests',        icon: 'bi-file-earmark-text' },
-    { to: '/app/estudiante/seguimiento', text: 'Seguimiento',  icon: 'bi-activity'          }
+    { to: '/app/estudiante/tests',       text: 'Tests',        icon: 'bi-file-earmark-text' }
   ],
   profesor: [
     { to: '/app/profesor/dashboard',   text: 'Inicio',       icon: 'bi-house'             },

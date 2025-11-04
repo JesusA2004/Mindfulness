@@ -89,9 +89,9 @@
             </div>
 
             <div class="card-footer bg-transparent border-0 pt-0 pb-3 px-3">
-              <div class="d-flex flex-column flex-md-row gap-2">
+              <div class="btn-grid">
                 <button
-                  class="btn btn-outline-secondary btn-sm flex-fill btn-with-label"
+                  class="btn btn-outline-secondary btn-sm flex-fill btn-with-label w-100"
                   @click="openView(item)"
                   data-bs-toggle="tooltip"
                   title="Consultar"
@@ -99,8 +99,20 @@
                   <i class="bi bi-eye me-1"></i>
                   <span>Consultar</span>
                 </button>
+
+                <!-- NUEVO: Ver respuestas -->
                 <button
-                  class="btn btn-outline-primary btn-sm flex-fill btn-with-label"
+                  class="btn btn-outline-info btn-sm flex-fill btn-with-label w-100"
+                  @click="viewAnswers(item)"
+                  data-bs-toggle="tooltip"
+                  title="Ver respuestas"
+                >
+                  <i class="bi bi-bar-chart-line me-1"></i>
+                  <span>Ver respuestas</span>
+                </button>
+
+                <button
+                  class="btn btn-outline-primary btn-sm flex-fill btn-with-label w-100"
                   @click="openEdit(item)"
                   data-bs-toggle="tooltip"
                   title="Modificar"
@@ -109,7 +121,7 @@
                   <span>Modificar</span>
                 </button>
                 <button
-                  class="btn btn-outline-danger btn-sm flex-fill btn-with-label"
+                  class="btn btn-outline-danger btn-sm flex-fill btn-with-label w-100"
                   @click="confirmDelete(item)"
                   data-bs-toggle="tooltip"
                   title="Eliminar"
@@ -167,9 +179,9 @@
 
     <!-- ======= Modales ======= -->
 
-    <!-- Modal: Consulta (vistosa como Docente, pero con acciones de Admin en footer) -->
+    <!-- Modal: Consulta -->
     <div class="modal fade" ref="viewModalRef" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered modal-xl modal-fit">
+      <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable modal-fullscreen-sm-down modal-fit">
         <div class="modal-content modal-flex border-0 shadow-lg">
           <div class="modal-header border-0 sticky-top bg-white">
             <div class="d-flex align-items-center gap-3">
@@ -233,7 +245,7 @@
               </div>
             </div>
 
-            <!-- Progreso (cantidad visible vs total) -->
+            <!-- Progreso -->
             <div class="progress-wrap mb-3" v-if="totalQuestions > 0">
               <div class="d-flex justify-content-between small text-muted mb-1">
                 <span>Mostrando {{ visibleQuestions }} de {{ totalQuestions }} preguntas</span>
@@ -244,7 +256,7 @@
               </div>
             </div>
 
-            <!-- Preguntas en tarjetas -->
+            <!-- Preguntas -->
             <div class="row g-3">
               <div
                 v-for="(q, i) in filteredQuestions"
@@ -252,15 +264,21 @@
                 class="col-12"
               >
                 <div class="q-card shadow-sm">
-                  <div class="q-head" @click="toggleViewQuestion(iMapped(i))" :aria-expanded="viewToggle.qOpen[iMapped(i)]">
-                    <div class="d-flex align-items-center gap-2">
+                  <div
+                    class="q-head"
+                    @click="toggleViewQuestion(iMapped(i))"
+                    :aria-expanded="viewToggle.qOpen[iMapped(i)]"
+                  >
+                    <!-- IZQ: índice + título -->
+                    <div class="q-left">
                       <span class="q-index">#{{ i + 1 }}</span>
-                      <span class="q-title text-truncate" :title="q.pregunta || '—'">
+                      <span class="q-title" :title="q.pregunta || '—'">
                         {{ q.pregunta || '—' }}
                       </span>
                     </div>
 
-                    <div class="d-flex align-items-center gap-2">
+                    <!-- DER: badge + chevron -->
+                    <div class="q-right">
                       <span class="badge rounded-pill q-type" :class="tipoBadgeClass(q.tipo)">
                         <i :class="tipoIcon(q.tipo)" class="me-1"></i>{{ labelTipo(q.tipo) }}
                       </span>
@@ -459,14 +477,13 @@ const {
   openView, openCreate, openEdit,
   addPregunta, removePregunta, toggleQuestion, needsOptions, addOpcion, removeOpcion, onChangeTipo, toggleViewQuestion,
   onSubmit, confirmDelete, modifyFromView, deleteFromView,
+  // si aún no lo tienes, puedes implementar viewAnswers en tu composable
+  viewAnswers
 } = useTestsCrud();
 
-/* ==========
-   Controles del visor (consulta vistosa)
-=========== */
+/* ==========  Controles del visor ========== */
 const qSearch = ref('');
 
-/* Preguntas del test seleccionado + filtro local */
 const questions = computed(() => selected?.value?.cuestionario || []);
 const totalQuestions = computed(() => questions.value.length);
 
@@ -479,17 +496,14 @@ const filteredQuestions = computed(() => {
   );
 });
 
-/* Cantidad visible */
 const visibleQuestions = computed(() => filteredQuestions.value.length);
 
-/* Map índice visible -> índice real (para usar viewToggle.qOpen) */
 const iMapped = (visibleIndex) => {
   if (!qSearch.value) return visibleIndex;
   const q = filteredQuestions.value[visibleIndex];
   return questions.value.indexOf(q);
 };
 
-/* Expandir / Contraer */
 const expandAll = () => {
   ensureQOpenSize();
   filteredQuestions.value.forEach((_, i) => viewToggle.qOpen[iMapped(i)] = true);
@@ -499,7 +513,6 @@ const collapseAll = () => {
   filteredQuestions.value.forEach((_, i) => viewToggle.qOpen[iMapped(i)] = false);
 };
 
-/* Asegurar tamaño de qOpen */
 function ensureQOpenSize () {
   if (!Array.isArray(viewToggle.qOpen)) viewToggle.qOpen = [];
   const need = Math.max(viewToggle.qOpen.length, questions.value.length);
@@ -508,7 +521,7 @@ function ensureQOpenSize () {
   }
 }
 
-/* Iconos y clases por tipo */
+/* Iconos/clases por tipo */
 const tipoIcon = (tipo) => {
   switch (tipo) {
     case 'seleccion_multiple': return 'bi bi-ui-radios';
@@ -528,36 +541,22 @@ const tipoBadgeClass = (tipo) => {
 <style scoped>
 @import '@/assets/css/Crud.css';
 
-/* Elevar sutilmente al hover */
-.hover-raise {
-  transition: transform .2s ease, box-shadow .2s ease;
-}
-.hover-raise:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(0,0,0,.08);
-}
+/* Hover */
+.hover-raise { transition: transform .2s ease, box-shadow .2s ease; }
+.hover-raise:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,.08); }
 
 /* Modal header avatar */
 .avatar-pill{
-  width: 44px; height: 44px;
-  display: grid; place-items: center;
-  border-radius: 999px;
-  background: var(--chip, #eef6ff);
-  color: var(--ink-2, #2c4c86);
-  box-shadow: inset 0 0 0 1px rgba(27,59,111,.08);
+  width: 44px; height: 44px; display: grid; place-items: center; border-radius: 999px;
+  background: var(--chip, #eef6ff); color: var(--ink-2, #2c4c86); box-shadow: inset 0 0 0 1px rgba(27,59,111,.08);
   font-size: 1.25rem;
 }
 
 /* Chips superiores */
-.meta-wrap{
-  display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem;
-}
+.meta-wrap{ display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
 .meta-chip{
-  background: var(--chip, #eef6ff);
-  color: var(--ink-2, #2c4c86);
-  border: 1px solid var(--stroke, #e6eefc);
-  padding: .35rem .65rem; border-radius: 999px;
-  font-size: .85rem;
+  background: var(--chip, #eef6ff); color: var(--ink-2, #2c4c86); border: 1px solid var(--stroke, #e6eefc);
+  padding: .35rem .65rem; border-radius: 999px; font-size: .85rem;
 }
 
 /* Toolbar del visor */
@@ -569,9 +568,7 @@ const tipoBadgeClass = (tipo) => {
 
 /* Progreso */
 .progress-wrap .progress{ height: .6rem; }
-.progress-wrap .progress-bar{
-  background: linear-gradient(90deg, #7cb8ff, #2c4c86);
-}
+.progress-wrap .progress-bar{ background: linear-gradient(90deg, #7cb8ff, #2c4c86); }
 
 /* Tarjetas de preguntas */
 .q-card{
@@ -579,26 +576,39 @@ const tipoBadgeClass = (tipo) => {
   border-radius: 16px;
   background: var(--card-b, #f8fbff);
 }
+
+/* HEAD de pregunta: ahora permite wrap y evita recortes */
 .q-head{
   padding: .9rem 1rem;
   display: flex; align-items: center; justify-content: space-between; gap: .75rem;
-  cursor: pointer; user-select: none;
+  cursor: pointer; user-select: none; flex-wrap: wrap;
 }
 .q-head:hover{ background: #f1f6ff; }
+
+/* Columna izquierda: índice + título */
+.q-left{
+  display: flex; align-items: center; gap: .5rem;
+  min-width: 0;               /* importante para que el ellipsis funcione */
+  flex: 1 1 auto;             /* que ocupe el ancho disponible */
+}
 .q-index{
-  width: 32px; height: 32px; border-radius: 8px;
-  display: grid; place-items: center; font-weight: 700;
+  width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; font-weight: 700;
   background: white; color: var(--ink, #1b3b6f); border: 1px solid var(--stroke, #e6eefc);
 }
-.q-title{ font-weight: 600; }
+.q-title{
+  font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; /* truncado suave en desktop */
+}
+
+/* Columna derecha: badge + chevron */
+.q-right{
+  display: flex; align-items: center; gap: .5rem;
+  margin-left: auto; flex-shrink: 0;
+}
 .q-type{ font-weight: 600; }
 
-.q-body{
-  padding: .5rem 1rem 1rem 1rem;
-}
-.q-chips{
-  display: flex; flex-wrap: wrap; gap: .5rem;
-}
+.q-body{ padding: .5rem 1rem 1rem 1rem; }
+.q-chips{ display: flex; flex-wrap: wrap; gap: .5rem; }
 .chip{
   display: inline-flex; align-items: center; gap: .25rem;
   background: white; border: 1px solid var(--stroke,#e6eefc);
@@ -606,18 +616,10 @@ const tipoBadgeClass = (tipo) => {
 }
 
 /* Badges de tipo */
-.bg-type-multi{
-  background: #e7f7ef;
-  color: #0f7a47;
-  border: 1px solid #bce8d1;
-}
-.bg-type-open{
-  background: #fff4e5;
-  color: #8a4b00;
-  border: 1px solid #ffe0b8;
-}
+.bg-type-multi{ background: #e7f7ef; color: #0f7a47; border: 1px solid #bce8d1; }
+.bg-type-open{  background: #fff4e5; color: #8a4b00; border: 1px solid #ffe0b8; }
 
-/* Animaciones suaves */
+/* Animaciones */
 .rotate{ transform: rotate(180deg); transition: transform .2s ease; }
 .fade-enter-active, .fade-leave-active{ transition: opacity .18s ease; }
 .fade-enter-from, .fade-leave-to{ opacity: 0; }
@@ -625,4 +627,18 @@ const tipoBadgeClass = (tipo) => {
 /* Ajustes menores */
 .modal-fit .modal-content{ border-radius: 20px; }
 .btn-with-label i{ vertical-align: -1px; }
+
+/* Modal responsive: ancho máximo y márgenes */
+.modal-fit .modal-dialog{ max-width: min(980px, 92vw); margin: 1rem auto; }
+/* Evitar desbordes horizontales */
+.modal-fit .modal-content{ overflow: hidden; }
+/* Body con alto máximo y scroll interno */
+.modal-body.modal-body-safe{ max-height: calc(100vh - 180px); overflow: auto; }
+
+/* En móviles: badge/chevron bajan a segunda línea, título se mantiene legible */
+@media (max-width: 576px){
+  .modal-fit .modal-dialog{ margin: .5rem; }
+  .q-right{ width: 100%; justify-content: flex-end; margin-top: .35rem; }
+  .q-title{ white-space: normal; }  /* permite dos líneas si es necesario en móvil */
+}
 </style>
