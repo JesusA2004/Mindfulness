@@ -175,6 +175,10 @@ const form = reactive({
 const errors = reactive({})
 const hasErrors = computed(() => Object.keys(errors).length > 0)
 
+function clearErrors () {
+  for (const k of Object.keys(errors)) delete errors[k]
+}
+
 /* ======= Init ======= */
 onMounted(async () => {
   await cargarDocentes()
@@ -197,7 +201,8 @@ async function cargarDocentes () {
 async function cargarCitas () {
   try {
     const { data } = await axios.get(API, { headers: authHeaders() })
-    citas.value = data?.data || data?.registros || []
+    citas.value = (data?.data || data?.registros || [])
+      .sort((a, b) => new Date(a.fecha_cita) - new Date(b.fecha_cita))
   } catch (err) {
     console.error(err)
     toast('No fue posible cargar tus citas', 'error')
@@ -227,11 +232,16 @@ const filteredCitas = computed(() => {
 })
 
 /* ======= Modal registro ======= */
-function openCreate () { Object.assign(form, { fecha: '', hora: '', modalidad: '', docente_id: '', motivo: '' }); formModal.show() }
+function openCreate () { 
+  clearErrors()
+  Object.assign(form, { fecha: '', hora: '', modalidad: '', docente_id: '', motivo: '' }); 
+  formModal.show() 
+}
 function hideModal () { formModal.hide() }
 
 async function registrarCita () {
-  errors.value = {}
+  clearErrors()
+
   const fechaISO = construirISO(form.fecha, form.hora)
   if (!fechaISO) return toast('Fecha u hora inválida', 'error')
 
@@ -242,9 +252,11 @@ async function registrarCita () {
     toast('Cita registrada exitosamente')
     await cargarCitas()
     hideModal()
+    clearErrors()
   } catch (e) {
     console.error(e)
     toast(e.response?.data?.message || 'Error al registrar cita', 'error')
+    Object.assign(errors, e.response?.data?.errors || {})
   } finally { saving.value = false }
 }
 
