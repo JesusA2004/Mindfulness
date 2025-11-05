@@ -100,7 +100,7 @@
                   <span>Consultar</span>
                 </button>
 
-                <!-- NUEVO: Ver respuestas -->
+                <!-- Ver respuestas -->
                 <button
                   class="btn btn-outline-info btn-sm flex-fill btn-with-label w-100"
                   @click="viewAnswers(item)"
@@ -334,6 +334,113 @@
       </div>
     </div>
 
+    <!-- Modal: Respuestas -->
+    <div class="modal fade" ref="answersModalRef" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable modal-fit">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:20px;">
+          <div class="modal-header border-0 sticky-top bg-white">
+            <div class="d-flex align-items-center gap-3">
+              <div class="avatar-pill">
+                <i class="bi bi-graph-up"></i>
+              </div>
+              <div>
+                <h5 class="modal-title fw-bold mb-0">
+                  Respuestas · {{ selected?.nombre || 'Test' }}
+                </h5>
+                <div class="small text-muted">{{ filteredAnswers.length }} respondente(s)</div>
+              </div>
+            </div>
+            <button type="button" class="btn-close" @click="hideAnswers()" aria-label="Cerrar"></button>
+          </div>
+
+          <div class="modal-body modal-body-safe">
+            <!-- Buscador local -->
+            <div class="input-group input-group-sm mb-3">
+              <span class="input-group-text"><i class="bi bi-search"></i></span>
+              <input
+                v-model.trim="answersQuery"
+                type="search"
+                class="form-control"
+                placeholder="Buscar por nombre o correo..."
+                aria-label="Buscar respondentes"
+              />
+              <button v-if="answersQuery" class="btn btn-outline-secondary" @click="answersQuery = ''">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+
+            <!-- Cargando -->
+            <div v-if="answersLoading" class="text-center py-4">
+              <div class="spinner-border" role="status" aria-hidden="true"></div>
+              <div class="small text-muted mt-2">Cargando respuestas…</div>
+            </div>
+
+            <!-- Lista de respondentes -->
+            <div v-else>
+              <div v-if="filteredAnswers.length === 0" class="alert alert-light border d-flex align-items-center gap-2">
+                <i class="bi bi-inbox text-secondary fs-5"></i>
+                <div><strong>Sin coincidencias.</strong> Ajusta tu búsqueda.</div>
+              </div>
+
+              <div class="vstack gap-3">
+                <div
+                  v-for="(r, idx) in filteredAnswers"
+                  :key="idx"
+                  class="card shadow-sm"
+                >
+                  <div class="card-body">
+                    <div class="d-flex align-items-start justify-content-between gap-3 mb-2">
+                      <div>
+                        <div class="fw-bold">{{ r.nombre || 'Usuario' }}</div>
+                        <div class="text-muted small" v-if="r.email"> {{ r.email }} </div>
+                      </div>
+                      <div class="d-flex flex-wrap gap-2">
+                        <span class="badge rounded-pill bg-primary-subtle text-primary fw-semibold">
+                          <i class="bi bi-check2-square me-1"></i>{{ r.total_respuestas }} respuesta(s)
+                        </span>
+                        <span class="badge rounded-pill bg-secondary-subtle text-secondary" v-if="r.ultima_fecha">
+                          <i class="bi bi-calendar-check me-1"></i>{{ r.ultima_fecha }}
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Respuestas por pregunta -->
+                    <div class="vstack gap-2">
+                      <div
+                        v-for="(ans, k) in r.respuestas"
+                        :key="k"
+                        class="border rounded-3 p-2"
+                        style="background:#fff"
+                      >
+                        <div class="small text-muted mb-1">
+                          #{{ ans.numero }} · {{ ans.pregunta || '—' }}
+                        </div>
+
+                        <!-- Si hay varios valores, lista; si solo uno, texto -->
+                        <template v-if="Array.isArray(ans.valores) && ans.valores.length > 1">
+                          <div class="fw-semibold mb-1">Respuesta(s):</div>
+                          <ul class="mb-1 ps-3">
+                            <li v-for="(v, z) in ans.valores" :key="z">{{ v }}</li>
+                          </ul>
+                        </template>
+                        <template v-else>
+                          <div><span class="fw-semibold">Respuesta:</span> {{ (ans.valores && ans.valores[0]) || '—' }}</div>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                </div> <!-- /card respondente -->
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn btn-secondary" @click="hideAnswers()">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal: Form (Crear/Editar) -->
     <div class="modal fade" ref="formModalRef" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-xl modal-fit">
@@ -467,6 +574,8 @@
 import { computed, ref } from 'vue';
 import { useTestsCrud } from '@/assets/js/useTestsCrud';
 
+const len = (x) => Array.isArray(x) ? x.length : 0;
+
 const {
   items, isLoading, hasMore, filteredItems, page,
   searchQuery, onInstantSearch, clearSearch,
@@ -477,8 +586,8 @@ const {
   openView, openCreate, openEdit,
   addPregunta, removePregunta, toggleQuestion, needsOptions, addOpcion, removeOpcion, onChangeTipo, toggleViewQuestion,
   onSubmit, confirmDelete, modifyFromView, deleteFromView,
-  // si aún no lo tienes, puedes implementar viewAnswers en tu composable
-  viewAnswers
+  viewAnswers, hideAnswers, answers, answersLoading, answersQuery, filteredAnswers,
+  answersModalRef
 } = useTestsCrud();
 
 /* ==========  Controles del visor ========== */

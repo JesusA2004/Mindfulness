@@ -19,6 +19,7 @@ class Test extends Model
     protected $casts = [
         'fechaAplicacion' => 'date:Y-m-d',
         'cuestionario'    => 'array',
+        'duracion_estimada' => 'integer',
     ];
 
     protected $perPage = 20;

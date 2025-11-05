@@ -1,8 +1,8 @@
 <template>
-  <main class="container-lg py-4 student-activities">
+  <main class="container-fluid px-3 px-sm-4 px-lg-5 py-4 student-activities">
 
     <!-- ===== Hero ancho (web) – círculo a la IZQUIERDA, texto a la DERECHA ===== -->
-    <section class="card border-0 shadow-sm hero-card animate__animated animate__fadeIn">
+    <section class="card border-0 shadow-sm hero-card animate__animated animate__fadeIn px-0">
       <div class="hero-inner p-4 p-lg-5">
         <div class="row g-4 align-items-center">
           <!-- Círculo “respirando” -->
@@ -40,23 +40,6 @@
               Aquí verás únicamente las actividades que <strong>son para ti</strong>.
             </p>
 
-            <div class="d-flex align-items-center gap-3 mb-3">
-              <div class="flex-grow-1">
-                <div class="d-flex justify-content-between small text-muted mb-1">
-                  <span><i class="bi bi-graph-up-arrow me-1"></i>Tu progreso</span>
-                  <span>{{ completadas }} / {{ totalAsignadas }}</span>
-                </div>
-                <div class="progress hero-progress">
-                  <div
-                    class="progress-bar"
-                    role="progressbar"
-                    :style="{ width: progressPct + '%' }"
-                    :aria-valuenow="progressPct" aria-valuemin="0" aria-valuemax="100">
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <div class="small text-muted">
               <img class="me-1 align-text-bottom" width="18" height="18" alt=""
                    src="https://img.icons8.com/ios-glyphs/30/graduation-cap.png"/>
@@ -77,8 +60,8 @@
         <p class="text-muted mb-0">Cuando tu docente te asigne nuevas prácticas, aparecerán aquí.</p>
       </div>
 
-      <div v-else class="row g-3 g-lg-4">
-        <div v-for="a in registrosAlumno" :key="a._id || a.id" class="col-12 col-md-6 col-xl-4">
+      <div v-else class="row g-3 g-lg-4 row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-4">
+        <div v-for="a in registrosAlumno" :key="a._id || a.id" class="col">
           <article class="card activity-card border-0 shadow-sm h-100 animate__animated animate__fadeInUp">
 
             <!-- ====== Media estilo “hero card” con overlay ====== -->

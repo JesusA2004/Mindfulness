@@ -23,6 +23,7 @@ use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Api\ActividadesAsignadasController;
 use App\Http\Controllers\Api\ReporteController;
 use App\Http\Controllers\Api\ContactoController;
+use App\Http\Controllers\Api\TestRespuestaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -63,6 +64,9 @@ Route::middleware(['auth:api'])->group(function () {
 
     // Personas (todas excepto store que fue pública)
     Route::apiResource('personas', PersonaController::class)->except(['store']);
+
+    // Respuestas de tests
+    Route::get('/tests/{id}/respuestas', [TestRespuestaController::class, 'index']);
 
     // CRUD de los demás modelos
     Route::apiResource('users', UserController::class);

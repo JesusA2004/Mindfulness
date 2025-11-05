@@ -53,16 +53,32 @@ export function useTestsCrud() {
     cuestionario: [],
   });
 
+  /** === Respuestas (nuevo) === */
+  const answers = ref([]);              // lista de respondentes con sus respuestas
+  const answersLoading = ref(false);
+  const answersQuery = ref('');         // búsqueda en tiempo real (cliente)
+  const filteredAnswers = computed(() => {
+    const q = (answersQuery.value || '').toLowerCase();
+    if (!q) return answers.value;
+    return answers.value.filter(r =>
+      (r.nombre || '').toLowerCase().includes(q) ||
+      (r.email  || '').toLowerCase().includes(q) ||
+      (r.usuario_id || '').toLowerCase().includes(q)
+    );
+  });
+
   /** === Refs de modales === */
   const viewModalRef = ref(null);
   const formModalRef = ref(null);
-  let viewModal, formModal;
+  const answersModalRef = ref(null);    // nuevo
+  let viewModal, formModal, answersModal;
 
   onMounted(async () => {
     await fetchItems();
     await nextTick();
     if (viewModalRef.value) viewModal = new Modal(viewModalRef.value, { backdrop: 'static' });
     if (formModalRef.value) formModal = new Modal(formModalRef.value, { backdrop: 'static' });
+    if (answersModalRef.value) answersModal = new Modal(answersModalRef.value, { backdrop: 'static' }); // nuevo
     setupBsTooltips(); // activa tooltips globales (incluye botones de la UI)
   });
 
@@ -77,7 +93,7 @@ export function useTestsCrud() {
   async function fetchItems({ append = false } = {}) {
     try {
       isLoading.value = true;
-      const { list, hasMore: hm, raw } = await fetchPaginated(API_BASE, {
+      const { list, hasMore: hm } = await fetchPaginated(API_BASE, {
         page: page.value, perPage, headers: authHeaders()
       });
       hasMore.value = hm;
@@ -90,6 +106,37 @@ export function useTestsCrud() {
       isLoading.value = false;
     }
   }
+
+  /** === Ver respuestas === */
+  async function viewAnswers(item){
+    try{
+      selected.value = normalizeTest({ ...item });
+      answersLoading.value = true;
+      answersQuery.value = '';
+
+      const id = getId(item);
+      const { data } = await axios.get(`${API_BASE}/${id}/respuestas`, { headers: authHeaders() });
+
+      // ⬇️ El controller regresa { test:{...}, respondents:[...] }
+      if (data?.test?.nombre) {
+        // asegura que el modal muestre el nombre correcto del test
+        selected.value.nombre = data.test.nombre;
+      }
+
+      const payload = Array.isArray(data?.respondents)
+        ? data.respondents
+        : (Array.isArray(data?.data) ? data.data : []); // fallback por si cambias después
+
+      answers.value = payload;
+      answersModal?.show();
+    }catch(e){
+      console.error(e);
+      toast('No fue posible obtener las respuestas.', 'error');
+    }finally{
+      answersLoading.value = false;
+    }
+  }
+  function hideAnswers(){ answersModal?.hide(); }
 
   function normalizeTest(t) {
     const id = getId(t);
@@ -304,21 +351,32 @@ export function useTestsCrud() {
   return {
     // estado y listas
     items, isLoading, hasMore, filteredItems, page,
+
     // búsqueda
     searchQuery, onInstantSearch, clearSearch,
+
     // utilidades
     getId, formatDate, labelTipo,
-    // refs
-    viewModalRef, formModalRef, hideModal,
+
+    // refs de modales
+    viewModalRef, formModalRef, answersModalRef, hideModal,
+
     // selección, formulario y UI
     selected, ui, viewToggle, isEditing, saving, form,
+
     // grid/paginación
     loadMore,
+
     // abrir/ver/editar
     openView, openCreate, openEdit,
+
     // cuestionario
     addPregunta, removePregunta, toggleQuestion, needsOptions, addOpcion, removeOpcion, onChangeTipo, toggleViewQuestion,
+
     // submit/eliminar
     onSubmit, confirmDelete, modifyFromView, deleteFromView,
+
+    // respuestas (nuevo)
+    viewAnswers, hideAnswers, answers, answersLoading, answersQuery, filteredAnswers,
   };
 }
