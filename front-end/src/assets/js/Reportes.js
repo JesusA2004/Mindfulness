@@ -42,10 +42,6 @@ const exportMap = {
   rec: "recompensas-canjeadas",
 };
 
-// Endpoint de sugerencias (server) — solo para la PRIMERA carga:
-const alumnoSuggestPrimary = "reportes/suggest-alumnos";
-const alumnoSuggestFallback = "reportes/reportes/suggest-alumnos";
-
 /* =================== HELPERS =================== */
 const ymd = (d) => {
   const pad = (n) => String(n).padStart(2, "0");
@@ -76,7 +72,6 @@ function buildQuery(active, filtros = {}) {
   if (filtros.hasta) p.set("hasta", filtros.hasta);
   if (active === "top" && filtros.grupo) p.set("grupo", filtros.grupo);
   if (["act","citas","bit"].includes(active) && filtros.alumno) p.set("alumno", filtros.alumno);
-  // (rec) no acepta alumno; solo tipo + fechas
   if (active === "enc" && filtros.encuesta) p.set("encuesta", filtros.encuesta);
   if (active === "rec" && filtros.tipo) p.set("tipo", filtros.tipo);
   return p.toString();
@@ -92,7 +87,7 @@ async function getReport(active, filtros = {}) {
 
   const res = await fetch(url, { headers: authHeaders({ "Cache-Control": "no-cache" }) });
   if (res.status === 401) { const err = new Error("401 Unauthorized"); err.code = 401; throw err; }
-  if (!res.ok)          { const err = new Error(`HTTP ${res.status}`); err.code = res.status; throw err; }
+  if (!res.ok)            { const err = new Error(`HTTP ${res.status}`); err.code = res.status; throw err; }
   return await res.json();
 }
 async function exportReport(active, tipo = "pdf", filtros = {}) {
@@ -106,7 +101,7 @@ async function exportReport(active, tipo = "pdf", filtros = {}) {
 
   const res = await fetch(url, { headers: authHeaders({ "Cache-Control": "no-cache" }) });
   if (res.status === 401) { const err = new Error("401 Unauthorized"); err.code = 401; throw err; }
-  if (!res.ok)          { const err = new Error(`HTTP ${res.status}`); err.code = res.status; throw err; }
+  if (!res.ok)            { const err = new Error(`HTTP ${res.status}`); err.code = res.status; throw err; }
 
   const cd = res.headers.get("Content-Disposition") || "";
   let filename = "";
@@ -120,9 +115,8 @@ async function exportReport(active, tipo = "pdf", filtros = {}) {
   return { blob, filename };
 }
 
-/* =================== ALUMNOS: CARGA ÚNICA + FILTRO LOCAL =================== */
-let alumnoSuggestAbort = null;
-let alumnosCache = [];   // [{label, nombre, matricula}]
+/* =================== ALUMNOS: SIN ENDPOINT (texto libre) =================== */
+let alumnosCache = [];   // mantenemos interfaz, pero no cargamos nada del server
 function normalizeAlumno(u) {
   const label = (u.label ||
     `${(u.nombre||"").trim()} ${(u.apellidoPaterno||"").trim()} ${(u.apellidoMaterno||"").trim()} — ${(u.matricula||"S/MAT").toUpperCase()}`)
@@ -134,29 +128,67 @@ function normalizeAlumno(u) {
     matricula: (u.matricula || (label.split(" — ")[1] || "S/MAT")).toUpperCase(),
   };
 }
-async function tryFetch(path) {
-  const base = apiBase();
-  const res = await fetch(`${base}/${path}`, { headers: authHeaders() });
-  if (!res.ok) throw new Error("bad");
-  return res.json();
-}
 async function loadAllAlumnos() {
-  if (alumnosCache.length) return alumnosCache;
-  if (alumnoSuggestAbort) alumnoSuggestAbort.abort();
-  alumnoSuggestAbort = new AbortController();
-  try {
-    const arr = await tryFetch(alumnoSuggestPrimary);
-    alumnosCache = (Array.isArray(arr) ? arr : []).map(normalizeAlumno);
-  } catch {
-    try {
-      const arr = await tryFetch(alumnoSuggestFallback);
-      alumnosCache = (Array.isArray(arr) ? arr : []).map(normalizeAlumno);
-    } catch {
-      alumnosCache = [];
-    }
-  }
+  // Sin autocompletar remoto: dejamos la lista vacía.
+  alumnosCache = [];
   return alumnosCache;
 }
+
+// Reemplaza TODO este método
+async function previewTopChart(filtros = {}) {
+  const base = apiBase();
+  const qs = buildQuery("top", filtros);
+  const url = `${base}/reportes/top-tecnicas${qs ? `?${qs}` : ""}`;
+
+  const res = await fetch(url, { headers: authHeaders() });
+  if (!res.ok) throw new Error("No se pudo obtener datos del reporte");
+  const json = await res.json();
+
+  const rows  = Array.isArray(json.rows) ? json.rows : [];
+  const total = Number(json.total || 0);
+
+  const pct = (v) => total ? Math.round((Number(v||0)/total)*1000)/10 : 0;
+
+  // columnas
+  const cols = rows.map(r => {
+    const label = String(r.tecnica || "");
+    const val   = Number(r.total || 0);
+    const p     = pct(val);
+    return `
+      <div class="pv-col">
+        <div class="pv-val">${val} (${p.toFixed(1)}%)</div>
+        <div class="pv-bar"><div class="pv-fill" style="height:${Math.max(0,Math.min(100,p))}%"></div></div>
+        <div class="pv-lbl">${label}</div>
+      </div>`;
+  }).join("");
+
+  const html = `
+    <style>
+      /* Estilos locales solo para la vista previa vertical */
+      .pvv-wrap{ padding:.25rem 0; }
+      .pvv-title{ font-weight:800; margin-bottom:.4rem; color:#111827; text-align:center; font-size:20px; }
+      .pvv-card{ border:1px solid #e5e7eb; border-radius:18px; padding:16px; background:#fff; }
+      .pvv-grid{ display:flex; align-items:flex-end; gap:14px; min-height:160px; padding:8px 6px 0; border-bottom:1px solid #e5e7eb; }
+      .pv-col{ flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; }
+      .pv-bar{ width:26px; height:140px; background:#ede9fe; border:1px solid #e5e7eb; border-radius:6px 6px 0 0; overflow:hidden; display:flex; align-items:flex-end; }
+      .pv-fill{ width:100%; background:#7c3aed; }
+      .pv-val{ font-size:12px; color:#334155; font-weight:800; }
+      .pv-lbl{ font-size:13px; font-weight:800; color:#0f172a; margin-top:6px; text-align:center; }
+      .pv-total{ margin-top:10px; text-align:center; font-size:18px; font-weight:800; color:#334155; }
+    </style>
+    <div class="pvv-wrap">
+      <div class="pvv-title">Previsualización</div>
+      <div class="pvv-card">
+        <div class="pvv-grid">
+          ${cols || '<div class="text-muted">Sin datos en el rango seleccionado.</div>'}
+        </div>
+        <div class="pv-total">Total de usos: <b>${total}</b></div>
+      </div>
+    </div>`;
+
+  return { html, hasData: rows.length > 0 };
+}
+
 function filterAlumnosLocal(term = "") {
   if (!term) return alumnosCache;
   const t = term.toLowerCase();
@@ -192,7 +224,18 @@ function ensureSwalStyles() {
   .sw-item .mt{ font-size:.83rem; color:#64748b; }
   .chip{ display:inline-flex; align-items:center; gap:.35rem; padding:.25rem .55rem; border:1px solid #e5e7eb; border-radius:999px; font-size:.78rem; background:#fff; }
   .chip b{ font-weight:800; }
-  @media (min-width:768px){ .sw-report .swal2-popup{ width:780px!important; } }`;
+  @media (min-width:768px){ .sw-report .swal2-popup{ width:780px!important; } }
+  
+    .pv-wrap{ padding:.25rem 0; }
+  .pv-head{ font-weight:800; margin-bottom:.25rem; color:#111827; }
+  .pv-chart{ border:1px solid #e5e7eb; border-radius:14px; padding:.8rem; background:#fff; }
+  .pv-bar{ display:flex; align-items:center; gap:10px; margin:.5rem 0; }
+  .pv-lbl{ width:34%; font-size:.9rem; font-weight:700; color:#0f172a; }
+  .pv-track{ flex:1; height:12px; background:#eef2ff; border-radius:999px; overflow:hidden; border:1px solid #e5e7eb; }
+  .pv-fill{ height:100%; background:#7c3aed; }
+  .pv-val{ width:18%; text-align:right; font-size:.85rem; color:#334155; font-weight:700; }
+
+  `;
   const style = document.createElement("style");
   style.id = "sw-report-styles";
   style.textContent = css;
@@ -298,6 +341,12 @@ async function openExportDialog(active, tipo = "pdf") {
       let currentSelection = ""; // etiqueta elegida (para export)
 
       const renderAlumnos = (list) => {
+        if (!list || !list.length) {
+          $alumnoList.innerHTML = `<div class="mini-hint">
+            Escribe <b>nombre</b> o <b>matrícula</b> y presiona <b>Enter</b>. (Sin autocompletar)
+          </div>`;
+          return;
+        }
         $alumnoList.innerHTML = list.map((o, i) => `
           <button type="button" class="sw-item ${o.label===currentSelection ? "active" : ""}"
                   data-label="${o.label}" data-idx="${i}">
@@ -324,11 +373,20 @@ async function openExportDialog(active, tipo = "pdf") {
         if (v === "tipo")     $textLabel.textContent = "Tipo de recompensa";
       };
 
-      // Carga inicial (una vez) y filtrar local
+      // Carga inicial (sin endpoint) y filtro local (lista vacía)
       await loadAllAlumnos();
       renderAlumnos(alumnosCache);
 
       const doFilterLocal = debounce((t) => renderAlumnos(filterAlumnosLocal((t||"").trim())), 140);
+
+      document.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") {
+          const input = document.activeElement;
+          if (input && (input.id === "sw-alumno-input" || input.id === "sw-filter-text-input")) {
+            // Permite confirmar rápidamente con Enter
+          }
+        }
+      });
 
       $preset.addEventListener("change", toggleCustom);
       $filter.addEventListener("change", toggleFilterInputs);
@@ -353,7 +411,6 @@ async function openExportDialog(active, tipo = "pdf") {
         if (!desde || !hasta) { Swal.showValidationMessage("Selecciona fecha <b>Desde</b> y <b>Hasta</b>."); return false; }
       }
 
-      // Filtros a enviar (también usados por el backend para pintar cabecera bonita)
       const filtros = { ...(desde ? { desde } : {}), ...(hasta ? { hasta } : {}) };
 
       const f = $filter.value;
@@ -369,7 +426,31 @@ async function openExportDialog(active, tipo = "pdf") {
       return filtros;
     }
   }).then(async (res) => {
-    if (!res.isConfirmed) return;
+  if (!res.isConfirmed) return;
+
+  // === Previsualización solo para TOP TÉCNICAS ===
+  if (active === "top") {
+    try {
+      const { html, hasData } = await previewTopChart(res.value || {});
+      const confirm = await Swal.fire({
+        title: "Top técnicas",
+        html,
+        customClass: { container: "sw-report" },
+        showCancelButton: true,
+        confirmButtonText: "Generar",
+        cancelButtonText: "Cancelar",
+        width: 780,
+      });
+      if (!confirm.isConfirmed) return;
+      if (!hasData) {
+        await Swal.fire({ icon:"warning", title:"Sin datos para exportar", timer:1300, showConfirmButton:false, customClass:{container:"sw-report"} });
+        return;
+      }
+    } catch (e) {
+      await Swal.fire({ icon:"error", title:"No se pudo previsualizar", text:e.message || "Error", customClass:{container:"sw-report"} });
+      return;
+    }
+  }
 
     Swal.fire({
       title: "Generando archivo…",

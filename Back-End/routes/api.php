@@ -25,6 +25,13 @@ use App\Http\Controllers\Api\ReporteController;
 use App\Http\Controllers\Api\ContactoController;
 use App\Http\Controllers\Api\TestRespuestaController;
 use App\Http\Controllers\Api\CitaAlumnoController;
+use App\Http\Controllers\Api\Reportes\TopTecnicasController;
+use App\Http\Controllers\Api\Reportes\ActividadesAlumnoController;
+use App\Http\Controllers\Api\Reportes\CitasAlumnoController;
+use App\Http\Controllers\Api\Reportes\BitacorasAlumnoController;
+use App\Http\Controllers\Api\Reportes\EncuestasResultadosController;
+use App\Http\Controllers\Api\Reportes\RecompensasCanjeadasController;
+use App\Http\Controllers\Api\Reportes\ExportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -104,23 +111,30 @@ Route::middleware(['auth:api'])->group(function () {
     Route::put('encuestas/{encuesta}/responder', [EncuestaController::class, 'responder']);
     Route::put('tests/{test}/responder',         [TestController::class, 'responder']);
 
-    // Subidas
-    Route::post('/uploads', [UploadController::class, 'store']);
-
-    // Reportes (solo consulta). Opcional: agrega tu middleware de rol/policy si aplica.
-    // ->middleware('can:reportes.consultar')  // ejemplo con Gate/Policy
+    // Reportes (solo consulta).
     Route::prefix('reportes')->group(function () {
-        Route::get('/top-tecnicas',            [ReporteController::class, 'topTecnicas']);
-        Route::get('/actividades-por-alumno',  [ReporteController::class, 'actividadesPorAlumno']);
-        Route::get('/citas-por-alumno',        [ReporteController::class, 'citasPorAlumno']);
-        Route::get('/bitacoras-por-alumno',    [ReporteController::class, 'bitacorasPorAlumno']);
-        Route::get('/encuestas-resultados',    [ReporteController::class, 'encuestasResultados']);
-        Route::get('/recompensas-canjeadas',   [ReporteController::class, 'recompensasCanjeadas']);
 
-        // Descargas
-        Route::get('/export', [ReporteController::class, 'export']); 
+        // 1) Top técnicas
+        Route::get('/top-tecnicas', [TopTecnicasController::class, 'index']);
 
-        Route::get('/suggest-alumnos', [ReporteController::class, 'suggestAlumnos']);
+        // 2) Actividades por alumno
+        Route::get('/actividades-por-alumno', [ActividadesAlumnoController::class, 'index']);
+
+        // 3) Citas por alumno
+        Route::get('/citas-por-alumno', [CitasAlumnoController::class, 'index']);
+
+        // 4) Bitácoras por alumno
+        Route::get('/bitacoras-por-alumno', [BitacorasAlumnoController::class, 'index']);
+
+        // 5) Resultados de encuestas
+        Route::get('/encuestas-resultados', [EncuestasResultadosController::class, 'index']);
+
+        // 6) Recompensas canjeadas
+        Route::get('/recompensas-canjeadas', [RecompensasCanjeadasController::class, 'index']);
+
+        // Exportador universal (pdf|excel)
+        // Ej: /api/reportes/export?reporte=top-tecnicas&tipo=pdf
+        Route::get('/export', [ExportController::class, 'export']);
     });
 
     // Backups
@@ -131,16 +145,6 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('/users/{id}/points/earn',   [UserPointsController::class, 'earn']);
     Route::post('/users/{id}/points/redeem', [UserPointsController::class, 'redeem']);
     Route::get('/users/{id}/points',         [UserPointsController::class, 'getPoints']);
-
-    // Subida de foto (protegida)
-    Route::post('/subir-foto', function (Request $request) {
-        if ($request->hasFile('foto')) {
-            $path = $request->file('foto')->store('public/fotos');
-            $url  = Storage::url($path); // /storage/fotos/xxx.jpg
-            return response()->json(['url' => asset($url)], 200);
-        }
-        return response()->json(['error' => 'No se recibió archivo'], 400);
-    });
 
     /*
     |--------------------------------------------------------------------------
