@@ -38,12 +38,6 @@
               <option value="profesor">Profesores</option>
               <option value="admin">Administradores</option>
             </select>
-            <select v-model="filters.estatus" class="form-select shadow-sm flex-fill">
-              <option value="">Todos</option>
-              <option value="activo">Activo</option>
-              <option value="bajaSistema">Baja del sistema</option>
-              <option value="bajaTemporal">Baja temporal</option>
-            </select>
           </div>
         </div>
 
@@ -95,7 +89,6 @@
         <div class="ui-mid">
           <div class="d-flex align-items-center flex-wrap">
             <span class="ui-chip me-1" :class="badgeRol(u.rol)" :title="asTitle(u.rol)">{{ asTitle(u.rol) }}</span>
-            <span class="ui-chip" :class="badgeEstatus(u.estatus)" :title="asTitle(u.estatus)">{{ asTitle(u.estatus) }}</span>
           </div>
 
           <div class="ui-field">
@@ -185,14 +178,6 @@
                         <option value="estudiante">Estudiante</option>
                         <option value="profesor">Profesor</option>
                         <option value="admin">Administrador</option>
-                      </select>
-                    </div>
-                    <div class="col-12 col-md-4">
-                      <label class="form-label">Estatus <span class="text-danger">*</span></label>
-                      <select v-model="form.user.estatus" class="form-select" required>
-                        <option value="activo">Activo</option>
-                        <option value="bajaSistema">Baja del sistema</option>
-                        <option value="bajaTemporal">Baja temporal</option>
                       </select>
                     </div>
                     <div class="col-12 col-md-4">

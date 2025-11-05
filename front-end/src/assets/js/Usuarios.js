@@ -75,7 +75,7 @@ const server = reactive({ pagination: null })
 const rows   = ref([])
 
 const searchQuery = ref('')
-const filters = reactive({ rol: '', estatus: '' })
+const filters = reactive({ rol: '' })
 const debouncer = makeDebouncer(140)
 
 /* Modales */
@@ -139,7 +139,7 @@ function prettyField (f) {
     'persona.nombre':'Nombre','persona.apellidoPaterno':'Apellido paterno','persona.apellidoMaterno':'Apellido materno',
     'persona.fechaNacimiento':'Fecha de nacimiento','persona.telefono':'Teléfono','persona.sexo':'Sexo',
     'persona.matricula':'Matrícula','persona.cohortes':'Grupos del profesor',
-    'user.email':'Correo','user.rol':'Rol','user.estatus':'Estatus','user.password':'Contraseña'
+    'user.email':'Correo','user.rol':'Rol','user.password':'Contraseña'
   }
   return map[f] || f
 }
@@ -304,7 +304,7 @@ const filteredRows = computed(() => {
       u.nombreCompleto, u.matricula, u.email, u.telefono, arrOrStr(u.cohorte)
     ].join(' ').toLowerCase()
     const qOk = !q || bag.includes(q)
-    return rolOk && estOk && qOk
+    return rolOk && qOk
   })
 })
 function onInstantSearch(){ debouncer(()=>{}) }
@@ -371,7 +371,7 @@ function openEdit(row){
   form.user.name = row.nombreCompleto || ''
   form.user.email = row.email || ''
   form.user.rol = form.user.rol || row.rol || ''
-  form.user.estatus = row.estatus || 'activo'
+  form.user.estatus = 'activo'
   form.user.urlFotoPerfil = row.urlFotoPerfil || ''
 
   formModal.show()
@@ -445,15 +445,21 @@ function validateFront(){
   const errs={}
 
   if(!isRequired(form.user.rol)) errs['user.rol']=['El rol es obligatorio.']
-  if(!isRequired(form.user.estatus)) errs['user.estatus']=['El estatus es obligatorio.']
+  
   if(!isRequired(form.user.email) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.user.email)) errs['user.email']=['El correo es inválido.']
 
   if(!isRequired(form.persona.nombre)) errs['persona.nombre']=['El nombre es obligatorio.']
+  
   if(!isRequired(form.persona.apellidoPaterno)) errs['persona.apellidoPaterno']=['El apellido paterno es obligatorio.']
+  
   if(!isRequired(form.persona.fechaNacimiento)) errs['persona.fechaNacimiento']=['La fecha de nacimiento es obligatoria.']
+  
   if(isRequired(form.persona.fechaNacimiento) && !isAdult.value) errs['persona.fechaNacimiento']=['Debes ser mayor de 18 años.']
+  
   if(!/^\d{10}$/.test(form.persona.telefono||'')) errs['persona.telefono']=['El teléfono debe tener 10 dígitos.']
+  
   if(!isRequired(form.persona.sexo)) errs['persona.sexo']=['El sexo es obligatorio.']
+  
   if(!isRequired(form.persona.matricula)) errs['persona.matricula']=['La matrícula es obligatoria.']
 
   const rol=(form.user.rol||'').toLowerCase()
@@ -572,7 +578,7 @@ async function createOrUpdateUser(personaId){
     name: displayName,
     email: form.user.email,
     rol: form.user.rol,
-    estatus: form.user.estatus || 'activo',
+    estatus: 'activo',
     urlFotoPerfil: form.user.urlFotoPerfil || null,
     persona_id: personaId,
     matricula: form.persona.matricula,
@@ -718,7 +724,7 @@ async function startBulk(){
         name: toNombreCompleto(persona),
         email: raw.email ?? '',
         rol: (raw.rol ?? '').toLowerCase(),
-        estatus: (raw.estatus ?? 'activo').toLowerCase(),
+        estatus: 'activo',
         persona_id: String(personaId),
         matricula: persona.matricula,
         notify_email: true
