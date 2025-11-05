@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\User;   
 use MongoDB\Laravel\Eloquent\Model;
+use MongoDB\Laravel\Eloquent\Casts\ObjectId;
 
 class Cita extends Model
 {
@@ -13,12 +15,13 @@ class Cita extends Model
         'modalidad',
         'motivo',
         'estado',
-        'observaciones', // nuevo campo
+        'observaciones', 
     ];
 
     protected $casts = [
         'fecha_cita' => 'datetime:c',
-        // 'observaciones' no requiere cast especial (string / null)
+        'alumno_id'  => ObjectId::class,
+        'docente_id' => ObjectId::class,
     ];
 
     // MUY IMPORTANTE: la llave del User en Mongo es "_id"

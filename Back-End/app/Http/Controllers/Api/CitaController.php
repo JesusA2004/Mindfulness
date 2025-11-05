@@ -26,13 +26,14 @@ class CitaController extends Controller
     {
         $perPage = (int) $request->get('per_page', 20);
 
-        $citas = Cita::with(['alumno','docente'])
-            ->orderByDesc('created_at')
-            ->paginate($perPage);
+        $citas = Cita::with([
+            'alumno.persona',
+            'docente.persona',
+        ])->orderByDesc('created_at')->paginate($perPage);
 
         return response()->json([
             'registros' => \App\Http\Resources\CitaResource::collection($citas)->resolve(),
-            'enlaces'   => [
+            'enlaces' => [
                 'primero'   => $citas->url(1),
                 'ultimo'    => $citas->url($citas->lastPage()),
                 'anterior'  => $citas->previousPageUrl(),

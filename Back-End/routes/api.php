@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\ActividadesAsignadasController;
 use App\Http\Controllers\Api\ReporteController;
 use App\Http\Controllers\Api\ContactoController;
 use App\Http\Controllers\Api\TestRespuestaController;
+use App\Http\Controllers\Api\CitaAlumnoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -61,6 +62,12 @@ Route::post('/contacto', [ContactoController::class, 'store']);
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth:api'])->group(function () {
+
+    // Citas para alumno (solo sus propias citas)
+    Route::prefix('alumno')->group(function () {
+        Route::get('citas',  [CitaAlumnoController::class, 'index']);
+        Route::post('citas', [CitaAlumnoController::class, 'store']);
+    });
 
     // Personas (todas excepto store que fue pública)
     Route::apiResource('personas', PersonaController::class)->except(['store']);
