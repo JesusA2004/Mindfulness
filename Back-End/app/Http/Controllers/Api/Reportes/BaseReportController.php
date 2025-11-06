@@ -124,25 +124,91 @@ abstract class BaseReportController extends Controller
             ->pluck('_id')->map(fn($id)=>(string)$id)->values()->all();
     }
 
-    protected function userIdsByCohorte(?string $grupo): array
+    protected function userIdsByCohorte(string $cohorte): array
     {
-        $grupo = trim((string)$grupo);
-        if ($grupo === '') return [];
+        $target = trim($cohorte);
+        if ($target === '') return [];
 
-        $personaIds = Persona::query()
-            ->where(function($q) use ($grupo) {
-                $q->where('cohorte', $grupo)
-                  ->orWhere('cohorte', 'like', "%{$grupo}%");
-            })
-            ->limit(2000)
-            ->pluck('_id')
-            ->map(fn($id)=>(string)$id)
-            ->values()
-            ->all();
+        // Normaliza en PHP: compacta y a lower
+        $compact = static function (string $s): string {
+            $s = preg_replace('/\s+/u', ' ', trim($s));
+            if ($s === null) $s = '';
+            return function_exists('mb_strtolower') ? mb_strtolower($s, 'UTF-8') : strtolower($s);
+        };
+        $targetNorm = $compact($target);
 
-        if (empty($personaIds)) return [];
-        return User::whereIn('persona_id', $this->mixedIn($personaIds))
-            ->pluck('_id')->map(fn($id)=>(string)$id)->values()->all();
+        $db   = \DB::connection('mongodb')->getMongoDB();
+        $coll = $db->selectCollection('personas');
+
+        $cursor = $coll->aggregate([
+            // Solo docs con cohorte y user_id
+            ['$match' => [ 'cohorte' => ['$exists' => true], 'user_id' => ['$exists' => true] ]],
+
+            // Asegura arreglo
+            ['$addFields' => [
+                'cohorteArr' => [
+                    '$cond' => [
+                        [ '$isArray' => '$cohorte' ],
+                        '$cohorte',
+                        [
+                            '$cond' => [
+                                [ '$eq' => [ ['$type' => '$cohorte'], 'string' ] ],
+                                [ '$cohorte' ],
+                                []
+                            ]
+                        ]
+                    ]
+                ]
+            ]],
+
+            ['$unwind' => '$cohorteArr'],
+
+            // toString + trim
+            ['$addFields' => [
+                'c_str' => [ '$trim' => [ 'input' => [ '$toString' => '$cohorteArr' ] ] ]
+            ]],
+
+            // Compacta espacios: split por ' ', quita vacíos y vuelve a unir con un solo espacio
+            ['$addFields' => [
+                'tokens' => [
+                    '$filter' => [
+                        'input' => [ '$split' => [ '$c_str', ' ' ] ],
+                        'as'    => 't',
+                        'cond'  => [ '$ne' => [ '$$t', '' ] ]
+                    ]
+                ]
+            ]],
+            ['$addFields' => [
+                'c_norm' => [
+                    '$toLower' => [
+                        '$reduce' => [
+                            'input'       => '$tokens',
+                            'initialValue'=> '',
+                            'in'          => [
+                                '$cond' => [
+                                    [ '$eq' => [ '$$value', '' ] ],
+                                    '$$this',
+                                    [ '$concat' => [ '$$value', ' ', '$$this' ] ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]],
+
+            // Match exacto sobre versión normalizada
+            ['$match' => [ 'c_norm' => $targetNorm ]],
+
+            ['$project' => [ '_id' => 0, 'uid' => '$user_id' ]],
+        ]);
+
+        $ids = [];
+        foreach ($cursor as $doc) {
+            $v = $doc['uid'] ?? null;
+            if ($v === null) continue;
+            $ids[] = is_object($v) && method_exists($v, '__toString') ? (string)$v : (string)$v;
+        }
+        return array_values(array_unique(array_filter($ids, fn($x) => $x !== '')));
     }
 
     protected function personaMapByUserIds(array $userIds)

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\Reportes;
 use Illuminate\Http\Request;
 use App\Models\Actividad;
 use App\Models\Tecnica;
+use App\Models\Persona;
+use App\Models\User;
 
 class TopTecnicasController extends BaseReportController
 {
@@ -25,17 +27,27 @@ class TopTecnicasController extends BaseReportController
         $campoFecha = 'fechaMaxima';
         $q = $this->rangoFechas($r, $campoFecha, $q);
 
-        // Filtro por cohorte/grupo (buscando por persona->user_id en participantes)
-        if (($grupoParam = $this->d($r, 'grupo')) !== null) {
-            $userIds = $this->userIdsByCohorte($grupoParam);
+       // ===== Filtro por cohorte (acepta ?cohorte= o ?grupo=) =====
+        $cohorteParam = $this->d($r, 'cohorte', $this->d($r, 'grupo'));
+        if ($cohorteParam !== null && trim($cohorteParam) !== '') {
+            $userIds = $this->userIdsByCohorte($cohorteParam);
+
             if (empty($userIds)) {
                 return response()->json([
                     'labels' => [], 'data' => [], 'total' => 0, 'rows' => []
                 ]);
             }
-            $q->where('participantes', 'elemMatch', [
-                'user_id' => ['$in' => $this->mixedIn($userIds)]
-            ]);
+
+            // Mezcla segura (ObjectId + string)
+            $mix = $this->mixedIn($userIds);
+
+            // 👇 Match robusto: tu array es "participantes" con docs que pueden
+            // tener user_id / usuario_id / userId según el histórico
+            $q->where(function ($w) use ($mix) {
+                $w->whereIn('participantes.user_id',   $mix)
+                ->orWhereIn('participantes.usuario_id', $mix)
+                ->orWhereIn('participantes.userId',  $mix);
+            });
         }
 
         // Contar ocurrencias por técnica
@@ -79,4 +91,85 @@ class TopTecnicasController extends BaseReportController
             'rows'   => $tableRows,
         ]);
     }
+
+    public function cohortes(Request $r)
+    {
+        try {
+            $q = trim((string) $this->d($r, 'q', ''));
+
+            // Helpers sin mbstring
+            $toLower = static fn(string $s) => function_exists('mb_strtolower') ? mb_strtolower($s, 'UTF-8') : strtolower($s);
+
+            // 1) Pipeline: toma 'cohorte' (string o array), aplana y devuelve valores únicos
+            $cursor = \DB::connection('mongodb')
+                ->getMongoDB()
+                ->selectCollection('personas')
+                ->aggregate([
+                    // Solo docs donde exista el campo
+                    ['$match' => ['cohorte' => ['$exists' => true]]],
+
+                    // Normaliza a array: si es string lo convertimos a array de un solo elemento
+                    ['$addFields' => [
+                        'cohorteArr' => [
+                            '$cond' => [
+                                [ '$isArray' => '$cohorte' ],
+                                '$cohorte',
+                                [ '$cond' => [
+                                    [ '$eq' => [ ['$type' => '$cohorte'], 'missing' ] ],
+                                    [],              // missing -> []
+                                    [ '$ifNull' => [ [ '$literal' => ['$cohorte'] ], [] ] ] // string/null -> [valor] o []
+                                ]]
+                            ]
+                        ]
+                    ]],
+
+                    // Aplana
+                    ['$unwind' => '$cohorteArr'],
+
+                    // Limpia espacios
+                    ['$project' => [
+                        'c' => [
+                            '$trim' => [ 'input' => ['$toString' => '$cohorteArr'] ]
+                        ]
+                    ]],
+
+                    // Filtra vacíos
+                    ['$match' => ['c' => ['$ne' => '']]],
+
+                    // Únicos (case-insensitive): hacemos un key lower y agrupamos
+                    ['$group' => [
+                        '_id' => [ '$toLower' => '$c' ],
+                        'any' => [ '$first' => '$c' ]   // conservamos una versión tal cual
+                    ]],
+
+                    // Sort natural insensible a mayúsculas (ordenamos por lower)
+                    ['$sort' => ['_id' => 1]],
+
+                    // Proyección final
+                    ['$project' => ['_id' => 0, 'c' => '$any']]
+                ]);
+
+            $items = [];
+            foreach ($cursor as $doc) {
+                $val = isset($doc['c']) ? trim((string)$doc['c']) : '';
+                if ($val !== '') $items[] = preg_replace('/\s+/u', ' ', $val);
+            }
+
+            // Filtro opcional por texto
+            if ($q !== '') {
+                $qL = $toLower($q);
+                $items = array_values(array_filter($items, fn($c) => strpos($toLower($c), $qL) !== false));
+            }
+
+            // Orden natural final por si vienen tildes/mixto
+            usort($items, fn($a, $b) => strnatcasecmp($a, $b));
+
+            return response()->json(['items' => $items], 200);
+
+        } catch (\Throwable $e) {
+            \Log::error('Error /reportes/opciones/cohortes', ['msg' => $e->getMessage()]);
+            return response()->json(['message' => 'Error', 'error' => $e->getMessage()], 500);
+        }
+    }
+
 }

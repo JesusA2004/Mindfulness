@@ -15,13 +15,12 @@ use App\Http\Controllers\Api\PersonaController;
 use App\Http\Controllers\Api\RecompensaController;
 use App\Http\Controllers\Api\TecnicaController;
 use App\Http\Controllers\Api\TestController;
-use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\UserPointsController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DashboardAlumnoController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Api\ActividadesAsignadasController;
-use App\Http\Controllers\Api\ReporteController;
+use App\Http\Controllers\Api\BaseReportController;
 use App\Http\Controllers\Api\ContactoController;
 use App\Http\Controllers\Api\TestRespuestaController;
 use App\Http\Controllers\Api\CitaAlumnoController;
@@ -62,6 +61,9 @@ Route::post('/password/forgot', [PasswordResetController::class, 'forgot']);
 Route::post('/password/reset',  [PasswordResetController::class, 'reset']);
 
 Route::post('/contacto', [ContactoController::class, 'store']);
+
+// Filtros de reportes
+Route::get('reportes/opciones/cohortes', [TopTecnicasController::class, 'cohortes']);
 
 /*
 |--------------------------------------------------------------------------

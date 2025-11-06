@@ -128,6 +128,29 @@ function normalizeAlumno(u) {
     matricula: (u.matricula || (label.split(" — ")[1] || "S/MAT")).toUpperCase(),
   };
 }
+
+/* =================== COHORTES =================== */
+let cohortesCache = [];
+
+async function loadCohortes(force = false) {
+  if (cohortesCache.length && !force) return cohortesCache;
+  const base = apiBase();
+  const res = await fetch(`${base}/reportes/opciones/cohortes`, {
+    headers: authHeaders({ "Cache-Control": "no-cache" }),
+  });
+  if (!res.ok) throw new Error("No se pudo cargar la lista de cohortes");
+  const json = await res.json();
+  cohortesCache = Array.isArray(json.items) ? json.items : [];
+  return cohortesCache;
+}
+
+function filterCohortesLocal(term = "") {
+  const t = (term || "").toLowerCase();
+  return cohortesCache
+    .filter((c) => c.toLowerCase().includes(t))
+    .slice(0, 30);
+}
+
 async function loadAllAlumnos() {
   // Sin autocompletar remoto: dejamos la lista vacía.
   alumnosCache = [];
@@ -298,6 +321,8 @@ async function openExportDialog(active, tipo = "pdf") {
           <div id="sw-filter-text" style="display:none">
             <label class="form-label mb-1" id="sw-filter-text-label">Valor</label>
             <input id="sw-filter-text-input" type="text" class="form-control" placeholder="Escribe para filtrar…" />
+
+            <div class="sw-list mt-2" id="sw-cohorte-list" style="display:none;"></div>
           </div>
 
           <div id="sw-filter-alumno" style="display:none">
@@ -327,17 +352,56 @@ async function openExportDialog(active, tipo = "pdf") {
     focusConfirm: false,
     showClass: { popup: "animate__animated animate__fadeInUp faster" },
     hideClass: { popup: "animate__animated animate__fadeOutDown faster" },
+
     didOpen: async () => {
-      const $preset = document.getElementById("sw-datepreset");
-      const $custom = document.getElementById("sw-customrange");
-      const $filter = document.getElementById("sw-filter");
-      const $textWrap  = document.getElementById("sw-filter-text");
-      const $textLabel = document.getElementById("sw-filter-text-label");
-      const $textInput = document.getElementById("sw-filter-text-input");
-      const $alumnoWrap = document.getElementById("sw-filter-alumno");
+      // === COHORTES (lista sugerencias) ===
+      const $cohorteList = document.getElementById("sw-cohorte-list");
+
+      const renderCohortes = (list) => {
+        if (!$cohorteList) return;
+        if (!list || !list.length) {
+          $cohorteList.innerHTML = `<div class="mini-hint">Sin coincidencias.</div>`;
+          return;
+        }
+        $cohorteList.innerHTML = list.map((c) => `
+          <button type="button" class="sw-item" data-value="${c}">
+            <span class="nm">${c}</span>
+          </button>
+        `).join("");
+
+        Array.from($cohorteList.querySelectorAll(".sw-item")).forEach((el) => {
+          el.addEventListener("click", () => {
+            const val = el.getAttribute("data-value") || "";
+            // Colocamos la cohorte elegida en el input de texto
+            $textInput.value = val;
+            // Resaltado visual opcional
+            $cohorteList.querySelectorAll(".sw-item").forEach((n) => n.classList.remove("active"));
+            el.classList.add("active");
+          });
+        });
+      };
+
+      const showCohortesIfNeeded = async () => {
+        if ($filter.value !== "cohorte") return;
+        if (!cohortesCache.length) await loadCohortes();
+        const term = ($textInput?.value || "").trim();
+        const list = term ? filterCohortesLocal(term) : cohortesCache.slice(0, 30);
+        if ($cohorteList) $cohorteList.style.display = "block";
+        renderCohortes(list);
+      };
+
+      // === ELEMENTOS GENERALES ===
+      const $preset      = document.getElementById("sw-datepreset");
+      const $custom      = document.getElementById("sw-customrange");
+      const $filter      = document.getElementById("sw-filter");
+      const $textWrap    = document.getElementById("sw-filter-text");
+      const $textLabel   = document.getElementById("sw-filter-text-label");
+      const $textInput   = document.getElementById("sw-filter-text-input");
+      const $alumnoWrap  = document.getElementById("sw-filter-alumno");
       const $alumnoInput = document.getElementById("sw-alumno-input");
       const $alumnoList  = document.getElementById("sw-alumno-list");
 
+      // === ALUMNOS (tu lista local vacía) ===
       let currentSelection = ""; // etiqueta elegida (para export)
 
       const renderAlumnos = (list) => {
@@ -363,38 +427,58 @@ async function openExportDialog(active, tipo = "pdf") {
         });
       };
 
-      const toggleCustom = () => { $custom.style.display = $preset.value === "custom" ? "flex" : "none"; };
-      const toggleFilterInputs = () => {
+      const toggleCustom = () => {
+        $custom.style.display = $preset.value === "custom" ? "flex" : "none";
+      };
+
+      // OJO: usamos let para poder extender sin reasignar un const
+      let toggleFilterInputs = () => {
         const v = $filter.value;
         $textWrap.style.display   = (v === "cohorte" || v === "encuesta" || v === "tipo") ? "block" : "none";
         $alumnoWrap.style.display = (v === "alumno") ? "block" : "none";
         if (v === "cohorte")  $textLabel.textContent = "Cohorte / Grupo (p.ej. ITI 10 A)";
         if (v === "encuesta") $textLabel.textContent = "Encuesta (título o ID)";
         if (v === "tipo")     $textLabel.textContent = "Tipo de recompensa";
+
+        // Mostrar/ocultar lista de cohortes
+        if (v === "cohorte") {
+          if ($cohorteList) $cohorteList.style.display = "block";
+          showCohortesIfNeeded();
+        } else {
+          if ($cohorteList) $cohorteList.style.display = "none";
+        }
       };
 
-      // Carga inicial (sin endpoint) y filtro local (lista vacía)
+      // Carga inicial alumnos (local vacío) y render
       await loadAllAlumnos();
       renderAlumnos(alumnosCache);
 
       const doFilterLocal = debounce((t) => renderAlumnos(filterAlumnosLocal((t||"").trim())), 140);
 
+      // Enter rápido (opcional, se queda como en tu versión)
       document.addEventListener("keydown", (ev) => {
         if (ev.key === "Enter") {
           const input = document.activeElement;
           if (input && (input.id === "sw-alumno-input" || input.id === "sw-filter-text-input")) {
-            // Permite confirmar rápidamente con Enter
+            // permitir confirmar rápido
           }
         }
       });
 
+      // === Eventos ===
       $preset.addEventListener("change", toggleCustom);
       $filter.addEventListener("change", toggleFilterInputs);
       $alumnoInput.addEventListener("input", (e) => doFilterLocal(e.target.value || ""));
+      $textInput.addEventListener("input", () => {
+        if ($filter.value === "cohorte") showCohortesIfNeeded();
+      });
 
+      // === Inicial ===
       toggleCustom();
       toggleFilterInputs();
-    },
+      await showCohortesIfNeeded();
+    }
+,
     preConfirm: () => {
       const $preset = document.getElementById("sw-datepreset");
       const $d = document.getElementById("sw-desde");
