@@ -2,27 +2,36 @@
 import { ref, computed } from 'vue'
 import axios from 'axios'
 
-// === Helpers ===
+/* =========================
+   Helpers base
+   ========================= */
 const API = (process.env.VUE_APP_API_URL || '').replace(/\/+$/,'')
 const RESTORE_ENDPOINT = `${API}/restore`
+const ENDPOINT = (col) => `${API}/${col}`
 
 function authHeaders () {
-  const t = localStorage.getItem('token') || ''
+  const t  = localStorage.getItem('token') || ''
   const tt = (localStorage.getItem('token_type') || 'Bearer').trim()
   return t ? { Authorization: `${tt} ${t}`, Accept: 'application/json' } : { Accept: 'application/json' }
 }
 
-// ====== state ======
-const importFormat = ref('json')   // excel|csv|json
-const collection   = ref('')       // tecnicas|recompensas|users (solo CSV/JSON)
-const mode         = ref('append') // append|replace
+const isObj   = (v)=> v && typeof v==='object' && !Array.isArray(v)
+const toInt   = (v, d=0)=> { const n = Number(v); return Number.isFinite(n) ? Math.trunc(n) : d }
+const toStr   = (v)=> (v == null ? '' : String(v))
 
-const file = ref(null)
+/* =========================
+   Estado
+   ========================= */
+const importFormat = ref('json')   // 'excel' | 'csv' | 'json'
+const collection   = ref('')       // 'tecnicas' | 'recompensas' | 'users' (CSV/JSON lo requieren)
+const mode         = ref('append') // 'append' | 'replace'
+
+const file        = ref(null)
 const flatPreview = ref([])
 
-const loading = ref(false)
-const message = ref('')
-const messageType = ref('') // info|success|error|warning
+const loading     = ref(false)
+const message     = ref('')
+const messageType = ref('') // 'info' | 'success' | 'error' | 'warning'
 
 const acceptByFormat = computed(() => {
   if (importFormat.value === 'excel') return '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel'
@@ -31,7 +40,9 @@ const acceptByFormat = computed(() => {
   return '.xlsx,.csv,.json'
 })
 
-// ====== lectura archivo -> preview ======
+/* =========================
+   Lectura de archivo -> preview
+   ========================= */
 async function onFileSelected(e){
   try{
     const f = e?.target?.files?.[0]
@@ -53,11 +64,12 @@ async function onFileSelected(e){
     } else if (name.endsWith('.xlsx')) {
       const XLSX = await tryLoadXLSX()
       const buf = await f.arrayBuffer()
-      const wb = XLSX.read(buf)
-      // hoja por nombre si existe
+      const wb  = XLSX.read(buf)
+
+      // intenta hoja con nombre conocido
       const wanted = ['tecnicas','recompensas','users']
       let sheetName = wb.SheetNames.find(n => wanted.includes(String(n).toLowerCase())) || wb.SheetNames[0]
-      const ws = wb.Sheets[sheetName]
+      const ws  = wb.Sheets[sheetName]
       const arr = XLSX.utils.sheet_to_json(ws)
       flatPreview.value = Array.isArray(arr) ? arr : []
       if (!collection.value) {
@@ -70,7 +82,7 @@ async function onFileSelected(e){
       return
     }
 
-    // aviso (la vista lo muestra y evita duplicado)
+    // aviso (la vista ya evita mostrar duplicado si aplica)
     message.value = `Se detectaron ${flatPreview.value.length} filas.`
     messageType.value = 'info'
   }catch(err){
@@ -81,7 +93,7 @@ async function onFileSelected(e){
 }
 
 function parseCSV(text){
-  const lines = text.split(/\r?\n/).filter(Boolean)
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length)
   if (!lines.length) return []
   const headers = splitCSVLine(lines[0]).map(h=>h.trim())
   const out=[]
@@ -113,11 +125,67 @@ async function tryLoadXLSX(){
   return window.XLSX
 }
 
-// ====== RESTORE ACTION ======
+/* =========================
+   Usuarios: crear persona + user (no usa RestoreController)
+   ========================= */
+function buildCohorte(carrera, cuatrimestre, grupo){
+  const c = Array.isArray(carrera)? carrera[0] : carrera
+  const q = Array.isArray(cuatrimestre)? cuatrimestre[0] : cuatrimestre
+  const g = Array.isArray(grupo)? grupo[0] : grupo
+  const parts = [c,q,g].map(v=>toStr(v).trim()).filter(Boolean)
+  return parts.length ? parts.join(' ') : ''
+}
+function nameFromPersona(p){
+  const n = [toStr(p.nombre), toStr(p.apellidoPaterno), toStr(p.apellidoMaterno)].filter(Boolean).join(' ').trim()
+  return n || toStr(p.nombre) || ''
+}
+async function createPersonaAndUser(raw){
+  // Cohorte puede venir en 'cohorte' (string o array) o desglosado (carrera/cuatrimestre/grupo)
+  const cohorte =
+    Array.isArray(raw.cohorte) ? raw.cohorte :
+    (raw.cohorte ? toStr(raw.cohorte) : buildCohorte(raw.carrera, raw.cuatrimestre, raw.grupo))
+
+  const personaPayload = {
+    nombre:          toStr(raw.nombre || raw.name),
+    apellidoPaterno: toStr(raw.apellidoPaterno),
+    apellidoMaterno: toStr(raw.apellidoMaterno),
+    fechaNacimiento: toStr(raw.fechaNacimiento),
+    telefono:        toStr(raw.telefono),
+    sexo:            toStr(raw.sexo),
+    cohorte,
+    matricula:       toStr(raw.matricula),
+  }
+
+  // store persona (ruta pública en tus rutas)
+  const presp = await axios.post(ENDPOINT('personas'), personaPayload, { headers: authHeaders() })
+  const persona = presp.data?.persona || presp.data || {}
+  const personaId = toStr(persona._id || persona.id || '')
+
+  // Ahora usuario
+  const userPayload = {
+    name:       nameFromPersona(personaPayload),
+    email:      toStr(raw.email),
+    rol:        toStr(raw.rol).toLowerCase(),  // 'estudiante' | 'profesor' | 'admin'
+    estatus:    toStr(raw.estatus || 'activo'),
+    persona_id: personaId || undefined,
+    matricula:  toStr(raw.matricula),
+    notify_email: true
+  }
+
+  await axios.post(ENDPOINT('users'), userPayload, { headers: authHeaders() })
+}
+
+/* =========================
+   Restore action
+   ========================= */
 async function doRestore(){
   if (!file.value) { message.value='Selecciona un archivo primero.'; messageType.value='warning'; return }
+
+  // Para CSV/JSON el RestoreController exige 'collection' (tecnicas|recompensas).
   if (importFormat.value !== 'excel' && !collection.value) {
-    message.value='Para CSV/JSON debes indicar la colección (tecnicas o recompensas).'; messageType.value='warning'; return
+    message.value='Para CSV/JSON debes indicar la colección (tecnicas, recompensas o users).'
+    messageType.value='warning'
+    return
   }
 
   loading.value = true
@@ -125,22 +193,41 @@ async function doRestore(){
   messageType.value = ''
 
   try{
-    // ¡Nada de DELETE de colecciones aquí! 'mode=replace' lo hace el backend.
+    // === 1) USERS: se procesan aquí (persona -> user), NO por RestoreController
+    if (collection.value === 'users') {
+      // Usa flatPreview (ya cargado del archivo)
+      for (const row of flatPreview.value) {
+        try { await createPersonaAndUser(row) }
+        catch (e) { console.error('Fila users con error:', e) }
+      }
+      message.value = 'Usuarios restaurados.'
+      messageType.value = 'success'
+      return
+    }
+
+    // === 2) TECNICAS / RECOMPENSAS: sí usan RestoreController
     const form = new FormData()
     form.append('file', file.value)
-    form.append('format', importFormat.value)
-    form.append('mode', mode.value || 'append')
-    if (importFormat.value !== 'excel') form.append('collection', collection.value)
+    form.append('format', importFormat.value)      // 'excel' | 'csv' | 'json'
+    form.append('mode', mode.value || 'append')    // 'append' | 'replace'
 
-    await axios.post(RESTORE_ENDPOINT, form, {
-      headers: authHeaders(), // dejar que axios ponga el Content-Type multipart con boundary
-    })
+    // Para CSV/JSON se requiere 'collection' por contrato de tu RestoreController
+    if (importFormat.value !== 'excel') {
+      if (!['tecnicas','recompensas'].includes(collection.value)) {
+        message.value = 'Para CSV/JSON la colección debe ser: tecnicas o recompensas.'
+        messageType.value = 'error'
+        return
+      }
+      form.append('collection', collection.value)
+    }
+
+    await axios.post(RESTORE_ENDPOINT, form, { headers: authHeaders() })
 
     message.value = 'Restauración completada.'
     messageType.value = 'success'
   }catch(e){
     console.error(e)
-    let msg = e?.response?.data?.message || e?.message || 'Error durante la restauración.'
+    const msg = e?.response?.data?.message || e?.message || 'Error durante la restauración.'
     message.value = msg
     messageType.value = 'error'
   }finally{
@@ -148,6 +235,9 @@ async function doRestore(){
   }
 }
 
+/* =========================
+   Reset
+   ========================= */
 function reset(){
   file.value = null
   flatPreview.value = []
@@ -155,7 +245,9 @@ function reset(){
   messageType.value = ''
 }
 
-// ====== export composable ======
+/* =========================
+   Export composable
+   ========================= */
 export function useRestoreBD(){
   return {
     importFormat, collection, mode,
