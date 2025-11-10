@@ -1,0 +1,38 @@
+[
+    {
+        "_id": "673a91b8cfe1a0001a3e4581",
+        "nombre": "Respiración Consciente",
+        "descripcion": "Ejercicio de respiración profunda para centrar la atención y reducir el estrés.",
+        "dificultad": "Bajo",
+        "duracion": 5,
+        "categoria": "Respiración",
+        "calificaciones": "[]",
+        "recursos": "[{\"tipo\":\"Video\",\"url\":\"https:\/\/www.youtube.com\/watch?v=Un5cumlGBSw\",\"descripcion\":\"video\",\"fecha\":\"2025-10-30\",\"_id\":\"6903b6d9df4439101800ed6b\"}]",
+        "created_at": "2025-11-10 01:44:10",
+        "updated_at": "2025-11-10 01:44:10"
+    },
+    {
+        "_id": "673a91b8cfe1a0001a3e4582",
+        "nombre": "Escaneo Corporal",
+        "descripcion": "Guía de atención a las sensaciones físicas desde los pies hasta la cabeza.",
+        "dificultad": "Medio",
+        "duracion": 8,
+        "categoria": "Relajación",
+        "calificaciones": "[]",
+        "recursos": "[]",
+        "created_at": "2025-11-10 01:44:10",
+        "updated_at": "2025-11-10 01:44:10"
+    },
+    {
+        "_id": "673a91b8cfe1a0001a3e4583",
+        "nombre": "Respiración 4-7-8",
+        "descripcion": "Técnica 4-7-8 para disminuir activación fisiológica.",
+        "dificultad": "Bajo",
+        "duracion": 4,
+        "categoria": "Sueño",
+        "calificaciones": "[]",
+        "recursos": "[{\"tipo\":\"Audio\",\"url\":\"https:\/\/cdn.example.com\/tecnicas\/respiracion_478.mp3\",\"descripcion\":\"audio\",\"fecha\":\"2025-11-01\",\"_id\":\"6903b6d9df4439101800ed6c\"}]",
+        "created_at": "2025-11-10 01:44:10",
+        "updated_at": "2025-11-10 01:44:10"
+    }
+]

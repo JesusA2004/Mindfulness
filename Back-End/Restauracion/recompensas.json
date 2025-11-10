@@ -1,0 +1,20 @@
+[
+  {
+    "nombre": "Tarjeta de Regalo Mercado Libre",
+    "descripcion": "Vale electrónico de $200 MXN canjeable en Mercado Libre.",
+    "puntos_necesarios": 200,
+    "stock": 20
+  },
+  {
+    "nombre": "Tarjeta de Regalo Amazon",
+    "descripcion": "Vale electrónico de $300 MXN en Amazon.",
+    "puntos_necesarios": 300,
+    "stock": 15
+  },
+  {
+    "nombre": "Playera institucional",
+    "descripcion": "Talla M/L (algodón).",
+    "puntos_necesarios": 150,
+    "stock": 40
+  }
+]

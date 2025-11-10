@@ -1,0 +1,4 @@
+nombre,descripcion,dificultad,duracion,categoria,calificaciones,recursos
+Respiración Consciente,Ejercicio de respiración profunda para centrar la atención y reducir el estrés.,Bajo,5,Respiración,"[{""usuario_id"":""66f1a1a1a1a1a1a1a1a1a1a1"",""valor"":5},{""usuario_id"":""66f1a1a1a1a1a1a1a1a1a1a2"",""valor"":4}]","[{""tipo"":""Video"",""url"":""https://youtu.be/dQw4w9WgXcQ"",""descripcion"":""video""},{""tipo"":""Audio"",""url"":""https://example.com/breath.mp3"",""descripcion"":""audio""}]"
+Escaneo Corporal,Guía de atención a las sensaciones físicas desde los pies hasta la cabeza.,Medio,8,Relajación,[],[]
+Cinco Sentidos,"Anclaje aquí‑y‑ahora identificando 5 cosas que ves, 4 que sientes, etc.",Bajo,6,Atención plena,"[{""usuario_id"":""66f1a1a1a1a1a1a1a1a1a1a3"",""valor"":5}]","[{""tipo"":""Documento"",""url"":""https://example.com/5-sentidos.pdf"",""descripcion"":""documento""}]"

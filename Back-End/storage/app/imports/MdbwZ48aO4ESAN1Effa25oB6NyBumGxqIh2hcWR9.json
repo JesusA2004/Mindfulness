@@ -1,0 +1,166 @@
+[
+  {
+    "_id": "673a91b8cfe1a0001a3e4581",
+    "nombre": "Respiración Consciente",
+    "descripcion": "Ejercicio de respiración profunda para centrar la atención y reducir el estrés.",
+    "dificultad": "Bajo",
+    "duracion": 5,
+    "categoria": "Atención Plena",
+    "calificaciones": [],
+    "recursos": [
+      {
+        "tipo": "Video",
+        "url": "https://www.youtube.com/watch?v=Un5cumlGBSw",
+        "descripcion": "video",
+        "fecha": "2025-10-30",
+        "_id": "6903b6d9df4439101800ed6b"
+      }
+    ]
+  },
+  {
+    "_id": "673a91b8cfe1a0001a3e4582",
+    "nombre": "Escaneo Corporal",
+    "descripcion": "Guía de atención a las sensaciones físicas desde los pies hasta la cabeza.",
+    "dificultad": "Medio",
+    "duracion": 8,
+    "categoria": "Relajación",
+    "calificaciones": [],
+    "recursos": []
+  },
+  {
+    "_id": "673a91b8cfe1a0001a3e4583",
+    "nombre": "Atención a la Respiración 4-7-8",
+    "descripcion": "Técnica 4-7-8 para disminuir activación fisiológica y conciliar el sueño.",
+    "dificultad": "Bajo",
+    "duracion": 4,
+    "categoria": "Sueño",
+    "calificaciones": [],
+    "recursos": [
+      {
+        "tipo": "Audio",
+        "url": "https://cdn.example.com/tecnicas/respiracion_478.mp3",
+        "descripcion": "audio",
+        "fecha": "2025-11-01",
+        "_id": "6903b6d9df4439101800ed6c"
+      }
+    ]
+  },
+  {
+    "_id": "673a91b8cfe1a0001a3e4584",
+    "nombre": "Meditación de Amor-Bondad",
+    "descripcion": "Práctica breve de amor-bondad (metta) para cultivar apertura y amabilidad.",
+    "dificultad": "Medio",
+    "duracion": 10,
+    "categoria": "Compasión",
+    "calificaciones": [],
+    "recursos": [
+      {
+        "tipo": "Video",
+        "url": "https://www.youtube.com/watch?v=3ZMK3G5h2h8",
+        "descripcion": "video",
+        "fecha": "2025-11-02",
+        "_id": "6903b6d9df4439101800ed6d"
+      }
+    ]
+  },
+  {
+    "_id": "673a91b8cfe1a0001a3e4585",
+    "nombre": "Atención a los Sonidos",
+    "descripcion": "Ejercicio para anclar la atención en sonidos cercanos y lejanos sin juicio.",
+    "dificultad": "Bajo",
+    "duracion": 6,
+    "categoria": "Atención Plena",
+    "calificaciones": [],
+    "recursos": [
+      {
+        "tipo": "Audio",
+        "url": "https://cdn.example.com/tecnicas/sonidos_atencion.mp3",
+        "descripcion": "audio",
+        "fecha": "2025-11-03",
+        "_id": "6903b6d9df4439101800ed6e"
+      }
+    ]
+  },
+  {
+    "_id": "673a91b8cfe1a0001a3e4586",
+    "nombre": "Anclaje en el Cuerpo",
+    "descripcion": "Escaneo rápido (3 minutos) para regresar al presente mediante sensaciones físicas.",
+    "dificultad": "Bajo",
+    "duracion": 3,
+    "categoria": "Regulación",
+    "calificaciones": [],
+    "recursos": [
+      {
+        "tipo": "Imagen",
+        "url": "https://cdn.example.com/tecnicas/anclaje_cuerpo.png",
+        "descripcion": "imagen",
+        "fecha": "2025-11-04",
+        "_id": "6903b6d9df4439101800ed6f"
+      }
+    ]
+  },
+  {
+    "_id": "673a91b8cfe1a0001a3e4587",
+    "nombre": "Respiración en Caja",
+    "descripcion": "Box breathing (4-4-4-4) para estabilizar la respiración y la mente.",
+    "dificultad": "Bajo",
+    "duracion": 5,
+    "categoria": "Regulación",
+    "calificaciones": [],
+    "recursos": [
+      {
+        "tipo": "Video",
+        "url": "https://www.youtube.com/watch?v=I4fGJrH1l9o",
+        "descripcion": "video",
+        "fecha": "2025-11-05",
+        "_id": "6903b6d9df4439101800ed70"
+      }
+    ]
+  },
+  {
+    "_id": "673a91b8cfe1a0001a3e4588",
+    "nombre": "Atención Abierta",
+    "descripcion": "Práctica de monitoreo abierto para observar pensamientos, emociones y sensaciones.",
+    "dificultad": "Alto",
+    "duracion": 12,
+    "categoria": "Conciencia",
+    "calificaciones": [],
+    "recursos": []
+  },
+  {
+    "_id": "673a91b8cfe1a0001a3e4589",
+    "nombre": "Respirar y Contar",
+    "descripcion": "Cuenta respiraciones del 1 al 10 para fortalecer el foco atencional.",
+    "dificultad": "Bajo",
+    "duracion": 7,
+    "categoria": "Atención Plena",
+    "calificaciones": [],
+    "recursos": [
+      {
+        "tipo": "Audio",
+        "url": "https://cdn.example.com/tecnicas/respirar_contar.mp3",
+        "descripcion": "audio",
+        "fecha": "2025-11-06",
+        "_id": "6903b6d9df4439101800ed71"
+      }
+    ]
+  },
+  {
+    "_id": "673a91b8cfe1a0001a3e4590",
+    "nombre": "Relajación Muscular Progresiva",
+    "descripcion": "Secuencia de tensión-relajación para soltar rigidez corporal.",
+    "dificultad": "Medio",
+    "duracion": 9,
+    "categoria": "Relajación",
+    "calificaciones": [],
+    "recursos": [
+      {
+        "tipo": "Video",
+        "url": "https://www.youtube.com/watch?v=Zb8n9dJXQ2s",
+        "descripcion": "video",
+        "fecha": "2025-11-07",
+        "_id": "6903b6d9df4439101800ed72"
+      }
+    ]
+  }
+]

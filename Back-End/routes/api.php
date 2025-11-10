@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\Reportes\BitacorasAlumnoController;
 use App\Http\Controllers\Api\Reportes\EncuestasResultadosController;
 use App\Http\Controllers\Api\Reportes\RecompensasCanjeadasController;
 use App\Http\Controllers\Api\Reportes\ExportController;
+use App\Http\Controllers\Api\RestoreController;
 
 /*
 |--------------------------------------------------------------------------
@@ -141,7 +142,11 @@ Route::middleware(['auth:api'])->group(function () {
 
     // Backups
     Route::get('backups/export', [BackupController::class, 'export']);
-    Route::post('backups/import', [BackupController::class, 'import']);
+
+    //Resturacion de base de datos
+    Route::post('/restore', 
+    [RestoreController::class, 'import']
+    );
 
     // Puntos de usuario
     Route::post('/users/{id}/points/earn',   [UserPointsController::class, 'earn']);

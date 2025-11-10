@@ -1,0 +1,32 @@
+[
+  {
+    "_id": "673a91b8cfe1a0001a3e4581",
+    "nombre": "Respiración Consciente",
+    "descripcion": "Ejercicio de respiración profunda para centrar la atención y reducir el estrés.",
+    "dificultad": "baja",
+    "duracion": 5,
+    "categoria": "atención plena",
+    "calificaciones": [
+    ],
+    "recursos": [
+      {
+        "tipo": "audio",
+        "url": "https://cdn.example.com/tecnicas/respiracion.mp3"
+      },
+      {
+        "tipo": "video",
+        "url": "https://cdn.example.com/tecnicas/respiracion.mp4"
+      }
+    ]
+  },
+  {
+    "_id": "673a91b8cfe1a0001a3e4582",
+    "nombre": "Escaneo Corporal",
+    "descripcion": "Guía de atención a las sensaciones físicas desde los pies hasta la cabeza.",
+    "dificultad": "media",
+    "duracion": 8,
+    "categoria": "relajación",
+    "calificaciones": [],
+    "recursos": []
+  }
+]

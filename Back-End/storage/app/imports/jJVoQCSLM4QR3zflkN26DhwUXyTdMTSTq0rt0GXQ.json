@@ -1,0 +1,36 @@
+[
+    {
+        "_id": "68f5d949f132dc5bd0033ef4",
+        "nombre": "Tarjeta de Regalo Mercado",
+        "descripcion": "Vale electrónico de $200 MXN canjeable en Mercado Libre.",
+        "puntos_necesarios": 500,
+        "stock": 20,
+        "updated_at": {
+            "$date": {
+                "$numberLong": "1760942409166"
+            }
+        },
+        "created_at": {
+            "$date": {
+                "$numberLong": "1760942409166"
+            }
+        }
+    },
+    {
+        "_id": "68f5d95cf132dc5bd0033ef5",
+        "nombre": "Tarjeta de Regalo Amazon",
+        "descripcion": "Vale electrónico de $200 MXN canjeable en Mercado Libre.",
+        "puntos_necesarios": 1000,
+        "stock": 20,
+        "updated_at": {
+            "$date": {
+                "$numberLong": "1760942428356"
+            }
+        },
+        "created_at": {
+            "$date": {
+                "$numberLong": "1760942428356"
+            }
+        }
+    }
+]

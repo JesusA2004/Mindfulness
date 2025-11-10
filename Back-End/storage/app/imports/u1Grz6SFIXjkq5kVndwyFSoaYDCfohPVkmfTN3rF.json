@@ -1,0 +1,59 @@
+[
+    {
+        "_id": "6903b6d9df4439101800ed6a",
+        "descripcion": "sfsfs",
+        "dificultad": "Bajo",
+        "duracion": 10,
+        "categoria": "Respiración",
+        "nombre": "Respiración",
+        "updated_at": {
+            "$date": {
+                "$numberLong": "1761851097446"
+            }
+        },
+        "created_at": {
+            "$date": {
+                "$numberLong": "1761851097443"
+            }
+        },
+        "recursos": "[{\"tipo\":\"Video\",\"url\":\"https:\\\/\\\/www.youtube.com\\\/watch?v=Un5cumlGBSw\",\"descripcion\":\"video\",\"fecha\":\"2025-10-30\",\"_id\":\"6903b6d9df4439101800ed6b\"}]"
+    },
+    {
+        "_id": "6903cbd3df4439101800ed71",
+        "descripcion": "dgdg",
+        "dificultad": "Medio",
+        "duracion": 32,
+        "categoria": "Concentración\/Atención Plena",
+        "nombre": "Prueba",
+        "updated_at": {
+            "$date": {
+                "$numberLong": "1761856467934"
+            }
+        },
+        "created_at": {
+            "$date": {
+                "$numberLong": "1761856467934"
+            }
+        }
+    },
+    {
+        "_id": "690c418cb3a0252bb50aced2",
+        "descripcion": "sagsag",
+        "dificultad": "Bajo",
+        "duracion": 1,
+        "categoria": "Respiración",
+        "nombre": "gadsg",
+        "updated_at": {
+            "$date": {
+                "$numberLong": "1762411089038"
+            }
+        },
+        "created_at": {
+            "$date": {
+                "$numberLong": "1762410891965"
+            }
+        },
+        "calificaciones": "[{\"usuario_id\":\"69039e90df4439101800ed65\",\"puntaje\":4,\"comentario\":null,\"fecha\":\"2025-11-06\",\"_id\":\"690c4251b3a0252bb50aced5\"}]",
+        "recursos": "[]"
+    }
+]

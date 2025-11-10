@@ -1,0 +1,29 @@
+[
+    {
+        "_id": "6911a8f4de51c5cd9600f017",
+        "nombre": "Tarjeta de Regalo Mercado Libre",
+        "descripcion": "Vale electrónico de $200 MXN canjeable en Mercado Libre.",
+        "puntos_necesarios": 200,
+        "stock": 20,
+        "created_at": "2025-11-10 02:57:24",
+        "updated_at": "2025-11-10 02:57:24"
+    },
+    {
+        "_id": "6911a8f4de51c5cd9600f018",
+        "nombre": "Tarjeta de Regalo Amazon",
+        "descripcion": "Vale electrónico de $300 MXN en Amazon.",
+        "puntos_necesarios": 300,
+        "stock": 15,
+        "created_at": "2025-11-10 02:57:24",
+        "updated_at": "2025-11-10 02:57:24"
+    },
+    {
+        "_id": "6911a8f4de51c5cd9600f019",
+        "nombre": "Playera institucional",
+        "descripcion": "Talla M\/L (algodón).",
+        "puntos_necesarios": 150,
+        "stock": 40,
+        "created_at": "2025-11-10 02:57:24",
+        "updated_at": "2025-11-10 02:57:24"
+    }
+]
