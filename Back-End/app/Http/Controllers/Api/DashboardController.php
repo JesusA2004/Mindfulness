@@ -159,11 +159,16 @@ class DashboardController extends Controller
                 ], 200);
             }
 
-            [$profStr, ] = $this->idBothTypes($prof->id ?? $prof->_id ?? null);
+            // Conteo por citas (aceptando ambos tipos de docente_id)
+            [$profStr, $profObj] = $this->idBothTypes($prof->id ?? $prof->_id ?? null);
             $alumnosUnicos = 0;
 
-            if ($profStr && class_exists(Cita::class)) {
-                $rows = Cita::where('docente_id', $profStr)->get(['alumno_id']);
+            if (($profStr || $profObj) && class_exists(Cita::class)) {
+                $rows = Cita::where(function ($q) use ($profStr, $profObj) {
+                            if ($profObj) $q->where('docente_id', $profObj);
+                            if ($profStr) $q->orWhere('docente_id', $profStr);
+                        })
+                        ->get(['alumno_id']);
                 $set  = [];
                 foreach ($rows as $r) {
                     $aid = (string) ($r->alumno_id ?? '');
@@ -191,65 +196,100 @@ class DashboardController extends Controller
     {
         try {
             $prof = $request->user();
-            [$profStr, ] = $this->idBothTypes($prof->id ?? $prof->_id ?? null);
+            [$profStr, $profObj] = $this->idBothTypes($prof->id ?? $prof->_id ?? null);
             [$cohortes, $regexes] = $this->resolveCohortesForUser($prof);
 
-            $start = $request->query('start') ?: Carbon::now('America/Mexico_City')->startOfMonth()->toDateString();
-            $end   = $request->query('end')   ?: Carbon::now('America/Mexico_City')->endOfMonth()->toDateString();
+            // Bounds robustos (MX -> UTC)
+            [$startStr, $endStr, $startUtc, $endUtc] = $this->monthBoundsUtc($request);
 
             $items = [];
 
-            if ($profStr && class_exists(Cita::class)) {
-                $items = Cita::where('docente_id', $profStr)
-                    ->whereBetween('fecha_cita', [
-                        $start . 'T00:00:00+00:00',
-                        $end   . 'T23:59:59+00:00'
-                    ])
+            // ===== 1) Citas del profesor (robusto a String/ObjectId)
+            if (($profStr || $profObj) && class_exists(Cita::class)) {
+                $q = Cita::where(function ($w) use ($profStr, $profObj) {
+                        if ($profObj) $w->where('docente_id', $profObj);
+                        if ($profStr) $w->orWhere('docente_id', $profStr);
+                        $w->orWhere('profesor_id', (string)$profStr)
+                          ->orWhere('medico_id',   (string)$profStr)
+                          ->orWhere('user_id',     (string)$profStr);
+                    });
+
+                // A) por DateTime
+                $items = (clone $q)
+                    ->where('fecha_cita', '>=', $startUtc)
+                    ->where('fecha_cita', '<=', $endUtc)
                     ->get()
                     ->map(function ($c) {
+                        $raw = $c->fecha_cita ?? null;
+                        $iso = $raw instanceof \MongoDB\BSON\UTCDateTime
+                            ? $raw->toDateTime()->format('c')
+                            : (string)$raw;
                         return [
                             'titulo'      => (string)($c->motivo ?? 'Cita'),
-                            'fecha'       => (string)($c->fecha_cita ?? ''),
+                            'fecha'       => $iso,
                             'descripcion' => (string)($c->observaciones ?? ''),
                             'cohorte'     => null,
                         ];
-                    })
-                    ->values()
-                    ->all();
+                    })->values()->all();
+
+                // B) fallback por string (YYYY-MM-DD)
+                if (empty($items)) {
+                    $items = (clone $q)
+                        ->where('fecha_cita', '>=', $startStr)
+                        ->where('fecha_cita', '<=', $endStr)
+                        ->get()
+                        ->map(function ($c) {
+                            $raw = $c->fecha_cita ?? null;
+                            $iso = $raw instanceof \MongoDB\BSON\UTCDateTime
+                                ? $raw->toDateTime()->format('c')
+                                : (string)$raw;
+                            return [
+                                'titulo'      => (string)($c->motivo ?? 'Cita'),
+                                'fecha'       => $iso,
+                                'descripcion' => (string)($c->observaciones ?? ''),
+                                'cohorte'     => null,
+                            ];
+                        })->values()->all();
+                }
             }
 
+            // ===== 2) Fallback: actividades del profesor filtradas por cohorte y fechas
             if (empty($items) && class_exists(Actividad::class)) {
-                $acts = Actividad::all()->filter(function ($a) use ($start, $end, $regexes) {
-                    $coh = (string) ($a->cohorte ?? $a->grupo ?? '');
-                    if (!empty($regexes) && !$this->stringMatchesAnyRegex($coh, $regexes)) return false;
+                $acts = Actividad::where(function ($q) use ($startStr, $endStr) {
+                            $q->orWhereBetween('fecha',           [$startStr, $endStr])
+                              ->orWhereBetween('fecha_inicio',    [$startStr, $endStr])
+                              ->orWhereBetween('fechaFin',        [$startStr, $endStr])
+                              ->orWhereBetween('fechaAsignacion', [$startStr, $endStr]);
+                        })
+                        ->get()
+                        ->filter(function ($a) use ($regexes) {
+                            $coh = (string) ($a->cohorte ?? $a->grupo ?? '');
+                            if (!empty($regexes) && !$this->stringMatchesAnyRegex($coh, $regexes)) return false;
+                            return true;
+                        })
+                        ->values();
 
-                    $dates = array_filter([
-                        $a->fecha ?? null,
-                        $a->fecha_inicio ?? null,
-                        $a->fechaFin ?? null,
-                        $a->fechaAsignacion ?? null,
-                    ]);
-
-                    foreach ($dates as $d) if ($d >= $start && $d <= $end) return true;
-                    return false;
-                })->values()->all();
-
-                $items = array_map(function ($a) {
-                    return [
-                        'titulo'      => $a->titulo ?? ($a->nombre ?? 'Actividad'),
-                        'fecha'       => $a->fecha ?? ($a->fecha_inicio ?? ($a->fechaFin ?? ($a->fechaAsignacion ?? null))),
-                        'descripcion' => $a->descripcion ?? ($a->detalle ?? ''),
-                        'cohorte'     => $a->cohorte ?? ($a->grupo ?? null),
-                    ];
-                }, $acts);
+                $items = $acts->map(function ($a) {
+                            $fecha = $a->fecha
+                                   ?? $a->fecha_inicio
+                                   ?? $a->fechaFin
+                                   ?? $a->fechaAsignacion
+                                   ?? null;
+                            return [
+                                'titulo'      => $a->titulo ?? ($a->nombre ?? 'Actividad'),
+                                'fecha'       => is_string($fecha) ? $fecha : (string)$fecha,
+                                'descripcion' => $a->descripcion ?? ($a->detalle ?? ''),
+                                'cohorte'     => $a->cohorte ?? ($a->grupo ?? null),
+                            ];
+                        })->all();
             }
 
             usort($items, fn($a, $b) => strtotime($a['fecha'] ?? '') <=> strtotime($b['fecha'] ?? ''));
 
             return response()->json([
                 'items' => $items,
-                'start' => $start,
-                'end'   => $end,
+                'start' => $startStr,
+                'end'   => $endStr,
             ], 200);
 
         } catch (Exception $e) {
@@ -261,31 +301,145 @@ class DashboardController extends Controller
     {
         try {
             $prof = $request->user();
-            [$cohortes, $regexes] = $this->resolveCohortesForUser($prof);
+            if (!$prof) return response()->json(['labels'=>[], 'data'=>[]], 200);
 
-            $counts = [];
+            // 1) Cohortes del profesor
+            [$cohortes, $regexes] = $this->resolveCohortesForUser($prof);
+            if (empty($cohortes)) {
+                return response()->json(['labels'=>[], 'data'=>[]], 200);
+            }
+
+            // Normalización de labels del profe (preservamos orden para eje X)
+            $norm = fn(string $s) => preg_replace('/\s+/', ' ', strtoupper(trim($s)));
+            $profOrder = [];
+            $profCanon = []; // norm => label original
+            foreach ($cohortes as $lbl) {
+                $n = $norm((string)$lbl);
+                if ($n === '') continue;
+                if (!isset($profCanon[$n])) { $profCanon[$n] = $lbl; $profOrder[] = $n; }
+            }
+            if (empty($profCanon)) return response()->json(['labels'=>[], 'data'=>[]], 200);
+
+            // 2) Personas que pertenecen a las cohortes del profesor
+            //    Traemos _id y cohorte para mapear a labels exactas del profe
+            $personasCursor = Persona::raw(function($c) use ($regexes) {
+                return $c->find(['cohorte' => ['$in' => $regexes]], ['projection' => ['_id'=>1,'cohorte'=>1]]);
+            });
+
+            // persona_id(string) => array de normLabels (intersección con cohortes del profe)
+            $personaToNorms = [];
+            foreach ($personasCursor as $doc) {
+                $pid = $doc['_id'] ?? null;
+                $pidStr = $pid instanceof ObjectId ? (string)$pid : (string)$pid;
+                if ($pidStr === '') continue;
+
+                $raw = $doc['cohorte'] ?? null;
+                $vals = [];
+                if (is_array($raw)) { foreach ($raw as $c) $vals[] = (string)$c; }
+                elseif (is_string($raw)) { $vals[] = $raw; }
+
+                $norms = [];
+                foreach ($vals as $v) {
+                    $nv = $norm($v);
+                    if ($nv && isset($profCanon[$nv])) $norms[$nv] = true;
+                }
+                if (!empty($norms)) $personaToNorms[$pidStr] = array_keys($norms);
+            }
+
+            if (empty($personaToNorms)) {
+                // No hay personas en esas cohortes → regresamos labels con 0 para que pinte eje X
+                return response()->json(['labels'=>array_values($cohortes), 'data'=>array_fill(0, count($cohortes), 0)], 200);
+            }
+
+            // 3) Usuarios (estudiantes) cuya persona está en esas personas
+            $personaIdsStr = array_keys($personaToNorms);
+            $personaIdsObj = [];
+            foreach ($personaIdsStr as $sid) {
+                try { $personaIdsObj[] = new ObjectId($sid); } catch (\Throwable $e) {}
+            }
+
+            $users = User::whereIn('rol', ['estudiante','alumno'])
+                ->where(function ($q) use ($personaIdsObj, $personaIdsStr) {
+                    if (!empty($personaIdsObj)) $q->whereIn('persona_id', $personaIdsObj);
+                    if (!empty($personaIdsStr)) $q->orWhereIn('persona_id', $personaIdsStr);
+                })
+                ->get(['_id','id','persona_id']);
+
+            // user_id(string) => array de normLabels (desde su persona)
+            $userToNorms = [];
+            foreach ($users as $u) {
+                $uid = (string)($u->_id ?? $u->id ?? '');
+                if ($uid === '') continue;
+                $pid = (string)($u->persona_id ?? '');
+                if ($pid === '' || empty($personaToNorms[$pid])) continue;
+                $userToNorms[$uid] = $personaToNorms[$pid]; // puede tener varias cohortes
+            }
+
+            // 4) Inicializa counters por las cohortes del profe
+            $counts = array_fill_keys($profOrder, 0);
+
+            // 5) ID del profesor (para atribuir actividades propias)
+            [$profStr, $profObj] = $this->idBothTypes($prof->id ?? $prof->_id ?? null);
+
+            // 6) Recorre actividades: si la actividad es del profe o tiene participantes de sus cohortes,
+            //    suma 1 por cohorte involucrada (una vez por actividad y cohorte)
             if (class_exists(Actividad::class)) {
                 foreach (Actividad::all() as $a) {
-                    $coh = (string) ($a->cohorte ?? $a->grupo ?? '');
-                    if ($coh === '') continue;
-                    if (!empty($regexes) && !$this->stringMatchesAnyRegex($coh, $regexes)) continue;
+                    $belongsToProf = false;
 
-                    $key = strtoupper(trim($coh));
-                    $counts[$key] = ($counts[$key] ?? 0) + 1;
+                    // ¿Actividad creada por el profe?
+                    $docenteId = (string)($a->docente_id ?? '');
+                    if ($profStr && $docenteId && $docenteId === (string)$profStr) {
+                        $belongsToProf = true;
+                    } elseif ($profObj && $a->docente_id instanceof ObjectId && (string)$a->docente_id === (string)$profObj) {
+                        $belongsToProf = true;
+                    }
+
+                    // Cohortes involucradas por participantes
+                    $cohInAct = [];
+                    $parts = $this->normalizeParticipantes($a->participantes ?? null);
+                    foreach ($parts as $p) {
+                        $uid = (string)($p['user_id'] ?? '');
+                        if ($uid === '') continue;
+                        if (!empty($userToNorms[$uid])) {
+                            foreach ($userToNorms[$uid] as $n) $cohInAct[$n] = true;
+                        }
+                    }
+
+                    // Si no es del profe y no hay participantes de sus cohortes, ignorar
+                    if (!$belongsToProf && empty($cohInAct)) continue;
+
+                    // Si es del profe pero no encontramos cohortes por participantes, intenta por etiqueta de actividad (cohorte/grupo)
+                    if ($belongsToProf && empty($cohInAct)) {
+                        $cohRaw = $a->cohorte ?? $a->grupo ?? null;
+                        $vals = [];
+                        if (is_array($cohRaw)) $vals = $cohRaw; elseif (is_string($cohRaw) && $cohRaw!=='') $vals[] = $cohRaw;
+                        foreach ($vals as $v) {
+                            $nv = $norm((string)$v);
+                            if ($nv && isset($profCanon[$nv])) $cohInAct[$nv] = true;
+                        }
+                    }
+
+                    // Sumar una vez por cohorte involucrada en esta actividad
+                    if (!empty($cohInAct)) {
+                        foreach (array_keys($cohInAct) as $n) {
+                            if (array_key_exists($n, $counts)) {
+                                $counts[$n] = ($counts[$n] ?? 0) + 1;
+                            }
+                        }
+                    }
                 }
             }
 
-            if (empty($counts)) {
-                $labels = $cohortes;
-                $data   = array_fill(0, count($cohortes), 0);
-                return response()->json(['labels' => $labels, 'data' => $data], 200);
+            // 7) Respuesta preservando orden y label “bonita” del profe
+            $labels = [];
+            $data   = [];
+            foreach ($profOrder as $n) {
+                $labels[] = $profCanon[$n];
+                $data[]   = (int)($counts[$n] ?? 0);
             }
 
-            ksort($counts);
-            return response()->json([
-                'labels' => array_keys($counts),
-                'data'   => array_values($counts),
-            ], 200);
+            return response()->json(['labels'=>$labels, 'data'=>$data], 200);
 
         } catch (Exception $e) {
             return response()->json(['labels'=>[], 'data'=>[]], 200);
@@ -371,5 +525,39 @@ class DashboardController extends Controller
             $idObj = $id; $idStr = (string)$id;
         }
         return [$idStr, $idObj];
+    }
+
+    /**
+     * Convierte el rango recibido (o el mes actual) de horario MX a UTC.
+     * Devuelve: [$startStr, $endStr, $startUtc, $endUtc]
+     */
+    private function monthBoundsUtc(Request $request): array
+    {
+        $mxTz = 'America/Mexico_City';
+
+        $startStr = $request->query('start') ?: Carbon::now($mxTz)->startOfMonth()->toDateString();
+        $endStr   = $request->query('end')   ?: Carbon::now($mxTz)->endOfMonth()->toDateString();
+
+        $startMx = Carbon::createFromFormat('Y-m-d H:i:s', $startStr.' 00:00:00', $mxTz);
+        $endMx   = Carbon::createFromFormat('Y-m-d H:i:s', $endStr.' 23:59:59', $mxTz);
+
+        $startUtc = $startMx->clone()->setTimezone('UTC');
+        $endUtc   = $endMx->clone()->setTimezone('UTC');
+
+        return [$startStr, $endStr, $startUtc, $endUtc];
+    }
+
+    /**
+     * participantes puede ser array o string JSON; devuelve siempre array de objetos
+     * con al menos la clave user_id (string).
+     */
+    private function normalizeParticipantes($p): array
+    {
+        if (is_array($p)) return $p;
+        if (is_string($p) && $p !== '') {
+            $dec = json_decode($p, true);
+            return is_array($dec) ? $dec : [];
+        }
+        return [];
     }
 }

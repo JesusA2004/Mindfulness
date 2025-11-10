@@ -72,8 +72,8 @@
             </div>
           </div>
           <div class="card-footer d-flex gap-2 justify-content-end">
-            <router-link class="btn btn-outline-secondary btn-sm" to="/app/profesor/actividades">
-              Ver actividades
+            <router-link class="btn btn-outline-secondary btn-sm" to="/app/profesor/citas">
+              Ver citas
             </router-link>
           </div>
         </div>
@@ -97,8 +97,8 @@
             <small class="text-muted">
               Se grafica el número de actividades asignadas por cada grupo a tu cargo.
             </small>
-            <router-link class="btn btn-outline-primary btn-sm" to="/app/profesor/encuestas">
-              Ver encuestas
+            <router-link class="btn btn-outline-primary btn-sm" to="/app/profesor/actividades">
+              Ver actividades
             </router-link>
           </div>
         </div>
@@ -113,7 +113,8 @@ import axios from 'axios'
 import Chart from 'chart.js/auto'
 
 /* ===== Config ===== */
-const API = (process.env.VUE_APP_API_URL || '').replace(/\/+$/, '')
+const __BASE = (process.env.VUE_APP_API_URL || '').replace(/\/+$/,'')
+const API = __BASE.endsWith('/api') ? __BASE : `${__BASE}/api`
 const today = ref(new Date().toISOString().slice(0, 10))
 
 /* ===== Estado ===== */
@@ -143,10 +144,15 @@ function authHeaders () {
 }
 
 /* ===== Helpers ===== */
-function fmtDateLabel (isoOrStr) {
-  if (!isoOrStr || typeof isoOrStr !== 'string') return 'Sin fecha'
-  const d = new Date(isoOrStr.length > 10 ? isoOrStr : `${isoOrStr}T00:00:00`)
-  if (isNaN(d.getTime())) return isoOrStr
+function fmtDateLabel (v) {
+  if (!v) return 'Sin fecha'
+  const d = new Date(v) // soporta ISO completo o 'YYYY-MM-DD'
+  if (isNaN(d.getTime())) {
+    const try2 = new Date(String(v).length > 10 ? String(v) : `${v}T00:00:00`)
+    if (isNaN(try2.getTime())) return String(v)
+    const opts2 = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }
+    return try2.toLocaleDateString('es-MX', opts2)
+  }
   const opts = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }
   return d.toLocaleDateString('es-MX', opts)
 }
@@ -159,7 +165,7 @@ function monthRangeISO () {
   return { start: toISO(start), end: toISO(end) }
 }
 
-/* ===== Fetch: profesor overview (hoy, cohortes, alumnosCargo) ===== */
+/* ===== Fetch: profesor overview ===== */
 async function fetchProfesorOverview () {
   try {
     const url = `${API}/dashboard/profesor/overview`
@@ -173,7 +179,7 @@ async function fetchProfesorOverview () {
   }
 }
 
-/* ===== Calendario del mes usando endpoint de profesor (con fallback interno del backend) ===== */
+/* ===== Calendario del mes ===== */
 async function fetchCalendarioMes () {
   try {
     const { start, end } = monthRangeISO()
@@ -197,8 +203,6 @@ async function fetchActividadesPorGrupo () {
     const labels = Array.isArray(data?.labels) ? data.labels : []
     const serie  = Array.isArray(data?.data)   ? data.data   : []
 
-    // Si el backend no devolvió etiquetas (p.ej., no hay modelo Actividad),
-    // mostramos las cohortes detectadas en overview con 0.
     if (!labels.length && groupLabels.value.length) {
       actsByGroup.value = groupLabels.value.map(() => 0)
     } else {
@@ -251,9 +255,9 @@ function renderChart () {
 
 /* ===== Init ===== */
 onMounted(async () => {
-  await fetchProfesorOverview()    // hoy, cohortes (Persona), alumnosCargo
-  await fetchCalendarioMes()       // calendario (citas -> fallback actividades)
-  await fetchActividadesPorGrupo() // gráfica
+  await fetchProfesorOverview()
+  await fetchCalendarioMes()
+  await fetchActividadesPorGrupo()
 })
 </script>
 

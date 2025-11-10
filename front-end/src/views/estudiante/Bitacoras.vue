@@ -191,7 +191,7 @@ const mindoraSwal = Swal.mixin({
     actions: 'swal2-actions-spaced flow-back-first',
     confirmButton: 'btn btn-gradient',
     cancelButton: 'btn btn-secondary',          // gris
-    denyButton: 'btn btn-outline-primary'
+    denyButton: 'btn btn-primary'
   },
   backdrop: 'rgba(2,6,12,.35)'
 });
@@ -202,7 +202,7 @@ const DEFAULT_SWAL_CLASSES = {
   actions: 'swal2-actions-spaced flow-back-first',
   confirmButton: 'btn btn-gradient',
   cancelButton: 'btn btn-secondary',
-  denyButton: 'btn btn-outline-primary'
+  denyButton: 'btn btn-primary'
 };
 function fireBlur(opts = {}) {
   const merged = {
