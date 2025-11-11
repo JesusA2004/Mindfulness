@@ -129,7 +129,7 @@ abstract class BaseReportController extends Controller
         $target = trim($cohorte);
         if ($target === '') return [];
 
-        // Normaliza en PHP: compacta y a lower
+        // Normaliza para match insensible a espacios múltiples y mayúsculas
         $compact = static function (string $s): string {
             $s = preg_replace('/\s+/u', ' ', trim($s));
             if ($s === null) $s = '';
@@ -140,11 +140,9 @@ abstract class BaseReportController extends Controller
         $db   = \DB::connection('mongodb')->getMongoDB();
         $coll = $db->selectCollection('personas');
 
+        // 1) Primer intento: personas con user_id
         $cursor = $coll->aggregate([
-            // Solo docs con cohorte y user_id
             ['$match' => [ 'cohorte' => ['$exists' => true], 'user_id' => ['$exists' => true] ]],
-
-            // Asegura arreglo
             ['$addFields' => [
                 'cohorteArr' => [
                     '$cond' => [
@@ -160,34 +158,22 @@ abstract class BaseReportController extends Controller
                     ]
                 ]
             ]],
-
             ['$unwind' => '$cohorteArr'],
-
-            // toString + trim
-            ['$addFields' => [
-                'c_str' => [ '$trim' => [ 'input' => [ '$toString' => '$cohorteArr' ] ] ]
-            ]],
-
-            // Compacta espacios: split por ' ', quita vacíos y vuelve a unir con un solo espacio
-            ['$addFields' => [
-                'tokens' => [
-                    '$filter' => [
-                        'input' => [ '$split' => [ '$c_str', ' ' ] ],
-                        'as'    => 't',
-                        'cond'  => [ '$ne' => [ '$$t', '' ] ]
-                    ]
-                ]
-            ]],
             ['$addFields' => [
                 'c_norm' => [
                     '$toLower' => [
                         '$reduce' => [
-                            'input'       => '$tokens',
+                            'input' => [
+                                '$filter' => [
+                                    'input' => [ '$split' => [ [ '$trim' => [ 'input' => [ '$toString' => '$cohorteArr' ] ] ], ' ' ] ],
+                                    'as'    => 't',
+                                    'cond'  => [ '$ne' => [ '$$t', '' ] ]
+                                ]
+                            ],
                             'initialValue'=> '',
-                            'in'          => [
+                            'in' => [
                                 '$cond' => [
-                                    [ '$eq' => [ '$$value', '' ] ],
-                                    '$$this',
+                                    [ '$eq' => [ '$$value', '' ] ], '$$this',
                                     [ '$concat' => [ '$$value', ' ', '$$this' ] ]
                                 ]
                             ]
@@ -195,20 +181,77 @@ abstract class BaseReportController extends Controller
                     ]
                 ]
             ]],
-
-            // Match exacto sobre versión normalizada
             ['$match' => [ 'c_norm' => $targetNorm ]],
-
             ['$project' => [ '_id' => 0, 'uid' => '$user_id' ]],
         ]);
 
-        $ids = [];
+        $uidSet = [];
         foreach ($cursor as $doc) {
             $v = $doc['uid'] ?? null;
             if ($v === null) continue;
-            $ids[] = is_object($v) && method_exists($v, '__toString') ? (string)$v : (string)$v;
+            $uidSet[] = is_object($v) && method_exists($v, '__toString') ? (string)$v : (string)$v;
         }
-        return array_values(array_unique(array_filter($ids, fn($x) => $x !== '')));
+        $uidSet = array_values(array_unique(array_filter($uidSet)));
+
+        if (!empty($uidSet)) return $uidSet;
+
+        // 2) Fallback: personas por cohorte -> users por persona_id
+        $cursor2 = $coll->aggregate([
+            ['$match' => [ 'cohorte' => ['$exists' => true] ]],
+            ['$addFields' => [
+                'cohorteArr' => [
+                    '$cond' => [
+                        [ '$isArray' => '$cohorte' ],
+                        '$cohorte',
+                        [
+                            '$cond' => [
+                                [ '$eq' => [ ['$type' => '$cohorte'], 'string' ] ],
+                                [ '$cohorte' ],
+                                []
+                            ]
+                        ]
+                    ]
+                ]
+            ]],
+            ['$unwind' => '$cohorteArr'],
+            ['$addFields' => [
+                'c_norm' => [
+                    '$toLower' => [
+                        '$reduce' => [
+                            'input' => [
+                                '$filter' => [
+                                    'input' => [ '$split' => [ [ '$trim' => [ 'input' => [ '$toString' => '$cohorteArr' ] ] ], ' ' ] ],
+                                    'as'    => 't',
+                                    'cond'  => [ '$ne' => [ '$$t', '' ] ]
+                                ]
+                            ],
+                            'initialValue'=> '',
+                            'in' => [
+                                '$cond' => [
+                                    [ '$eq' => [ '$$value', '' ] ], '$$this',
+                                    [ '$concat' => [ '$$value', ' ', '$$this' ] ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]],
+            ['$match' => [ 'c_norm' => $targetNorm ]],
+            ['$project' => [ '_id' => 1 ]],
+        ]);
+
+        $personaIds = [];
+        foreach ($cursor2 as $doc) {
+            $pid = $doc['_id'] ?? null;
+            if ($pid === null) continue;
+            $personaIds[] = (string)$pid;
+        }
+        if (empty($personaIds)) return [];
+
+        $userIds = \App\Models\User::whereIn('persona_id', $this->mixedIn($personaIds))
+            ->pluck('_id')->map(fn($id)=>(string)$id)->values()->all();
+
+        return array_values(array_unique($userIds));
     }
 
     protected function personaMapByUserIds(array $userIds)
@@ -305,11 +348,21 @@ abstract class BaseReportController extends Controller
                     $lbl = e((string)($b['label'] ?? ''));
                     $pct = max(0, min(100, (float)($b['pct'] ?? 0)));
                     $val = (int)($b['value'] ?? 0);
+
+                    $datesList = '';
+                    if (!empty($b['dates']) && is_array($b['dates'])) {
+                        $items = array_slice($b['dates'], 0, 6); // acota
+                        $li = '';
+                        foreach ($items as $it) $li .= '<li>'.e((string)$it).'</li>';
+                        $datesList = '<ul class="dates">'.$li.'</ul>';
+                    }
+
                     $colsHtml .= '
                     <div class="col">
-                      <div class="val">'.$val.' ('.number_format($pct,1).'%)</div>
-                      <div class="bar"><span class="fill" style="height:'.$pct.'%"></span></div>
-                      <div class="lbl">'.$lbl.'</div>
+                    <div class="val">'.$val.' ('.number_format($pct,1).'%)</div>
+                    <div class="bar"><span class="fill" style="height:'.$pct.'%"></span></div>
+                    <div class="lbl">'.$lbl.'</div>
+                    '.$datesList.'
                     </div>';
                 }
                 $chartHtml = '<div class="chart-v"><div class="grid">'.$colsHtml.'</div></div>';
@@ -351,34 +404,34 @@ abstract class BaseReportController extends Controller
     /* ===== Gráfica vertical (PDF-safe, sin flexbox) ===== */
     .chart-v{ margin:16px 0 6px 0; padding:16px; border:1px solid #e5e7eb; border-radius:14px; background:linear-gradient(180deg,#fcfdff,#ffffff); }
     .chart-v .grid{
-      text-align:center;
-      white-space:nowrap;
-      padding:8px 6px 12px 6px;
-      border-bottom:1px solid #e5e7eb;
+    text-align:center;
+    white-space:nowrap;
+    padding:8px 6px 12px 6px;
+    border-bottom:1px solid #e5e7eb;
+    font-size:0; /* elimina espacios entre inline-blocks */
     }
     .chart-v .col{
-      display:inline-block;
-      vertical-align:bottom;
-      width:90px;
-      margin:0 34px;
+    display:inline-block;
+    vertical-align:bottom;
+    width:22%;
+    margin:0 1.5%;
+    font-size:12px; /* reestablece */
     }
     .chart-v .bar{
-      width:26px;
-      height:160px;
-      background:#ede9fe;
-      border:1px solid #e5e7eb;
-      border-radius:6px 6px 0 0;
-      overflow:hidden;
-      margin:0 auto;
+        width:26px; height:160px;
+        background:#ede9fe; border:1px solid #e5e7eb;
+        border-radius:6px 6px 0 0; overflow:hidden; margin:0 auto;
+        position:relative;           /* <-- agregado */
     }
     .chart-v .fill{
-      display:block;
-      width:100%;
-      height:0; /* se reemplaza con style="height:X%" */
-      background:#7c3aed;
+        display:block; width:100%;
+        position:absolute; bottom:0; /* <-- agregado: anclar abajo */
+        height:0;                    /* se sobreescribe via style="height:X%" */
+        background:#7c3aed;
     }
     .chart-v .val{ font-size:11px; color:#334155; font-weight:700; margin-bottom:6px; line-height:1.1; }
     .chart-v .lbl{ font-size:12px; color:#0f172a; font-weight:700; text-align:center; margin-top:8px; line-height:1.2; }
+    .chart-v .dates{ list-style:none; padding:0; margin:6px 0 0 0; font-size:11px; color:#475569; }
 
     /* (opcional) barras horizontales fallback */
     .chart-h{ margin:16px 0 6px 0; padding:16px; border:1px solid #e5e7eb; border-radius:14px; background:linear-gradient(180deg,#fcfdff,#ffffff);}
@@ -401,7 +454,6 @@ abstract class BaseReportController extends Controller
       <thead><tr>'.$head.'</tr></thead>
       <tbody>'.$body.'</tbody>
     </table>
-    <footer>Reporte generado por el sistema.</footer>
     </body></html>';
     }
 
