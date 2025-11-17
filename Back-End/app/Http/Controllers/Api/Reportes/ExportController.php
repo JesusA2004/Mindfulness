@@ -8,6 +8,8 @@ class ExportController extends BaseReportController
 {
     public function export(Request $r)
     {
+        // OJO: aquí "tipo" es el tipo de exportación (pdf|excel),
+        // no lo usamos ya para filtrar recompensas.
         $tipo    = strtolower($this->d($r, 'tipo', 'pdf'));
         $reporte = $this->d($r, 'reporte', '');
 
@@ -17,19 +19,16 @@ class ExportController extends BaseReportController
 
         switch ($reporte) {
             case 'top-tecnicas': {
-                // Obtenemos el payload del endpoint index (ya aplica Top-4, filtros y usageDates)
                 $payload = app(TopTecnicasController::class)->index($r)->getData(true);
                 $title   = 'Top cuatro técnicas más utilizadas';
 
                 $labels = $payload['labels']     ?? [];
                 $data   = $payload['data']       ?? [];
-                $dates  = $payload['usageDates'] ?? []; // paralelo a labels/data
-                // Total real para porcentajes (suma de dataset)
+                $dates  = $payload['usageDates'] ?? [];
                 $total  = 0;
                 foreach ($data as $v) { $total += (int)$v; }
                 $total = max(0, (int)$total);
 
-                // Gráfica vertical PDF-safe
                 $meta['chartType'] = 'vbar';
                 $meta['chartData'] = [];
 
@@ -37,14 +36,12 @@ class ExportController extends BaseReportController
                     $cnt = (int)($data[$i] ?? 0);
                     $pct = ($total > 0) ? round(($cnt / $total) * 100, 1) : 0.0;
 
-                    // Filas de tabla
                     $rows[] = [
                         'Técnica'    => (string)$label,
                         'Total'      => $cnt,
                         'Porcentaje' => $pct.' %',
                     ];
 
-                    // Barras del chart del PDF (con fechas)
                     $meta['chartData'][] = [
                         'label' => (string)$label,
                         'value' => $cnt,
@@ -53,7 +50,6 @@ class ExportController extends BaseReportController
                     ];
                 }
 
-                // Chips de encabezado (rango/cohorte): prioriza lo que venga del payload->meta
                 $payloadMeta   = $payload['meta'] ?? [];
                 $meta['rango'] = $payloadMeta['rango']
                                  ?? (($this->d($r,'desde') && $this->d($r,'hasta'))
@@ -93,7 +89,6 @@ class ExportController extends BaseReportController
                 $payload = app(EncuestasResultadosController::class)->index($r)->getData(true);
                 $title   = 'Resultados de encuestas';
                 $rows    = $this->rowsFromChart($payload, 'Encuesta', 'Respuestas');
-                // Chips base
                 $desde = $this->d($r,'desde'); $hasta = $this->d($r,'hasta');
                 $meta['rango'] = ($desde && $hasta) ? "$desde a $hasta" : 'Todas las fechas';
                 if ($e = $this->d($r,'encuesta')) $meta['Encuesta'] = $e;
@@ -104,6 +99,12 @@ class ExportController extends BaseReportController
                 $payload = app(RecompensasCanjeadasController::class)->index($r)->getData(true);
                 $title   = 'Recompensas canjeadas';
                 $rows    = $payload['rows'] ?? [];
+
+                // Chip específico con el nombre de recompensa, si se filtró
+                $recName = $this->d($r, 'recompensa') ?? $this->d($r, 'nombre');
+                if ($recName) {
+                    $meta['Recompensa'] = $recName;
+                }
                 break;
             }
 
@@ -118,9 +119,10 @@ class ExportController extends BaseReportController
         }
         if (!isset($meta['Cohorte']) && ($g = $this->d($r,'grupo')))   $meta['Cohorte'] = $g;
         if ($a = $this->d($r,'alumno'))   $meta['Alumno']   = $a;
+
+        // Aquí "Tipo" se refiere al tipo de export (pdf|excel)
         if ($t = $this->d($r,'tipo'))     $meta['Tipo']     = $t;
 
-        // Export
         if ($tipo === 'excel')  return $this->exportExcel($title, $rows);
         if ($tipo === 'pdf')    return $this->exportPdf($title, $rows, $meta);
 

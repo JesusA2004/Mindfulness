@@ -14,24 +14,20 @@ class RecompensasCanjeadasController extends BaseReportController
     {
         $q = Recompensa::query();
 
-        /*
-         * ===== Filtro por nombre de recompensa =====
-         *  - Parámetro oficial: ?nombre=
-         *  - Soporte retro: si no viene nombre, intenta leer ?tipo= (por si algo quedó viejo)
-         */
-        $nombre = $this->d($r, 'nombre');
-        if ($nombre === null) {
-            // fallback suave: por si en algún punto se envió ?tipo= como filtro
-            $nombre = $this->d($r, 'tipo');
+        // ===== Filtro por nombre de recompensa (contiene, case-insensitive) =====
+        // Usamos "recompensa" como parámetro principal, y "nombre" como alias.
+        $filtroNombre = $this->d($r, 'recompensa');
+        if ($filtroNombre === null) {
+            $filtroNombre = $this->d($r, 'nombre');
         }
 
-        if ($nombre !== null) {
-            // Jenssegers: where 'like' -> /valor/i (contains, case-insensitive)
-            $q->where('nombre', 'like', $nombre);
+        if ($filtroNombre !== null) {
+            // En Mongo con jenssegers, 'like' ya genera regex /valor/i (contains)
+            $q->where('nombre', 'like', $filtroNombre);
         }
 
-        // Traemos recompensas con su arreglo de canjeos
-        $recs = $q->get(['_id', 'nombre', 'canjeo']);
+        // Traemos recompensas con su arreglo de canjeos y puntos_necesarios
+        $recs = $q->get(['_id', 'nombre', 'canjeo', 'puntos_necesarios']);
 
         // ===== Mapear user_id -> persona para enriquecer filas =====
         $uids = [];
@@ -74,6 +70,7 @@ class RecompensasCanjeadasController extends BaseReportController
 
         foreach ($recs as $rec) {
             $nombreRec = (string)($rec->nombre ?? 'Recompensa');
+            $puntosNecesarios = (int)($rec->puntos_necesarios ?? 0);
 
             foreach ((array) $rec->canjeo as $c) {
                 $uid = (string)($c['usuario_id'] ?? '');
@@ -81,7 +78,7 @@ class RecompensasCanjeadasController extends BaseReportController
                     continue;
                 }
 
-                // Fecha de canje (string YYYY-MM-DD según tu Request)
+                // Fecha de canje (string YYYY-MM-DD)
                 $f = null;
                 if (!empty($c['fechaCanjeo'])) {
                     try {
@@ -101,11 +98,14 @@ class RecompensasCanjeadasController extends BaseReportController
                     ? trim(($per->nombre ?? '') . ' ' . ($per->apellidoPaterno ?? '') . ' ' . ($per->apellidoMaterno ?? ''))
                     : 'Alumno';
 
+                // Si el registro de canjeo no trae "puntos", usamos puntos_necesarios de la recompensa
+                $puntos = (int)($c['puntos'] ?? $puntosNecesarios);
+
                 $rows[] = [
                     'alumno'     => $alumno !== '' ? $alumno : 'Alumno',
                     'matricula'  => (string)($per->matricula ?? '—'),
                     'recompensa' => $nombreRec,
-                    'puntos'     => (int)($c['puntos'] ?? 0),
+                    'puntos'     => $puntos,
                     'fecha'      => $f ? $f->format('Y-m-d') : null,
                 ];
             }

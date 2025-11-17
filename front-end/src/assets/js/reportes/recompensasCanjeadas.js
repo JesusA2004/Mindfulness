@@ -7,10 +7,10 @@ const EXPORT_REPORTE = "recompensas-canjeadas";
 
 function buildQuery(f = {}) {
   const p = new URLSearchParams();
-  if (f.desde)  p.set("desde", f.desde);
-  if (f.hasta)  p.set("hasta", f.hasta);
-  // >>> nombre de recompensa (nuevo nombre de parámetro)
-  if (f.nombre) p.set("nombre", f.nombre);
+  if (f.desde) p.set("desde", f.desde);
+  if (f.hasta) p.set("hasta", f.hasta);
+  // nombre de recompensa (nuevo): "recompensa"
+  if (f.recompensa) p.set("recompensa", f.recompensa);
   return p.toString();
 }
 
@@ -23,7 +23,6 @@ export async function getRecompensasCanjeadas(f = {}) {
 
 export async function exportRecompensasCanjeadas(tipo = "pdf", f = {}) {
   const qs = buildQuery(f);
-  // OJO: aquí "tipo" es SOLO pdf|excel, el filtro va como ?nombre=
   const url = `${apiBase()}/reportes/export?tipo=${tipo}&reporte=${EXPORT_REPORTE}${
     qs ? `&${qs}` : ""
   }&_=${Date.now()}`;
@@ -47,7 +46,7 @@ async function previewTable(filtros = {}) {
       ? `${filtros.desde} a ${filtros.hasta}`
       : "Todas las fechas";
 
-  const recompensaChip = filtros.nombre_label || filtros.nombre || "";
+  const recompensaChip = filtros.recompensa_label || filtros.recompensa || "";
 
   const chipsHtml = [
     `<span class="chip"><b>Rango:</b> ${rangoLabel}</span>`,
@@ -184,7 +183,7 @@ export async function openRecompensasCanjeadasDialog(tipo = "pdf") {
       <div class="col-12 col-md-6">
         <div class="sw-section h-100">
           <label class="form-label mb-2">Nombre de recompensa</label>
-          <input id="sw-nombre-input" class="form-control mb-1" type="text" placeholder="(vacío = todas)">
+          <input id="sw-recompensa-input" class="form-control mb-1" type="text" placeholder="(vacío = todas)">
           <div class="mini-hint">Puedes escribir parte del nombre (contiene).</div>
         </div>
       </div>
@@ -222,7 +221,7 @@ export async function openRecompensasCanjeadasDialog(tipo = "pdf") {
       const $preset = document.getElementById("sw-datepreset");
       const $d = document.getElementById("sw-desde");
       const $h = document.getElementById("sw-hasta");
-      const $n = document.getElementById("sw-nombre-input");
+      const $t = document.getElementById("sw-recompensa-input");
 
       let { desde, hasta } = presetToRange($preset.value);
       if ($preset.value === "custom") {
@@ -247,10 +246,10 @@ export async function openRecompensasCanjeadasDialog(tipo = "pdf") {
         ...(hasta ? { hasta } : {}),
       };
 
-      const val = ($n?.value || "").trim();
+      const val = ($t?.value || "").trim();
       if (val) {
-        filtros.nombre = val;        // <<--- nombre de recompensa
-        filtros.nombre_label = val;  // para el chip del preview
+        filtros.recompensa = val;
+        filtros.recompensa_label = val;
       }
 
       return filtros;
