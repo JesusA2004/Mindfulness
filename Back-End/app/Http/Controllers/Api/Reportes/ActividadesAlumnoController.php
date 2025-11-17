@@ -11,55 +11,121 @@ class ActividadesAlumnoController extends BaseReportController
     public function index(Request $r)
     {
         $q = Actividad::query();
+
+        // === Campo de fecha (string YYYY-MM-DD en la BD) ===
         $campoFecha = 'fechaMaxima';
-        $q = $this->rangoFechas($r, $campoFecha, $q);
 
+        // ====== RANGO DE FECHAS (funciona sólo con strings YYYY-MM-DD) ======
+        $desde = $this->d($r, 'desde');
+        $hasta = $this->d($r, 'hasta');
+
+        if ($desde) {
+            $q->where($campoFecha, '>=', $desde);
+        }
+        if ($hasta) {
+            $q->where($campoFecha, '<=', $hasta);
+        }
+
+        // ====== FILTRO DE ALUMNO ======
+        // Puede llegar matrícula ("M2025-00045") o texto libre
         $alumnoParam = $this->d($r, 'alumno');
-        $idsAlumno = $this->userIdsByAlumnoSearch($alumnoParam);
+        $norm        = $this->normalizeAlumnoNeedle($alumnoParam);
+        $matFilter   = $norm['mat'];     // si viene matrícula
+        $tokens      = $norm['tokens'];  // si viene nombre / cohorte
 
-        if ($alumnoParam !== null && empty($idsAlumno)) {
-            return response()->json(['rows'=>[]]);
-        }
-        if (!empty($idsAlumno)) {
-            $q->where('participantes', 'elemMatch', [
-                'user_id' => ['$in' => $this->mixedIn($idsAlumno)]
-            ]);
-        }
-
-        $acts = $q->latest($campoFecha)->limit(500)
+        // Traemos actividades (ya filtradas por fecha)
+        $acts = $q->latest($campoFecha)
+            ->limit(500)
             ->get(['nombre','descripcion','tecnica_id',$campoFecha,'participantes']);
 
+        // ====== MAPA DE TÉCNICAS ======
         $tecMap = Tecnica::whereIn('_id', $acts->pluck('tecnica_id')->filter()->unique()->values()->all())
-            ->get(['_id','nombre'])->keyBy('_id');
+            ->get(['_id','nombre'])
+            ->keyBy('_id');
 
+        // ====== PERSONAS POR USER_ID ======
         $userIds = [];
-        foreach ($acts as $a) foreach ((array)$a->participantes as $p) $userIds[] = (string)($p['user_id'] ?? '');
+        foreach ($acts as $a) {
+            foreach ((array) $a->participantes as $p) {
+                $userIds[] = (string) ($p['user_id'] ?? '');
+            }
+        }
         $personaByUser = $this->personaMapByUserIds(array_values(array_unique($userIds)));
 
+        // ====== CONSTRUCCIÓN DE FILAS (aquí sí filtramos por alumno) ======
         $rows = [];
+
         foreach ($acts as $a) {
-            $tec   = optional($tecMap->get((string)$a->tecnica_id))->nombre ?: '—';
+            $tec   = optional($tecMap->get((string) $a->tecnica_id))->nombre ?: '—';
             $fecha = $a->{$campoFecha} ?? $a->created_at;
 
-            foreach ((array)$a->participantes as $p) {
-                $uid = (string)($p['user_id'] ?? '');
-                if ($uid === '') continue;
-                if (!empty($idsAlumno) && !in_array($uid, $idsAlumno, true)) continue;
+            foreach ((array) $a->participantes as $p) {
+                $uid = (string) ($p['user_id'] ?? '');
+                if ($uid === '') {
+                    continue;
+                }
 
                 $per = $personaByUser->get($uid);
-                $alumnoNom = $per ? trim("{$per->nombre} {$per->apellidoPaterno} {$per->apellidoMaterno}") : 'Alumno';
+
+                $alumnoNom = $per
+                    ? trim("{$per->nombre} {$per->apellidoPaterno} {$per->apellidoMaterno}")
+                    : 'Alumno';
+
                 $mat = $per->matricula ?? '—';
+
+                // ---------- APLICAR FILTRO DE ALUMNO ----------
+                if ($alumnoParam !== null) {
+                    $include = true;
+
+                    // 1) Si vino matrícula (caso del modal: "M2025-00045")
+                    if ($matFilter !== null) {
+                        $include = stripos($mat, $matFilter) !== false;
+                    }
+                    // 2) Si vino nombre / texto libre (por si escribes a mano)
+                    elseif (!empty($tokens) && $per) {
+                        $haystack = trim(
+                            ($per->nombre ?? '') . ' ' .
+                            ($per->apellidoPaterno ?? '') . ' ' .
+                            ($per->apellidoMaterno ?? '') . ' ' .
+                            ($per->cohorte ?? '')
+                        );
+                        $haystack = function_exists('mb_strtolower')
+                            ? mb_strtolower($haystack, 'UTF-8')
+                            : strtolower($haystack);
+
+                        foreach ($tokens as $t) {
+                            $tNorm = function_exists('mb_strtolower')
+                                ? mb_strtolower($t, 'UTF-8')
+                                : strtolower($t);
+
+                            if ($tNorm === '') {
+                                continue;
+                            }
+
+                            if (strpos($haystack, $tNorm) === false) {
+                                $include = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!$include) {
+                        continue; // no pasa el filtro, saltamos este participante
+                    }
+                }
+                // ---------- FIN FILTRO DE ALUMNO ----------
 
                 $rows[] = [
                     'alumno'      => $alumnoNom,
                     'matricula'   => $mat,
                     'tecnica'     => $tec,
                     'fecha'       => $fecha,
-                    'titulo'      => (string)($a->nombre ?? ''),
-                    'descripcion' => (string)($a->descripcion ?? ''),
+                    'titulo'      => (string) ($a->nombre ?? ''),
+                    'descripcion' => (string) ($a->descripcion ?? ''),
                 ];
             }
         }
-        return response()->json(['rows'=>$rows]);
+
+        return response()->json(['rows' => $rows]);
     }
 }

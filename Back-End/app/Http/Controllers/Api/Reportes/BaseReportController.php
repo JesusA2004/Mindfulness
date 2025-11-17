@@ -95,21 +95,26 @@ abstract class BaseReportController extends Controller
     {
         $norm = $this->normalizeAlumnoNeedle($needle);
 
-        return Persona::query()
-            ->when($norm['mat'] !== null, function ($q) use ($norm) {
-                $q->where('matricula', 'like', '%'.$norm['mat'].'%');
-            })
-            ->when($norm['mat'] === null && !empty($norm['tokens']), function ($q) use ($norm) {
-                $q->where(function ($w) use ($norm) {
-                    foreach ($norm['tokens'] as $t) {
-                        $w->orWhere('nombre', 'like', "%{$t}%")
-                          ->orWhere('apellidoPaterno', 'like', "%{$t}%")
-                          ->orWhere('apellidoMaterno', 'like', "%{$t}%")
-                          ->orWhere('cohorte', 'like', "%{$t}%");
-                    }
-                });
-            })
-            ->limit(500)
+        $q = Persona::query();
+
+        // 1) Búsqueda por matrícula (contiene), SIN %
+        if ($norm['mat'] !== null) {
+            // En Mongo, 'like' con jenssegers ya genera un regex /valor/i (match "contains")
+            $q->where('matricula', 'like', $norm['mat']);
+        }
+        // 2) Búsqueda por nombre/apellidos/cohorte con tokens (también SIN %)
+        elseif (!empty($norm['tokens'])) {
+            $q->where(function ($w) use ($norm) {
+                foreach ($norm['tokens'] as $t) {
+                    $w->orWhere('nombre',          'like', $t)
+                      ->orWhere('apellidoPaterno', 'like', $t)
+                      ->orWhere('apellidoMaterno', 'like', $t)
+                      ->orWhere('cohorte',         'like', $t);
+                }
+            });
+        }
+
+        return $q->limit(500)
             ->pluck('_id')
             ->map(fn($id) => (string)$id)
             ->values()
@@ -118,10 +123,30 @@ abstract class BaseReportController extends Controller
 
     protected function userIdsByAlumnoSearch(?string $needle): array
     {
+        $needle = trim((string)$needle);
+        if ($needle === '') return [];
+
+        // Normalizamos para detectar si es matrícula o nombre
+        $norm = $this->normalizeAlumnoNeedle($needle);
+
+        // === 1) Si es matrícula, vamos directo a users.matricula ===
+        if ($norm['mat'] !== null) {
+            return User::where('matricula', 'like', $norm['mat'])
+                ->pluck('_id')
+                ->map(fn($id) => (string)$id)
+                ->values()
+                ->all();
+        }
+
+        // === 2) Si NO es matrícula (nombre / cohorte), usamos Personas como antes ===
         $personaIds = $this->personaIdsBySearch($needle);
         if (empty($personaIds)) return [];
+
         return User::whereIn('persona_id', $this->mixedIn($personaIds))
-            ->pluck('_id')->map(fn($id)=>(string)$id)->values()->all();
+            ->pluck('_id')
+            ->map(fn($id) => (string)$id)
+            ->values()
+            ->all();
     }
 
     protected function userIdsByCohorte(string $cohorte): array
