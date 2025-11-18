@@ -9,14 +9,13 @@ function buildQuery(f = {}) {
   const p = new URLSearchParams();
   if (f.desde) p.set("desde", f.desde);
   if (f.hasta) p.set("hasta", f.hasta);
-  // nombre de recompensa (nuevo): "recompensa"
-  if (f.recompensa) p.set("recompensa", f.recompensa);
+  if (f.tipo) p.set("tipo", f.tipo); // en el back se acepta 'tipo' | 'recompensa' | 'nombre'
   return p.toString();
 }
 
 const asArray = (v) => (Array.isArray(v) ? v : []);
 
-/* ------------ API helpers ------------ */
+/* ------------ API helpers reporte ------------ */
 export async function getRecompensasCanjeadas(f = {}) {
   return fetchJSON(ENDPOINT, buildQuery(f));
 }
@@ -27,6 +26,59 @@ export async function exportRecompensasCanjeadas(tipo = "pdf", f = {}) {
     qs ? `&${qs}` : ""
   }&_=${Date.now()}`;
   return downloadBinary(url);
+}
+
+/* ------------ Catálogo de recompensas (para el filtro) ------------ */
+
+let recompensasCache = [];
+
+/**
+ * Carga todas las recompensas *que tienen canjeos* a partir del propio reporte.
+ * Así nos aseguramos de que los nombres coincidan con los que ves en la tabla.
+ */
+async function loadAllRecompensas() {
+  if (recompensasCache.length) return recompensasCache;
+
+  // Usamos el endpoint del reporte sin filtros (todas las fechas, todas las recompensas)
+  const json = await getRecompensasCanjeadas({});
+  const rows = asArray(json.rows);
+
+  const map = new Map();
+  for (const r of rows) {
+    const nombre = String(r.recompensa ?? "").trim();
+    if (!nombre) continue;
+
+    // Tomamos puntos del primer registro que encontremos
+    const puntosRaw = r.puntos;
+    const puntos =
+      typeof puntosRaw === "number"
+        ? puntosRaw
+        : isNaN(parseInt(puntosRaw, 10))
+        ? null
+        : parseInt(puntosRaw, 10);
+
+    if (!map.has(nombre)) {
+      map.set(nombre, {
+        id: nombre,
+        nombre,
+        puntos,
+      });
+    }
+  }
+
+  recompensasCache = Array.from(map.values()).sort((a, b) =>
+    a.nombre.localeCompare(b.nombre, "es")
+  );
+
+  return recompensasCache;
+}
+
+function filterRecompensasLocal(term = "") {
+  const t = term.trim().toLowerCase();
+  if (!t) return recompensasCache;
+  return recompensasCache.filter((r) =>
+    r.nombre.toLowerCase().includes(t)
+  );
 }
 
 /* ------------ Previsualización (tabla) ------------ */
@@ -46,7 +98,7 @@ async function previewTable(filtros = {}) {
       ? `${filtros.desde} a ${filtros.hasta}`
       : "Todas las fechas";
 
-  const recompensaChip = filtros.recompensa_label || filtros.recompensa || "";
+  const recompensaChip = filtros.tipo_label || filtros.tipo || "";
 
   const chipsHtml = [
     `<span class="chip"><b>Rango:</b> ${rangoLabel}</span>`,
@@ -59,11 +111,11 @@ async function previewTable(filtros = {}) {
 
   const head = `
     <tr>
-      <th>alumno</th>
-      <th>matricula</th>
-      <th>recompensa</th>
-      <th>puntos</th>
-      <th>fecha</th>
+      <th>Alumno</th>
+      <th>Matricula</th>
+      <th>Recompensa</th>
+      <th>Puntos</th>
+      <th>Fecha</th>
     </tr>`;
 
   const body =
@@ -141,6 +193,52 @@ export async function openRecompensasCanjeadasDialog(tipo = "pdf") {
       font-size:11px;
       background:#fff;
     }
+    .sw-list{
+      margin-top:6px;
+      max-height:220px;
+      overflow:auto;
+    }
+    .sw-item{
+      width:100%;
+      border:0;
+      background:#fff;
+      border-radius:999px;
+      padding:8px 12px;
+      display:flex;
+      align-items:center;
+      justify-content:flex-start;
+      gap:10px;
+      margin-bottom:6px;
+      box-shadow:0 0 0 1px #e5e7eb;
+      font-size:13px;
+      text-align:left;
+      cursor:pointer;
+      transition:box-shadow .15s ease, transform .15s ease, background .15s ease;
+    }
+    .sw-item .sw-avatar{
+      width:28px;
+      height:28px;
+      border-radius:999px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:600;
+      font-size:13px;
+      background:#ede9fe;
+      color:#4c1d95;
+    }
+    .sw-item .sw-main{
+      display:flex;
+      flex-direction:column;
+      flex:1;
+    }
+    .sw-item .nm{font-weight:600;color:#111827;}
+    .sw-item .mt{font-size:11px;color:#6b7280;}
+    .sw-item.active{
+      box-shadow:0 0 0 2px #a855f7;
+      background:#faf5ff;
+      transform:translateY(-1px);
+    }
   </style>
 
   <div class="container-fluid p-0">
@@ -183,8 +281,9 @@ export async function openRecompensasCanjeadasDialog(tipo = "pdf") {
       <div class="col-12 col-md-6">
         <div class="sw-section h-100">
           <label class="form-label mb-2">Nombre de recompensa</label>
-          <input id="sw-recompensa-input" class="form-control mb-1" type="text" placeholder="(vacío = todas)">
+          <input id="sw-tipo-input" class="form-control mb-1" type="text" placeholder="(vacío = todas)">
           <div class="mini-hint">Puedes escribir parte del nombre (contiene).</div>
+          <div class="sw-list" id="sw-recompensa-list"></div>
         </div>
       </div>
     </div>
@@ -208,20 +307,66 @@ export async function openRecompensasCanjeadasDialog(tipo = "pdf") {
     focusConfirm: false,
     showCloseButton: true,
     closeButtonHtml: "&times;",
-    didOpen: () => {
+    didOpen: async () => {
       const $preset = document.getElementById("sw-datepreset");
       const $custom = document.getElementById("sw-customrange");
+      const $tinput = document.getElementById("sw-tipo-input");
+      const $list   = document.getElementById("sw-recompensa-list");
+
       const toggleCustom = () => {
         $custom.style.display = $preset.value === "custom" ? "flex" : "none";
       };
       $preset.addEventListener("change", toggleCustom);
       toggleCustom();
+
+      // ----- lista de recompensas (desde el propio reporte) -----
+      const render = (items = []) => {
+        if (!items.length) {
+          $list.innerHTML =
+            `<div class="mini-hint">No hay recompensas que coincidan con la búsqueda.</div>`;
+          return;
+        }
+        $list.innerHTML = items
+          .map(
+            (o, i) => `
+          <button type="button" class="sw-item" data-label="${o.nombre}" data-idx="${i}">
+            <div class="sw-avatar">${(o.nombre || "?").charAt(0).toUpperCase()}</div>
+            <div class="sw-main">
+              <div class="nm">${o.nombre}</div>
+              <div class="mt">${
+                o.puntos != null ? `${o.puntos} puntos necesarios` : ""
+              }</div>
+            </div>
+          </button>`
+          )
+          .join("");
+
+        Array.from($list.querySelectorAll(".sw-item")).forEach((el) => {
+          el.addEventListener("click", () => {
+            $list
+              .querySelectorAll(".sw-item")
+              .forEach((n) => n.classList.remove("active"));
+            el.classList.add("active");
+            const label = el.getAttribute("data-label") || "";
+            $tinput.value = label;
+          });
+        });
+      };
+
+      const all = await loadAllRecompensas();
+      render(all);
+
+      $tinput.addEventListener("input", (e) => {
+        const val = (e.target.value || "").trim();
+        render(filterRecompensasLocal(val));
+      });
     },
     preConfirm: () => {
       const $preset = document.getElementById("sw-datepreset");
       const $d = document.getElementById("sw-desde");
       const $h = document.getElementById("sw-hasta");
-      const $t = document.getElementById("sw-recompensa-input");
+      const $t = document.getElementById("sw-tipo-input");
+      const $list = document.getElementById("sw-recompensa-list");
 
       let { desde, hasta } = presetToRange($preset.value);
       if ($preset.value === "custom") {
@@ -246,10 +391,14 @@ export async function openRecompensasCanjeadasDialog(tipo = "pdf") {
         ...(hasta ? { hasta } : {}),
       };
 
-      const val = ($t?.value || "").trim();
+      const chosen =
+        $list.querySelector(".sw-item.active")?.getAttribute("data-label") ||
+        "";
+      const typed = ($t?.value || "").trim();
+      const val = (chosen || typed).trim();
       if (val) {
-        filtros.recompensa = val;
-        filtros.recompensa_label = val;
+        filtros.tipo = val;       // el back acepta 'tipo'
+        filtros.tipo_label = val; // para el chip en la tabla
       }
 
       return filtros;

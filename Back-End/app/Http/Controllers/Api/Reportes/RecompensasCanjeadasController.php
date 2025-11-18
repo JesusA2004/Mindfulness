@@ -15,14 +15,17 @@ class RecompensasCanjeadasController extends BaseReportController
         $q = Recompensa::query();
 
         // ===== Filtro por nombre de recompensa (contiene, case-insensitive) =====
-        // Usamos "recompensa" como parámetro principal, y "nombre" como alias.
-        $filtroNombre = $this->d($r, 'recompensa');
+        // Aceptamos varios nombres de parámetro por compatibilidad: tipo | recompensa | nombre
+        $filtroNombre = $this->d($r, 'tipo');
+        if ($filtroNombre === null) {
+            $filtroNombre = $this->d($r, 'recompensa');
+        }
         if ($filtroNombre === null) {
             $filtroNombre = $this->d($r, 'nombre');
         }
 
         if ($filtroNombre !== null) {
-            // En Mongo con jenssegers, 'like' ya genera regex /valor/i (contains)
+            // En Mongo con jenssegers, 'like' genera regex /valor/i (match "contains")
             $q->where('nombre', 'like', $filtroNombre);
         }
 
@@ -69,7 +72,7 @@ class RecompensasCanjeadasController extends BaseReportController
         $rows = [];
 
         foreach ($recs as $rec) {
-            $nombreRec = (string)($rec->nombre ?? 'Recompensa');
+            $nombreRec        = (string)($rec->nombre ?? 'Recompensa');
             $puntosNecesarios = (int)($rec->puntos_necesarios ?? 0);
 
             foreach ((array) $rec->canjeo as $c) {
