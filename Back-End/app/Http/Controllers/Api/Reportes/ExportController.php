@@ -2,14 +2,29 @@
 
 namespace App\Http\Controllers\Api\Reportes;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Response;
+use Carbon\Carbon;
+use MongoDB\BSON\ObjectId;
+
+// MODELOS
+use App\Models\Tecnica;
+use App\Models\Actividad;
+use App\Models\Cita;
+use App\Models\Bitacora;
+use App\Models\Encuesta;
+use App\Models\Recompensa;
+use App\Models\Persona;
+use App\Models\User;
 
 class ExportController extends BaseReportController
 {
     public function export(Request $r)
     {
-        // OJO: aquí "tipo" es el tipo de exportación (pdf|excel),
-        // no lo usamos ya para filtrar recompensas.
+        // Aquí "tipo" es el tipo de exportación (pdf|excel)
         $tipo    = strtolower($this->d($r, 'tipo', 'pdf'));
         $reporte = $this->d($r, 'reporte', '');
 
@@ -58,7 +73,10 @@ class ExportController extends BaseReportController
 
                 $coh = $payloadMeta['cohorte'] ?? $this->d($r,'grupo');
                 if (!empty($payloadMeta['cohortes']) && is_array($payloadMeta['cohortes'])) {
-                    $meta['Cohortes'] = implode(', ', array_values(array_unique(array_filter($payloadMeta['cohortes'], fn($x)=>trim((string)$x) !== ''))));
+                    $meta['Cohortes'] = implode(', ', array_values(array_unique(array_filter(
+                        $payloadMeta['cohortes'],
+                        fn($x) => trim((string)$x) !== ''
+                    ))));
                 }
                 if ($coh) $meta['Cohorte'] = $coh;
                 break;
@@ -88,10 +106,19 @@ class ExportController extends BaseReportController
             case 'encuestas-resultados': {
                 $payload = app(EncuestasResultadosController::class)->index($r)->getData(true);
                 $title   = 'Resultados de encuestas';
-                $rows    = $this->rowsFromChart($payload, 'Encuesta', 'Respuestas');
-                $desde = $this->d($r,'desde'); $hasta = $this->d($r,'hasta');
-                $meta['rango'] = ($desde && $hasta) ? "$desde a $hasta" : 'Todas las fechas';
-                if ($e = $this->d($r,'encuesta')) $meta['Encuesta'] = $e;
+
+                // filas tal cual vienen del controlador (recurso / puntaje / total)
+                $rows    = $payload['rows'] ?? [];
+
+                // meta con chartData + ejes que ya armamos en el controlador
+                $meta    = $payload['meta'] ?? [];
+
+                // Rango por si quieres sobreescribir si no viene
+                if (!isset($meta['rango'])) {
+                    $desde = $this->d($r,'desde'); $hasta = $this->d($r,'hasta');
+                    $meta['rango'] = ($desde && $hasta) ? "$desde a $hasta" : 'Todas las fechas';
+                }
+
                 break;
             }
 

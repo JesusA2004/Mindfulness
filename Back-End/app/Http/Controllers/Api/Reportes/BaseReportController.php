@@ -99,7 +99,6 @@ abstract class BaseReportController extends Controller
 
         // 1) Búsqueda por matrícula (contiene), SIN %
         if ($norm['mat'] !== null) {
-            // En Mongo, 'like' con jenssegers ya genera un regex /valor/i (match "contains")
             $q->where('matricula', 'like', $norm['mat']);
         }
         // 2) Búsqueda por nombre/apellidos/cohorte con tokens (también SIN %)
@@ -342,7 +341,7 @@ abstract class BaseReportController extends Controller
         $rango = $meta['rango'] ?? 'Todas las fechas';
         $chips .= '<span class="chip"><b>Rango:</b> '.e($rango).'</span>';
         foreach ($meta as $k => $v) {
-            if (in_array($k, ['rango','chartData','chartType'], true)) continue;
+            if (in_array($k, ['rango','chartData','chartType','axisY','axisX'], true)) continue;
             $chips .= '<span class="chip"><b>'.e($k).':</b> '.e($v).'</span>';
         }
 
@@ -363,11 +362,12 @@ abstract class BaseReportController extends Controller
         // ===== Gráfica (opcional) =====
         $chartHtml = '';
         $chartData = $meta['chartData'] ?? [];
-        $chartType = strtolower((string)($meta['chartType'] ?? 'vbar')); // vbar|hbar (default vbar)
+        $chartType = strtolower((string)($meta['chartType'] ?? 'vbar')); // vbar|hbar
+        $axisY     = isset($meta['axisY']) ? (string)$meta['axisY'] : 'Eje Y: Conteo';
+        $axisX     = isset($meta['axisX']) ? (string)$meta['axisX'] : 'Eje X: Valor';
 
         if (!empty($chartData) && is_array($chartData)) {
             if ($chartType === 'vbar') {
-                // columnas verticales (PDF-safe: sin flexbox)
                 $colsHtml = '';
                 foreach ($chartData as $b) {
                     $lbl = e((string)($b['label'] ?? ''));
@@ -376,7 +376,7 @@ abstract class BaseReportController extends Controller
 
                     $datesList = '';
                     if (!empty($b['dates']) && is_array($b['dates'])) {
-                        $items = array_slice($b['dates'], 0, 6); // acota
+                        $items = array_slice($b['dates'], 0, 6);
                         $li = '';
                         foreach ($items as $it) $li .= '<li>'.e((string)$it).'</li>';
                         $datesList = '<ul class="dates">'.$li.'</ul>';
@@ -390,7 +390,17 @@ abstract class BaseReportController extends Controller
                     '.$datesList.'
                     </div>';
                 }
-                $chartHtml = '<div class="chart-v"><div class="grid">'.$colsHtml.'</div></div>';
+
+                $chartHtml = '
+                <div class="chart-v">
+                <div class="plot-area">
+                    <div class="bars-row">'.$colsHtml.'</div>
+                </div>
+                <div class="axis-row">
+                    <span class="axis-y">'.e($axisY).'</span>
+                    <span class="axis-x">'.e($axisX).'</span>
+                </div>
+                </div>';
             } else {
                 // fallback barras horizontales
                 $bars = '';
@@ -402,9 +412,17 @@ abstract class BaseReportController extends Controller
                                 <div class="lbl">'.$lbl.'</div>
                                 <div class="track"><div class="fill" style="width:'.$pct.'%"></div></div>
                                 <div class="val">'.$val.' ('.number_format($pct,1).'%)</div>
-                              </div>';
+                            </div>';
                 }
-                $chartHtml = '<div class="chart-h">'.$bars.'</div>';
+
+                $chartHtml = '
+                <div class="chart-h">
+                '.$bars.'
+                <div class="axis-row">
+                    <span class="axis-y">'.e($axisY).'</span>
+                    <span class="axis-x">'.e($axisX).'</span>
+                </div>
+                </div>';
             }
         }
 
@@ -426,39 +444,47 @@ abstract class BaseReportController extends Controller
     tbody tr.even{ background:#fbfbff; }
     footer{ margin-top:8px; color:#94a3b8; font-size:11px; }
 
-    /* ===== Gráfica vertical (PDF-safe, sin flexbox) ===== */
+    /* ===== Gráfica vertical ===== */
     .chart-v{ margin:16px 0 6px 0; padding:16px; border:1px solid #e5e7eb; border-radius:14px; background:linear-gradient(180deg,#fcfdff,#ffffff); }
-    .chart-v .grid{
+
+    .chart-v .plot-area{
+    padding:8px 6px 12px 6px;
+    border-left:1px solid #e5e7eb;   /* eje Y */
+    border-bottom:1px solid #e5e7eb; /* eje X */
+    }
+    .chart-v .bars-row{
     text-align:center;
     white-space:nowrap;
-    padding:8px 6px 12px 6px;
-    border-bottom:1px solid #e5e7eb;
-    font-size:0; /* elimina espacios entre inline-blocks */
+    font-size:0;
     }
     .chart-v .col{
     display:inline-block;
     vertical-align:bottom;
-    width:22%;
+    width:16%;
     margin:0 1.5%;
-    font-size:12px; /* reestablece */
+    font-size:12px;
     }
     .chart-v .bar{
-        width:26px; height:160px;
-        background:#ede9fe; border:1px solid #e5e7eb;
-        border-radius:6px 6px 0 0; overflow:hidden; margin:0 auto;
-        position:relative;           /* <-- agregado */
+    width:26px; height:160px;
+    background:#ede9fe; border:1px solid #e5e7eb;
+    border-radius:6px 6px 0 0; overflow:hidden; margin:0 auto;
+    position:relative;
     }
     .chart-v .fill{
-        display:block; width:100%;
-        position:absolute; bottom:0; /* <-- agregado: anclar abajo */
-        height:0;                    /* se sobreescribe via style="height:X%" */
-        background:#7c3aed;
+    display:block; width:100%;
+    position:absolute; bottom:0;
+    height:0;
+    background:#7c3aed;
     }
     .chart-v .val{ font-size:11px; color:#334155; font-weight:700; margin-bottom:6px; line-height:1.1; }
     .chart-v .lbl{ font-size:12px; color:#0f172a; font-weight:700; text-align:center; margin-top:8px; line-height:1.2; }
     .chart-v .dates{ list-style:none; padding:0; margin:6px 0 0 0; font-size:11px; color:#475569; }
 
-    /* (opcional) barras horizontales fallback */
+    .axis-row{ margin-top:8px; font-size:11px; color:#64748b; display:flex; justify-content:space-between; }
+    .axis-y{ text-align:left; }
+    .axis-x{ text-align:right; }
+
+    /* barras horizontales */
     .chart-h{ margin:16px 0 6px 0; padding:16px; border:1px solid #e5e7eb; border-radius:14px; background:linear-gradient(180deg,#fcfdff,#ffffff);}
     .chart-h .bar-h{ display:flex; align-items:center; gap:10px; margin:8px 0; }
     .chart-h .bar-h .lbl{ width:32%; font-size:12px; font-weight:700; color:#0f172a; }
@@ -468,16 +494,16 @@ abstract class BaseReportController extends Controller
     </style>
     <body>
     <div class="header">
-      <h1>'.e($title).'</h1>
-      <p class="sub">Generado el '.now()->format('Y-m-d H:i').'</p>
-      <div class="chips">'.$chips.'</div>
+    <h1>'.e($title).'</h1>
+    <p class="sub">Generado el '.now()->format('Y-m-d H:i').'</p>
+    <div class="chips">'.$chips.'</div>
     </div>
 
     '.$chartHtml.'
 
     <table>
-      <thead><tr>'.$head.'</tr></thead>
-      <tbody>'.$body.'</tbody>
+    <thead><tr>'.$head.'</tr></thead>
+    <tbody>'.$body.'</tbody>
     </table>
     </body></html>';
     }
