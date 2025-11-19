@@ -21,11 +21,30 @@ function getToken () {
     return u?.access_token || u?.token || localStorage.getItem('token') || ''
   } catch { return localStorage.getItem('token') || '' }
 }
+
 function authHeaders () {
   const t = getToken()
   return t ? { Authorization: `Bearer ${t}`, Accept: 'application/json' } : { Accept: 'application/json' }
 }
-function toast (msg, type='success') { (type==='error' ? console.error : console.log)(msg) }
+
+function toast (msg, type = 'success') {
+  const icon = type === 'error'
+    ? 'error'
+    : type === 'warning'
+    ? 'warning'
+    : 'success'
+
+  Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon,
+    title: msg,
+    showConfirmButton: false,
+    timer: 2600,
+    timerProgressBar: true,
+  })
+}
+
 function makeDebouncer (ms) { let id; return (cb) => { clearTimeout(id); id = setTimeout(cb, ms) } }
 function toDateInputValue (d) { if (!(d instanceof Date) || isNaN(d)) return ''; return d.toISOString().slice(0,10) }
 function isRequired (v) { return v !== null && v !== undefined && String(v).trim() !== '' }
@@ -353,25 +372,48 @@ function openEdit(row){
   form.persona.sexo = p?.sexo || ''
   form.persona.matricula = p?.matricula || ''
 
-  // Si viene cohorte como array → profesor; si es string → alumno/admin
-  if (Array.isArray(p?.cohorte)) {
-    form.user.rol = 'profesor'
-    form.persona.cohortes = p.cohorte.slice()
-  } else {
-    const coh = p?.cohorte || row.cohorte || ''
-    const { carrera, cuatrimestre, grupo } = parseCohorte(coh)
-    currentCarrera.value = (carrera || '').toUpperCase()
-    currentCuatrimestre.value = String(cuatrimestre || '')
-    currentGrupo.value = (grupo || '').toUpperCase()
+    // Rol real viene del usuario, NO del tipo de cohorte
+  const rol = (row.rol || '').toLowerCase()
+  form.user.rol = rol
+
+  // PROFESOR: usa array de cohortes
+  if (rol === 'profesor') {
+    if (Array.isArray(p?.cohorte)) {
+      form.persona.cohortes = p.cohorte.slice()
+    } else if (p?.cohorte) {
+      // si por alguna razón viene un solo string, lo metemos como array
+      form.persona.cohortes = [String(p.cohorte)]
+    } else {
+      form.persona.cohortes = []
+    }
+
+    // los inputs de carrera/cuatri/grupo no importan para profesor
+    currentCarrera.value = ''
+    currentCuatrimestre.value = ''
+    currentGrupo.value = ''
     syncCohorteFieldsIntoForm()
+  } else {
+    // ESTUDIANTE / ADMIN: solo un cohorte tipo "CARRERA CUAT GRUPO"
+    const cohRaw = Array.isArray(p?.cohorte)
+      ? (p.cohorte[0] || '')
+      : (p?.cohorte || row.cohorte || '')
+
+    const { carrera, cuatrimestre, grupo } = parseCohorte(cohRaw)
+    currentCarrera.value      = (carrera || '').toUpperCase()
+    currentCuatrimestre.value = cuatrimestre ? String(cuatrimestre) : ''
+    currentGrupo.value        = (grupo || '').toUpperCase()
+    syncCohorteFieldsIntoForm()
+
+    // por seguridad, no dejamos array de cohortes para roles que no son profesor
+    form.persona.cohortes = []
   }
 
-  form.user._id = row.user_id || null
+  form.user._id        = row.user_id || null
   form.user.persona_id = row.persona_id || null
-  form.user.name = row.nombreCompleto || ''
-  form.user.email = row.email || ''
-  form.user.rol = form.user.rol || row.rol || ''
-  form.user.estatus = 'activo'
+  form.user.name       = row.nombreCompleto || ''
+  form.user.email      = row.email || ''
+  // YA NO reescribas aquí el rol: respeta el que ya pusimos arriba
+  form.user.estatus      = row.estatus || 'activo'
   form.user.urlFotoPerfil = row.urlFotoPerfil || ''
 
   formModal.show()
@@ -616,7 +658,7 @@ async function onSubmit(){
     await createOrUpdateUser(personaId)
     await fetchUsers()
     hideModal()
-    toast('Registro guardado.')
+    toast(isEditing.value ? 'Usuario actualizado correctamente.' : 'Usuario registrado correctamente.')
   } catch (e) {
     console.error('onSubmit error =>', e)
     const resp = e.response?.data

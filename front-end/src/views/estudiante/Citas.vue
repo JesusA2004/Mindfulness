@@ -288,4 +288,9 @@ function construirISO (fecha, hora) {
   transform: translateY(-4px);
   transition: all 0.3s ease;
 }
+
+:deep(.modal-header .modal-title) {
+  color: #ffffff !important;
+}
+
 </style>

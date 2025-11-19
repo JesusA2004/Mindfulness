@@ -206,18 +206,6 @@
           </table>
         </div>
 
-        <!-- Paginación -->
-        <div class="d-flex justify-content-between align-items-center px-3 py-2 border-top flex-wrap gap-2">
-          <div class="small text-muted">Página actual: {{ paginaActual }} / {{ totalPaginas || 1 }}</div>
-          <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-sm btn-outline-secondary" :disabled="!enlaces.anterior" @click="go(enlaces.anterior)">
-              <i class="bi bi-chevron-left"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-secondary" :disabled="!enlaces.siguiente" @click="go(enlaces.siguiente)">
-              <i class="bi bi-chevron-right"></i>
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   </main>

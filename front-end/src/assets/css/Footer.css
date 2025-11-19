@@ -1,33 +1,97 @@
+/* =======================================
+   ⚫ FOOTER — Versión Negra Premium
+   ======================================= */
 .footer-section {
-  background: #343a40;
-  color: #fff;
-  padding: 2.5rem 1rem;
+  background: #000000; /* NEGRO PURO */
+  color: #e5e7eb;
+  padding: 3.5rem 1.5rem 2.8rem;
+  position: relative;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  overflow: hidden;
 }
 
-.footer-content {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  align-items: start;
-  text-align: center;
+/* Glow sutil */
+.footer-glow {
+  position: absolute;
+  inset: auto -35% -100px;
+  height: 260px;
+  background: radial-gradient(circle at 50% 0, rgba(138,0,156,0.35), transparent 70%);
+  filter: blur(40px);
+  opacity: 0.45;
+  pointer-events: none;
+  animation: footerGlow 12s ease-in-out infinite;
 }
 
-.footer-brand {
-  /* Esta columna puede tener un tamaño un poco mayor si se quiere */
+@keyframes footerGlow {
+  0% { opacity: 0.35; transform: translateY(0); }
+  50% { opacity: 0.55; transform: translateY(-6px); }
+  100% { opacity: 0.35; transform: translateY(0); }
 }
 
+
+/* =======================================
+   📌 Marca
+   ======================================= */
 .brand-title {
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  background: linear-gradient(90deg, #a855f7, #ec4899);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .brand-copy {
-  font-size: 0.9rem;
-  color: #adb5bd;
+  font-size: 1.05rem;
+  color: #cbd5e1;
+  max-width: 34rem;
+  line-height: 1.75;
+  margin-bottom: 1.4rem;
 }
 
+.footer-cta {
+  display: inline-flex;
+  padding: 0.8rem 2rem;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: #020617;
+  background: linear-gradient(90deg, #22c55e, #a855f7);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  transition: transform .25s ease, box-shadow .25s ease, filter .25s ease;
+}
+
+.footer-cta:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 44px rgba(0,0,0,0.85);
+  filter: brightness(1.05);
+}
+
+.brand-year {
+  margin-top: 1.4rem;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+
+/* =======================================
+   📌 Títulos de columnas
+   ======================================= */
+.links-title,
+.social-title {
+  font-size: 1rem;
+  color: #9ca3af;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+
+/* =======================================
+   📌 Lista de enlaces con iconos
+   ======================================= */
 .footer-links ul {
   list-style: none;
   padding: 0;
@@ -35,41 +99,98 @@
 }
 
 .footer-links li {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.65rem;
 }
 
 .footer-links a {
-  color: #adb5bd;
-  text-decoration: none;
-  transition: color 0.3s ease;
-  font-size: 0.95rem;
-}
-
-.footer-links a:hover {
-  color: #fff;
-}
-
-.footer-social .social-icons {
   display: flex;
-  justify-content: center;
+  align-items: center;
+  gap: .55rem;
+  font-size: 1.05rem;
+  text-decoration: none;
+  color: #d1d5db;
+  transition: all .25s ease;
+  position: relative;
+}
+
+/* Iconos a la izquierda (Icons8 o FontAwesome) */
+.footer-links a::before {
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
+  font-size: 1rem;
+  opacity: .75;
+  transition: all .25s ease;
+}
+
+/* Íconos (puedes reemplazar por los que quieras) */
+.footer-links li:nth-child(1) a::before { content: "\f015"; } /* Home */
+.footer-links li:nth-child(2) a::before { content: "\f05a"; } /* Info */
+.footer-links li:nth-child(3) a::before { content: "\f2b6"; } /* Envelope */
+.footer-links li:nth-child(4) a::before { content: "\f2f6"; } /* Sign-in */
+
+/* Hover */
+.footer-links a:hover {
+  color: #ffffff;
+  transform: translateX(4px);
+}
+
+.footer-links a:hover::before {
+  opacity: 1;
+  color: #a855f7;
+  transform: scale(1.15);
+}
+
+
+/* =======================================
+   📌 Redes sociales
+   ======================================= */
+.social-copy {
+  font-size: 1rem;
+  color: #cbd5e1;
+  margin-bottom: 1.1rem;
+}
+
+.social-icons {
+  display: flex;
   gap: 1rem;
 }
 
 .social-icon {
-  color: #adb5bd;
-  font-size: 1.25rem;
-  transition: transform 0.3s ease, color 0.3s ease;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  color: #e5e7eb;
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(8px);
+  transition: transform .25s ease, border-color .25s ease, background .25s ease;
 }
 
 .social-icon:hover {
-  transform: scale(1.2);
-  color: #fff;
+  transform: translateY(-4px) scale(1.07);
+  border-color: rgba(255,255,255,0.45);
+  background: rgba(255,255,255,0.12);
 }
 
-/* Para pantallas muy pequeñas, que el grid se ajuste */
+
+/* =======================================
+   📌 Responsivo
+   ======================================= */
+@media (max-width: 992px) {
+  .brand-title { font-size: 1.8rem; }
+  .brand-copy { font-size: 1rem; }
+}
+
+@media (max-width: 768px) {
+  .footer-section { padding: 3rem 1.2rem 2.4rem; }
+  .footer-links a { font-size: 1rem; }
+}
+
 @media (max-width: 576px) {
-  .footer-content {
-    grid-template-columns: 1fr;
-    text-align: center;
-  }
+  .footer-section { padding: 2.8rem 1.1rem 2rem; }
+  .footer-links, .footer-social { margin-top: 1.6rem; }
 }

@@ -175,13 +175,21 @@ class AuthController extends Controller
     /**
      * GET /api/auth/me
      */
-    public function userProfile(): JsonResponse
+    public function userProfile()
     {
-        $user = auth('api')->user();
-        if (!$user) {
-            return response()->json(['error' => 'No autenticado'], 401);
-        }
-        return response()->json($user);
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        // Cargamos persona y normalizamos puntos
+        $user->load('persona');
+
+        $data = $user->toArray();
+        // Asegurar puntosCanjeo numérico aun si no existe en documentos viejos
+        $data['puntosCanjeo'] = (int) ($data['puntosCanjeo'] ?? 0);
+
+        return response()->json([
+            'user' => $data,
+        ], 200);
     }
 
     /**

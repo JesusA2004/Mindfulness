@@ -147,20 +147,6 @@
           </article>
         </div>
       </div>
-
-      <!-- Paginación (modo servidor) -->
-      <div v-if="!_clientPaginate && registrosAlumno.length"
-           class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
-        <div class="small text-muted"><i class="bi bi-menu-button-wide me-1"></i>Página: {{ paginaActual }} / {{ totalPaginas || 1 }}</div>
-        <div class="d-flex align-items-center gap-2">
-          <button class="btn btn-sm btn-outline-secondary" :disabled="!enlaces.anterior" @click="go(enlaces.anterior)">
-            <i class="bi bi-chevron-left"></i>
-          </button>
-          <button class="btn btn-sm btn-outline-secondary" :disabled="!enlaces.siguiente" @click="go(enlaces.siguiente)">
-            <i class="bi bi-chevron-right"></i>
-          </button>
-        </div>
-      </div>
     </section>
   </main>
 </template>

@@ -1,37 +1,76 @@
 <template>
-    <div class="error-container">
-      <div class="container min-vh-100 d-flex align-items-center justify-content-center p-3">
-        <div class="error-content bg-dark bg-opacity-75 p-5 rounded-3 text-center text-white shadow-lg">
-          <!-- Icono animado -->
-          <div class="zen-icon mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon-svg mx-auto d-block" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M8 16a6 6 0 0 0 6-6 6 6 0 0 1-6 6 6 6 0 0 1-6-6 6 6 0 0 0 6 6"/>
-              <path d="M8 0a6 6 0 0 0-6 6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 0-6-6M0 8a6 6 0 0 0 6 6 6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 0-6 6"/>
-              <path d="M16 8a6 6 0 0 0-6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6 6 6 0 0 0 6-6"/>
-            </svg>
-          </div>
-  
-          <!-- Código de error -->
-          <h1 class="error-code display-1 fw-bold mb-3">404</h1>
-  
-          <!-- Mensaje destacado -->
-          <h2 class="h3 fw-semibold mb-4 animated-text text-warning">Paz interior no encontrada</h2>
-  
-          <!-- Descripción resaltada -->
-          <div class="message-highlight p-4 mb-5 rounded shadow-sm bg-black bg-opacity-50">
-            <p class="lead mb-0 text-white">
-              La página que buscas ha entrado en <strong>meditación profunda</strong>.<br />
-              <strong>Respira hondo</strong>, libera tu mente y regresa al camino <em>consciente</em>.
-            </p>
-          </div>
-  
-          <!-- Botón de acción -->
-          <router-link to="/" class="btn btn-light btn-lg px-5 rounded-pill shadow-btn mt-3 text-dark fw-semibold">
-            <i class="bi bi-house-door me-2"></i>Volver al inicio
+  <section class="error-container">
+    <!-- Fondo full desde /public/img/404.png usando style inline -->
+    <div
+      class="error-bg"
+      style="
+        background-image: url('/img/404.png');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+      "
+    ></div>
+
+    <!-- Capa de oscurecimiento -->
+    <div class="error-overlay"></div>
+
+    <!-- Orbes de color -->
+    <div class="error-orb orb-1"></div>
+    <div class="error-orb orb-2"></div>
+
+    <!-- Contenido -->
+    <div class="container error-inner min-vh-100 d-flex align-items-center justify-content-center">
+      <div class="error-card text-center text-light">
+        <!-- Icono -->
+        <div class="error-icon-wrap mx-auto mb-3">
+          <i class="bi bi-peace error-icon"></i>
+        </div>
+
+        <!-- Etiqueta y título -->
+        <p class="error-label">ERROR 404</p>
+        <h1 class="error-title mb-2">Página no encontrada</h1>
+
+        <!-- Subtítulo / lema -->
+        <p class="error-subtitle mb-4">
+          La ruta que intentas visitar se salió del camino consciente. 🌿
+        </p>
+
+        <!-- Mensaje principal -->
+        <div class="error-message-box mb-4">
+          <p class="mb-0">
+            Respira profundo: la página que buscas sigue en su viaje interior.
+            Regresa a un punto seguro y continúa tu práctica en
+            <strong>Mindfulness</strong>.
+          </p>
+        </div>
+
+        <!-- Acciones -->
+        <div class="error-actions d-flex flex-column flex-sm-row justify-content-center gap-3">
+          <router-link
+            to="/"
+            class="btn btn-error-secondary fix-text"
+          >
+            <i class="bi bi-house-door me-2"></i>
+            Ir al inicio
+          </router-link>
+
+          <router-link
+            to="/login"
+            class="btn btn-error-secondary fix-text"
+          >
+            <i class="bi bi-box-arrow-in-right me-2"></i>
+            Ir al inicio de sesión
           </router-link>
         </div>
+
+        <!-- Hint -->
+        <p class="error-hint mt-4 mb-0">
+          Tip: Regresa al menú principal y continúa tu viaje de mindfulness. 🌟
+        </p>
       </div>
     </div>
-  </template>
-  
-  <style src="@/assets/css/Error404.css" scoped></style>
+  </section>
+</template>
+
+<style src="@/assets/css/Error404.css"></style>

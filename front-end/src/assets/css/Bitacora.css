@@ -85,19 +85,40 @@
 /* Fondo y texto blanco para legibilidad */
 .swal2-mindora{
   background:
-    radial-gradient(120% 120% at 10% 10%, #8e16c6a9 0%, rgba(219,247,230,.85) 40%, rgba(4, 61, 27, 0.7) 60%),
-    linear-gradient(180deg, #c8f1dc 0%, #eafbef 100%) !important;
-  color:#fff; /* texto por defecto en blanco */
+    radial-gradient(
+      120% 120% at 10% 10%,
+      rgba(155, 89, 182, 0.85) 0%,   /* morado suave brillante */
+      rgba(95, 207, 255, 0.55) 40%, /* azul celeste translúcido */
+      rgba(44, 62, 80, 0.75) 70%    /* azul oscuro para contraste */
+    ),
+    linear-gradient(
+      180deg,
+      #e4f1ff 0%,      /* azul hielo */
+      #d3e8ff 100%     /* azul pastel */
+    ) !important;
+  
+  color:#fff;
   border: 0;
-  border-radius: 24px;
-  box-shadow: 0 18px 48px rgba(16,50,36,.18);
-  padding: clamp(1rem, 3vw, 1.5rem);
+  border-radius: 26px;
+  box-shadow: 0 22px 60px rgba(0,0,0,.28);
+  padding: clamp(1rem, 3vw, 1.8rem);
+}
+
+.swal2-mindora .swal2-input,
+.swal2-mindora .swal2-textarea{
+  border-radius: 14px !important;
+  border:1px solid rgba(255,255,255,.3);
+  background: rgba(255,255,255,.12);
+  color:#fff !important;
+  padding: 1rem;
+  backdrop-filter: blur(6px);
 }
 
 /* Títulos y contenido también en blanco */
 .swal2-mindora .swal2-title,
 .swal2-mindora .swal2-html-container{
-  color:#0a0a0a;
+  color:#ffffff;
+  text-shadow: 0 1px 2px rgba(0,0,0,.35);
 }
 .swal2-mindora .form-label,
 .swal2-mindora label,

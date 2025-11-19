@@ -1,0 +1,287 @@
+.perfil-page {
+  max-width: 960px;
+  margin: auto;
+}
+
+/* Card principal */
+.perfil-card {
+  border: none;
+  border-radius: 1.6rem;
+  overflow: hidden;
+  position: relative;
+  background: radial-gradient(circle at top left, #f1f5f9 0, #ffffff 40%, #f9fafb 100%);
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.16);
+  transition: transform 0.25s ease-out, box-shadow 0.25s ease-out;
+}
+
+.perfil-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 26px 70px rgba(15, 23, 42, 0.22);
+}
+
+/* Header */
+.perfil-header {
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  background: linear-gradient(120deg, #111827, #1f2937, #4f46e5);
+  color: #f9fafb;
+  padding: 1.3rem 1.8rem;
+}
+
+/* Avatar */
+.avatar-wrapper {
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+  border: 2px solid rgba(248, 250, 252, 0.95);
+  background: radial-gradient(circle at 30% 20%, #a5b4fc, #4f46e5);
+  animation: avatar-pop 0.65s ease-out both;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: #f9fafb;
+}
+
+/* Chips */
+.badge-chip {
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  font-weight: 500;
+  background: rgba(15, 23, 42, 0.16);
+  color: #f9fafb;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(248, 250, 252, 0.3);
+  font-size: 0.8rem;
+}
+
+.badge-chip[data-rol="admin"] {
+  background: rgba(30, 64, 175, 0.9);
+}
+
+.badge-chip[data-rol="profesor"] {
+  background: rgba(8, 47, 73, 0.9);
+}
+
+.badge-chip[data-rol="estudiante"] {
+  background: rgba(22, 163, 74, 0.9);
+}
+
+.badge-chip[data-estatus="bajasistema"],
+.badge-chip[data-estatus="BajaSistema"] {
+  background: rgba(220, 38, 38, 0.9);
+}
+
+.badge-chip[data-estatus="bajatemporal"],
+.badge-chip[data-estatus="BajaTemporal"] {
+  background: rgba(234, 179, 8, 0.92);
+}
+
+.estatus-dot {
+  font-size: 0.55rem;
+}
+
+/* Bloques */
+.info-block {
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 1.2rem;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.18s ease-out, box-shadow 0.18s ease-out, border-color 0.18s ease-out;
+}
+
+.info-block::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top left, rgba(129, 140, 248, 0.19), transparent 65%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease-out;
+}
+
+.info-block:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.1);
+  border-color: rgba(99, 102, 241, 0.6);
+}
+
+.info-block:hover::before {
+  opacity: 1;
+}
+
+.info-title {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #4b5563;
+  margin-bottom: 0.75rem;
+}
+
+/* Items */
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.32rem 0;
+  font-size: 0.9rem;
+}
+
+.info-label {
+  color: #6b7280;
+  flex: 0 0 40%;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.info-value {
+  flex: 1;
+  text-align: right;
+  font-weight: 500;
+  color: #111827;
+}
+
+/* Cohortes */
+.cohorte-pill {
+  background: rgba(224, 231, 255, 0.98);
+  color: #3730a3;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+}
+
+/* Puntos (solo estudiantes) */
+.puntos-card {
+  background: radial-gradient(circle at top, #dbeafe, #eef2ff);
+}
+
+.puntos-value {
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: #4f46e5;
+  text-shadow: 0 8px 18px rgba(79, 70, 229, 0.4);
+  animation: puntos-pulse 2.8s ease-in-out infinite;
+}
+
+/* Rol card para admin/profesor */
+.rol-card {
+  background: linear-gradient(145deg, #f9fafb, #e5e7eb);
+}
+
+/* Lista inferior */
+.perfil-list .list-group-item {
+  border: none;
+  padding: 0.5rem 0.2rem;
+  background-color: transparent;
+}
+
+.label-pill {
+  font-size: 0.85rem;
+  color: #6b7280;
+  display: inline-flex;
+  align-items: center;
+}
+
+.value-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.8rem;
+  color: #111827;
+}
+
+/* Botón */
+.btn-hover-scale {
+  transition: transform 0.18s ease-in-out, box-shadow 0.18s ease-in-out;
+}
+
+.btn-hover-scale:hover {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 0.9rem 1.9rem rgba(15, 23, 42, 0.22);
+}
+
+.btn-change-pass {
+  border-radius: 999px;
+}
+
+/* Footer */
+.perfil-footer {
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  background: #f9fafb;
+}
+
+/* Animaciones */
+@keyframes avatar-pop {
+  0% {
+    transform: scale(0.6) translateY(10px);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.06) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes puntos-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .perfil-page {
+    margin: 1rem;
+  }
+
+  .perfil-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem 1.2rem;
+  }
+
+  .info-block {
+    padding: 0.9rem 1rem;
+  }
+
+  .perfil-card {
+    border-radius: 1.1rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .info-item {
+    font-size: 0.85rem;
+  }
+
+  .info-label {
+    flex-basis: 45%;
+  }
+
+  .info-value {
+    font-size: 0.86rem;
+  }
+}

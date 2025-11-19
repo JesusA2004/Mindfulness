@@ -129,17 +129,6 @@
       </div>
     </section>
 
-    <!-- Paginación -->
-    <div v-if="server.pagination" class="list-footer d-flex flex-wrap gap-2 justify-content-between align-items-center">
-      <div class="small text-muted">
-        Mostrando {{ server.pagination.from }}–{{ server.pagination.to }} de {{ server.pagination.total }}
-      </div>
-      <div class="btn-group">
-        <button class="btn btn-outline-secondary btn-sm" :disabled="!server.pagination.prev" @click="goPage(server.pagination.prev)">Anterior</button>
-        <button class="btn btn-outline-secondary btn-sm" :disabled="!server.pagination.next" @click="goPage(server.pagination.next)">Siguiente</button>
-      </div>
-    </div>
-
     <!-- ===== Modal: Registrar / Modificar ===== -->
     <div class="modal fade" ref="formModalRef" tabindex="-1">
       <div class="modal-dialog modal-dialog-centered modal-lg modal-fixed">

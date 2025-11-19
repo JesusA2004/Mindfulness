@@ -131,10 +131,13 @@
       </router-link>
     </div>
   </section>
+  
+  <Footer />
 </template>
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
+import Footer from '@/components/Footer.vue'
 
 const sideImg  = new URL('@/assets/images/loquehacemos.png', import.meta.url).href
 
