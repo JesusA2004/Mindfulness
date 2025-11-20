@@ -89,9 +89,9 @@
             </div>
 
             <div class="card-footer bg-transparent border-0 pt-0 pb-3 px-3">
-              <div class="d-flex flex-column flex-md-row gap-2">
+              <div class="d-flex flex-column gap-2">
                 <button
-                  class="btn btn-outline-secondary btn-sm flex-fill btn-with-label"
+                  class="btn btn-outline-secondary btn-sm flex-fill btn-with-label w-100"
                   @click="openView(item)"
                   data-bs-toggle="tooltip"
                   title="Consultar"
@@ -99,24 +99,38 @@
                   <i class="bi bi-eye me-1"></i>
                   <span>Consultar</span>
                 </button>
+
+                <!-- Ver respuestas (nuevo) -->
                 <button
-                  class="btn btn-outline-primary btn-sm flex-fill btn-with-label"
-                  @click="openEdit(item)"
+                  class="btn btn-outline-info btn-sm flex-fill btn-with-label w-100"
+                  @click="viewAnswers(item)"
                   data-bs-toggle="tooltip"
-                  title="Modificar"
+                  title="Ver respuestas"
                 >
-                  <i class="bi bi-pencil-square me-1"></i>
-                  <span>Modificar</span>
+                  <i class="bi bi-bar-chart-line me-1"></i>
+                  <span>Ver respuestas</span>
                 </button>
-                <button
-                  class="btn btn-outline-danger btn-sm flex-fill btn-with-label"
-                  @click="confirmDelete(item)"
-                  data-bs-toggle="tooltip"
-                  title="Eliminar"
-                >
-                  <i class="bi bi-trash me-1"></i>
-                  <span>Eliminar</span>
-                </button>
+
+                <div class="d-flex flex-column flex-md-row gap-2 mt-1">
+                  <button
+                    class="btn btn-outline-primary btn-sm flex-fill btn-with-label"
+                    @click="openEdit(item)"
+                    data-bs-toggle="tooltip"
+                    title="Modificar"
+                  >
+                    <i class="bi bi-pencil-square me-1"></i>
+                    <span>Modificar</span>
+                  </button>
+                  <button
+                    class="btn btn-outline-danger btn-sm flex-fill btn-with-label"
+                    @click="confirmDelete(item)"
+                    data-bs-toggle="tooltip"
+                    title="Eliminar"
+                  >
+                    <i class="bi bi-trash me-1"></i>
+                    <span>Eliminar</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -167,7 +181,7 @@
 
     <!-- ======= Modales ======= -->
 
-    <!-- Modal: Consulta Vistosa (AHORA con chips/buscador/expandir/progreso) -->
+    <!-- Modal: Consulta (visor de cuestionario) -->
     <div class="modal fade" ref="viewModalRef" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-xl modal-fit">
         <div class="modal-content modal-flex border-0 shadow-lg">
@@ -240,7 +254,13 @@
                 <span>Mostrando {{ visibleQuestions }} de {{ totalQuestions }} preguntas</span>
                 <span>{{ Math.round((visibleQuestions/totalQuestions)*100) }}%</span>
               </div>
-              <div class="progress" role="progressbar" :aria-valuenow="(visibleQuestions/totalQuestions)*100" aria-valuemin="0" aria-valuemax="100">
+              <div
+                class="progress"
+                role="progressbar"
+                :aria-valuenow="(visibleQuestions/totalQuestions)*100"
+                aria-valuemin="0"
+                aria-valuemax="100"
+              >
                 <div class="progress-bar" :style="{ width: (visibleQuestions/totalQuestions)*100 + '%' }"></div>
               </div>
             </div>
@@ -249,7 +269,11 @@
             <div class="row g-3">
               <div v-for="(q, i) in filteredQuestions" :key="q._id || i" class="col-12">
                 <div class="q-card shadow-sm">
-                  <div class="q-head" @click="toggleViewQuestion(iMapped(i))" :aria-expanded="viewToggle.qOpen[iMapped(i)]">
+                  <div
+                    class="q-head"
+                    @click="toggleViewQuestion(iMapped(i))"
+                    :aria-expanded="viewToggle.qOpen[iMapped(i)]"
+                  >
                     <div class="d-flex align-items-center gap-2">
                       <span class="q-index">#{{ i + 1 }}</span>
                       <span class="q-title text-truncate" :title="q.pregunta || '—'">
@@ -260,7 +284,10 @@
                       <span class="badge rounded-pill q-type" :class="tipoBadgeClass(q.tipo)">
                         <i :class="tipoIcon(q.tipo)" class="me-1"></i>{{ labelTipo(q.tipo) }}
                       </span>
-                      <i class="bi ms-2" :class="viewToggle.qOpen[iMapped(i)] ? 'bi-chevron-up rotate' : 'bi-chevron-down'"></i>
+                      <i
+                        class="bi ms-2"
+                        :class="viewToggle.qOpen[iMapped(i)] ? 'bi-chevron-up rotate' : 'bi-chevron-down'"
+                      ></i>
                     </div>
                   </div>
 
@@ -297,7 +324,6 @@
 
           <div class="modal-footer modal-footer-sticky">
             <div class="d-grid d-md-flex w-100 gap-2">
-              <!-- Acciones admin conservadas -->
               <div class="d-grid d-md-flex gap-2">
                 <button type="button" class="btn btn-outline-primary" @click="modifyFromView">
                   <i class="bi bi-pencil-square me-1"></i> Modificar
@@ -313,12 +339,133 @@
       </div>
     </div>
 
+    <!-- Modal: Respuestas (nuevo) -->
+    <div class="modal fade" ref="answersModalRef" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable modal-fit">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:20px;">
+          <div class="modal-header border-0 sticky-top bg-white">
+            <div class="d-flex align-items-center gap-3">
+              <div class="avatar-pill">
+                <i class="bi bi-graph-up"></i>
+              </div>
+              <div>
+                <h5 class="modal-title fw-bold mb-0">
+                  Respuestas · {{ selected?.titulo || 'Encuesta' }}
+                </h5>
+                <div class="small text-muted">{{ filteredAnswers.length }} respondente(s)</div>
+              </div>
+            </div>
+            <button type="button" class="btn-close" @click="hideAnswers()" aria-label="Cerrar"></button>
+          </div>
+
+          <div class="modal-body modal-body-safe">
+            <!-- Buscador local -->
+            <div class="input-group input-group-sm mb-3">
+              <span class="input-group-text"><i class="bi bi-search"></i></span>
+              <input
+                v-model.trim="answersQuery"
+                type="search"
+                class="form-control"
+                placeholder="Buscar por nombre o correo..."
+                aria-label="Buscar respondentes"
+              />
+              <button
+                v-if="answersQuery"
+                class="btn btn-outline-secondary"
+                @click="answersQuery = ''"
+              >
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+
+            <!-- Cargando -->
+            <div v-if="answersLoading" class="text-center py-4">
+              <div class="spinner-border" role="status" aria-hidden="true"></div>
+              <div class="small text-muted mt-2">Cargando respuestas…</div>
+            </div>
+
+            <!-- Lista de respondentes -->
+            <div v-else>
+              <div
+                v-if="filteredAnswers.length === 0"
+                class="alert alert-light border d-flex align-items-center gap-2"
+              >
+                <i class="bi bi-inbox text-secondary fs-5"></i>
+                <div><strong>Sin coincidencias.</strong> Ajusta tu búsqueda.</div>
+              </div>
+
+              <div class="vstack gap-3">
+                <div
+                  v-for="(r, idx) in filteredAnswers"
+                  :key="idx"
+                  class="card shadow-sm"
+                >
+                  <div class="card-body">
+                    <div class="d-flex align-items-start justify-content-between gap-3 mb-2">
+                      <div>
+                        <div class="fw-bold">{{ r.nombre || 'Usuario' }}</div>
+                        <div class="text-muted small" v-if="r.email">{{ r.email }}</div>
+                      </div>
+                      <div class="d-flex flex-wrap gap-2">
+                        <span class="badge rounded-pill bg-primary-subtle text-primary fw-semibold">
+                          <i class="bi bi-check2-square me-1"></i>{{ r.total_respuestas }} respuesta(s)
+                        </span>
+                        <span
+                          class="badge rounded-pill bg-secondary-subtle text-secondary"
+                          v-if="r.ultima_fecha"
+                        >
+                          <i class="bi bi-calendar-check me-1"></i>{{ r.ultima_fecha }}
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Respuestas por pregunta -->
+                    <div class="vstack gap-2">
+                      <div
+                        v-for="(ans, k) in r.respuestas"
+                        :key="k"
+                        class="border rounded-3 p-2"
+                        style="background:#fff"
+                      >
+                        <div class="small text-muted mb-1">
+                          #{{ ans.numero }} · {{ ans.pregunta || '—' }}
+                        </div>
+
+                        <template v-if="Array.isArray(ans.valores) && ans.valores.length > 1">
+                          <div class="fw-semibold mb-1">Respuesta(s):</div>
+                          <ul class="mb-1 ps-3">
+                            <li v-for="(v, z) in ans.valores" :key="z">{{ v }}</li>
+                          </ul>
+                        </template>
+                        <template v-else>
+                          <div>
+                            <span class="fw-semibold">Respuesta:</span>
+                            {{ (ans.valores && ans.valores[0]) || '—' }}
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                </div> <!-- /card respondente -->
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn btn-secondary" @click="hideAnswers()">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal: Form (Crear/Editar) -->
     <div class="modal fade" ref="formModalRef" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-xl modal-fit">
         <form class="modal-content modal-flex border-0 shadow-lg" @submit.prevent="onSubmit">
           <div class="modal-header border-0 sticky-top bg-white">
-            <h5 class="modal-title fw-bold">{{ isEditing ? 'Modificar encuesta' : 'Registrar encuesta' }}</h5>
+            <h5 class="modal-title fw-bold">
+              {{ isEditing ? 'Modificar encuesta' : 'Registrar encuesta' }}
+            </h5>
             <button type="button" class="btn-close" @click="hideModal('form')" aria-label="Cerrar"></button>
           </div>
 
@@ -328,13 +475,26 @@
               <div class="card-body">
                 <label class="form-label">
                   Título <span class="text-danger">*</span>
-                  <i class="bi bi-info-circle ms-1 text-primary"
-                     data-bs-toggle="tooltip"
-                     title="Nombre visible de la encuesta. Debe ser único."></i>
+                  <i
+                    class="bi bi-info-circle ms-1 text-primary"
+                    data-bs-toggle="tooltip"
+                    title="Nombre visible de la encuesta. Debe ser único."
+                  ></i>
                 </label>
                 <div class="d-flex align-items-center gap-2">
-                  <input v-model.trim="form.titulo" type="text" class="form-control" required maxlength="150" />
-                  <button type="button" class="btn btn-light btn-sm shadow-sm" @click="ui.meta = !ui.meta" :aria-expanded="ui.meta">
+                  <input
+                    v-model.trim="form.titulo"
+                    type="text"
+                    class="form-control"
+                    required
+                    maxlength="150"
+                  />
+                  <button
+                    type="button"
+                    class="btn btn-light btn-sm shadow-sm"
+                    @click="ui.meta = !ui.meta"
+                    :aria-expanded="ui.meta"
+                  >
                     <i class="bi" :class="ui.meta ? 'bi-chevron-up rotate' : 'bi-chevron-down'"></i>
                   </button>
                 </div>
@@ -345,38 +505,57 @@
                       <div class="col-12 col-lg-6">
                         <label class="form-label">
                           Fecha de inicio
-                          <i class="bi bi-info-circle ms-1 text-primary"
-                             data-bs-toggle="tooltip"
-                             title="Fecha a partir de la cual la encuesta estará disponible. Si la dejas vacía, el sistema puede asignar la fecha de creación."></i>
+                          <i
+                            class="bi bi-info-circle ms-1 text-primary"
+                            data-bs-toggle="tooltip"
+                            title="Fecha a partir de la cual la encuesta estará disponible. Si la dejas vacía, el sistema puede asignar la fecha de creación."
+                          ></i>
                         </label>
                         <input v-model="form.fechaAsignacion" type="date" class="form-control" />
                       </div>
                       <div class="col-12 col-lg-6">
                         <label class="form-label">
                           Fecha de fin
-                          <i class="bi bi-info-circle ms-1 text-primary"
-                             data-bs-toggle="tooltip"
-                             title="Último día en que se puede responder. Debe ser mayor o igual a la fecha de inicio."></i>
+                          <i
+                            class="bi bi-info-circle ms-1 text-primary"
+                            data-bs-toggle="tooltip"
+                            title="Último día en que se puede responder. Debe ser mayor o igual a la fecha de inicio."
+                          ></i>
                         </label>
                         <input v-model="form.fechaFinalizacion" type="date" class="form-control" />
                       </div>
                       <div class="col-12 col-lg-6">
                         <label class="form-label">
                           Duración estimada (minutos)
-                          <i class="bi bi-info-circle ms-1 text-primary"
-                             data-bs-toggle="tooltip"
-                             title="Tiempo aproximado que tardará un usuario en responder. Solo valores enteros positivos."></i>
+                          <i
+                            class="bi bi-info-circle ms-1 text-primary"
+                            data-bs-toggle="tooltip"
+                            title="Tiempo aproximado que tardará un usuario en responder. Solo valores enteros positivos."
+                          ></i>
                         </label>
-                        <input v-model.number="form.duracion_estimada" type="number" min="1" step="1" class="form-control" />
+                        <input
+                          v-model.number="form.duracion_estimada"
+                          type="number"
+                          min="1"
+                          step="1"
+                          class="form-control"
+                        />
                       </div>
                       <div class="col-12">
                         <label class="form-label">
                           Descripción
-                          <i class="bi bi-info-circle ms-1 text-primary"
-                             data-bs-toggle="tooltip"
-                             title="Contexto breve para el encuestado sobre el objetivo de la encuesta."></i>
+                          <i
+                            class="bi bi-info-circle ms-1 text-primary"
+                            data-bs-toggle="tooltip"
+                            title="Contexto breve para el encuestado sobre el objetivo de la encuesta."
+                          ></i>
                         </label>
-                        <textarea v-model.trim="form.descripcion" rows="3" class="form-control" maxlength="500"></textarea>
+                        <textarea
+                          v-model.trim="form.descripcion"
+                          rows="3"
+                          class="form-control"
+                          maxlength="500"
+                        ></textarea>
                       </div>
                     </div>
                   </div>
@@ -388,15 +567,22 @@
             <div class="d-flex align-items-center justify-content-between mb-2">
               <h6 class="mb-0 fw-bold">
                 Cuestionario ({{ form.cuestionario.length }})
-                <i class="bi bi-info-circle ms-1 text-primary"
-                   data-bs-toggle="tooltip"
-                   title="Agrega preguntas de selección múltiple con al menos dos opciones."></i>
+                <i
+                  class="bi bi-info-circle ms-1 text-primary"
+                  data-bs-toggle="tooltip"
+                  title="Agrega preguntas de selección múltiple con al menos dos opciones."
+                ></i>
               </h6>
               <div class="d-flex align-items-center gap-2">
                 <button type="button" class="btn btn-sm btn-outline-success" @click="addPregunta">
                   <i class="bi bi-plus-circle me-1"></i> Agregar pregunta
                 </button>
-                <button type="button" class="btn btn-light btn-sm shadow-sm" @click="ui.cuestionario = !ui.cuestionario" :aria-expanded="ui.cuestionario">
+                <button
+                  type="button"
+                  class="btn btn-light btn-sm shadow-sm"
+                  @click="ui.cuestionario = !ui.cuestionario"
+                  :aria-expanded="ui.cuestionario"
+                >
                   <i class="bi" :class="ui.cuestionario ? 'bi-chevron-up rotate' : 'bi-chevron-down'"></i>
                 </button>
               </div>
@@ -412,10 +598,18 @@
                   <div class="card-body">
                     <div class="d-flex align-items-center gap-2">
                       <div class="fw-semibold flex-grow-1">Pregunta #{{ idx + 1 }}</div>
-                      <button type="button" class="btn btn-light btn-sm" @click="toggleQuestion(idx)">
+                      <button
+                        type="button"
+                        class="btn btn-light btn-sm"
+                        @click="toggleQuestion(idx)"
+                      >
                         <i class="bi" :class="ui.qOpen[idx] ? 'bi-chevron-up rotate' : 'bi-chevron-down'"></i>
                       </button>
-                      <button type="button" class="btn btn-sm btn-outline-danger" @click="removePregunta(idx)">
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-danger"
+                        @click="removePregunta(idx)"
+                      >
                         <i class="bi bi-x-lg me-1"></i> Quitar
                       </button>
                     </div>
@@ -425,42 +619,54 @@
                         <div class="mb-3">
                           <label class="form-label">
                             Texto de la pregunta <span class="text-danger">*</span>
-                            <i class="bi bi-info-circle ms-1 text-primary"
-                               data-bs-toggle="tooltip"
-                               title="Enunciado claro de lo que deseas preguntar."></i>
                           </label>
                           <input v-model.trim="q.pregunta" type="text" class="form-control" required />
                         </div>
 
-                        <!-- Tipo (si manejas más de uno, habilita aquí) -->
+                        <!-- Tipo (si en un futuro manejas más de uno, aquí se reactiva) -->
                         <div class="mb-3">
                           <label class="form-label">
                             Tipo de pregunta
                           </label>
-                          <select v-model="q.tipo" class="form-select" required>
-                            <option value="seleccion_multiple">Selección múltiple (varias respuestas)</option>
-                            <option value="respuesta_abierta">Respuesta abierta</option>
+                          <select v-model="q.tipo" class="form-select" disabled>
+                            <option value="seleccion_multiple">
+                              Selección múltiple (varias respuestas)
+                            </option>
                           </select>
                         </div>
 
                         <div class="mb-2" v-if="q.tipo !== 'respuesta_abierta'">
                           <label class="form-label">
                             Opciones
-                            <i class="bi bi-info-circle ms-1 text-primary"
-                               data-bs-toggle="tooltip"
-                               title="Lista de posibles respuestas. Debe haber al menos dos opciones no vacías."></i>
                           </label>
-                          <div class="row g-2 align-items-center mb-2" v-for="(op, i) in q.opciones" :key="i">
+                          <div
+                            class="row g-2 align-items-center mb-2"
+                            v-for="(op, i) in q.opciones"
+                            :key="i"
+                          >
                             <div class="col">
-                              <input v-model.trim="q.opciones[i]" type="text" class="form-control" placeholder="Texto de opción" />
+                              <input
+                                v-model.trim="q.opciones[i]"
+                                type="text"
+                                class="form-control"
+                                placeholder="Texto de opción"
+                              />
                             </div>
                             <div class="col-auto">
-                              <button type="button" class="btn btn-outline-danger btn-sm" @click="removeOpcion(q, i)">
+                              <button
+                                type="button"
+                                class="btn btn-outline-danger btn-sm"
+                                @click="removeOpcion(q, i)"
+                              >
                                 <i class="bi bi-dash-circle"></i>
                               </button>
                             </div>
                           </div>
-                          <button type="button" class="btn btn-outline-secondary btn-sm" @click="addOpcion(q)">
+                          <button
+                            type="button"
+                            class="btn btn-outline-secondary btn-sm"
+                            @click="addOpcion(q)"
+                          >
                             <i class="bi bi-plus-circle me-1"></i> Agregar opción
                           </button>
                           <div class="form-text">Agrega al menos 2 opciones.</div>
@@ -476,10 +682,17 @@
           </div>
 
           <div class="modal-footer modal-footer-sticky">
-            <button type="button" class="btn btn-outline-secondary" @click="hideModal('form')">Cancelar</button>
+            <button type="button" class="btn btn-outline-secondary" @click="hideModal('form')">
+              Cancelar
+            </button>
             <button type="submit" class="btn btn-gradient" :disabled="saving">
               <span v-if="!saving">{{ isEditing ? 'Guardar cambios' : 'Registrar' }}</span>
-              <span v-else class="spinner-border spinner-border-sm ms-1" role="status" aria-hidden="true"></span>
+              <span
+                v-else
+                class="spinner-border spinner-border-sm ms-1"
+                role="status"
+                aria-hidden="true"
+              ></span>
             </button>
           </div>
         </form>
@@ -494,26 +707,70 @@ import { useEncuestasCrud } from '@/assets/js/useEncuestasCrud';
 
 const {
   // estado y listas
-  items, isLoading, hasMore, filteredItems, page,
+  items,
+  isLoading,
+  hasMore,
+  filteredItems,
+  page,
+
   // búsqueda
-  searchQuery, onInstantSearch, clearSearch,
+  searchQuery,
+  onInstantSearch,
+  clearSearch,
+
   // utilidad
-  getId, formatDateRange, labelTipo,
+  getId,
+  formatDateRange,
+  labelTipo,
+
   // modales y refs
-  viewModalRef, formModalRef, hideModal,
+  viewModalRef,
+  formModalRef,
+  answersModalRef,
+  hideModal,
+
   // acciones de lista/paginación
   loadMore,
+
   // selección y UI
-  selected, ui, viewToggle, isEditing, saving, form,
+  selected,
+  ui,
+  viewToggle,
+  isEditing,
+  saving,
+  form,
+
   // abrir/editar/ver
-  openView, openCreate, openEdit,
+  openView,
+  openCreate,
+  openEdit,
+
   // cuestionario
-  addPregunta, removePregunta, toggleQuestion, needsOptions, addOpcion, removeOpcion, onChangeTipo, toggleViewQuestion,
-  // submit/eliminar (vinculadas a acciones de admin)
-  onSubmit, confirmDelete, modifyFromView, deleteFromView,
+  addPregunta,
+  removePregunta,
+  toggleQuestion,
+  needsOptions,
+  addOpcion,
+  removeOpcion,
+  onChangeTipo,
+  toggleViewQuestion,
+
+  // submit/eliminar (admin)
+  onSubmit,
+  confirmDelete,
+  modifyFromView,
+  deleteFromView,
+
+  // respuestas
+  viewAnswers,
+  hideAnswers,
+  answers,
+  answersLoading,
+  answersQuery,
+  filteredAnswers,
 } = useEncuestasCrud();
 
-/* ====== Búsqueda local dentro del cuestionario del seleccionado (solo para visor) ====== */
+/* ====== Búsqueda local dentro del cuestionario del seleccionado (solo visor) ====== */
 const qSearch = ref('');
 const questions = computed(() => selected?.value?.cuestionario || []);
 const totalQuestions = computed(() => questions.value.length);
@@ -526,6 +783,7 @@ const filteredQuestions = computed(() => {
     (p?.opciones || []).some(op => (op || '').toLowerCase().includes(q))
   );
 });
+
 const visibleQuestions = computed(() => filteredQuestions.value.length);
 
 /* Mapeo índice visible -> índice real (para viewToggle.qOpen) */
@@ -535,7 +793,7 @@ const iMapped = (visibleIndex) => {
   return questions.value.indexOf(q);
 };
 
-/* Expandir / Contraer todo (sobre el universo visible) */
+/* Expandir / Contraer todo */
 const ensureQOpenSize = () => {
   if (!Array.isArray(viewToggle.qOpen)) viewToggle.qOpen = [];
   const need = Math.max(viewToggle.qOpen.length, questions.value.length);
@@ -543,16 +801,22 @@ const ensureQOpenSize = () => {
     if (typeof viewToggle.qOpen[i] !== 'boolean') viewToggle.qOpen[i] = false;
   }
 };
+
 const expandAll = () => {
   ensureQOpenSize();
-  filteredQuestions.value.forEach((_, i) => viewToggle.qOpen[iMapped(i)] = true);
-};
-const collapseAll = () => {
-  ensureQOpenSize();
-  filteredQuestions.value.forEach((_, i) => viewToggle.qOpen[iMapped(i)] = false);
+  filteredQuestions.value.forEach((_, i) => {
+    viewToggle.qOpen[iMapped(i)] = true;
+  });
 };
 
-/* Icono y badge por tipo de pregunta (para visor) */
+const collapseAll = () => {
+  ensureQOpenSize();
+  filteredQuestions.value.forEach((_, i) => {
+    viewToggle.qOpen[iMapped(i)] = false;
+  });
+};
+
+/* Icono y badge por tipo de pregunta (visor) */
 const tipoIcon = (tipo) => {
   switch (tipo) {
     case 'seleccion_multiple': return 'bi bi-ui-checks';
@@ -560,6 +824,7 @@ const tipoIcon = (tipo) => {
     default:                   return 'bi bi-question-circle';
   }
 };
+
 const tipoBadgeClass = (tipo) => {
   switch (tipo) {
     case 'seleccion_multiple': return 'bg-type-multi';
@@ -572,7 +837,7 @@ const tipoBadgeClass = (tipo) => {
 <style scoped>
 @import '@/assets/css/Crud.css';
 
-/* Elevar sutilmente al hover */
+/* Hover */
 .hover-raise {
   transition: transform .2s ease, box-shadow .2s ease;
 }
@@ -582,9 +847,11 @@ const tipoBadgeClass = (tipo) => {
 }
 
 /* Modal header avatar */
-.avatar-pill{
-  width: 44px; height: 44px;
-  display: grid; place-items: center;
+.avatar-pill {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
   border-radius: 999px;
   background: var(--chip, #eef6ff);
   color: var(--ink-2, #2c4c86);
@@ -592,81 +859,135 @@ const tipoBadgeClass = (tipo) => {
   font-size: 1.25rem;
 }
 
-/* Chips superiores */
-.meta-wrap{
-  display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem;
+/* Chips meta */
+.meta-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-bottom: 1rem;
 }
-.meta-chip{
+.meta-chip {
   background: var(--chip, #eef6ff);
   color: var(--ink-2, #2c4c86);
   border: 1px solid var(--stroke, #e6eefc);
-  padding: .35rem .65rem; border-radius: 999px;
+  padding: .35rem .65rem;
+  border-radius: 999px;
   font-size: .85rem;
 }
 
-/* Toolbar del visor */
-.viewer-toolbar{
-  display: flex; gap: .75rem; align-items: center; justify-content: space-between;
-  margin-bottom: .75rem; flex-wrap: wrap;
+/* Toolbar visor */
+.viewer-toolbar {
+  display: flex;
+  gap: .75rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .75rem;
+  flex-wrap: wrap;
 }
-.viewer-search{ max-width: 420px; }
+
+.viewer-search {
+  max-width: 420px;
+}
 
 /* Progreso */
-.progress-wrap .progress{ height: .6rem; }
-.progress-wrap .progress-bar{
+.progress-wrap .progress {
+  height: .6rem;
+}
+.progress-wrap .progress-bar {
   background: linear-gradient(90deg, #7cb8ff, #2c4c86);
 }
 
 /* Tarjetas de preguntas */
-.q-card{
+.q-card {
   border: 1px solid var(--stroke, #e6eefc);
   border-radius: 16px;
   background: var(--card-b, #f8fbff);
 }
-.q-head{
-  padding: .9rem 1rem;
-  display: flex; align-items: center; justify-content: space-between; gap: .75rem;
-  cursor: pointer; user-select: none;
-}
-.q-head:hover{ background: #f1f6ff; }
-.q-index{
-  width: 32px; height: 32px; border-radius: 8px;
-  display: grid; place-items: center; font-weight: 700;
-  background: white; color: var(--ink, #1b3b6f); border: 1px solid var(--stroke, #e6eefc);
-}
-.q-title{ font-weight: 600; }
-.q-type{ font-weight: 600; }
 
-.q-body{
+.q-head {
+  padding: .9rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  cursor: pointer;
+  user-select: none;
+  flex-wrap: wrap;
+}
+.q-head:hover {
+  background: #f1f6ff;
+}
+
+.q-index {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  background: white;
+  color: var(--ink, #1b3b6f);
+  border: 1px solid var(--stroke, #e6eefc);
+}
+.q-title {
+  font-weight: 600;
+}
+
+.q-type {
+  font-weight: 600;
+}
+
+.q-body {
   padding: .5rem 1rem 1rem 1rem;
 }
-.q-chips{
-  display: flex; flex-wrap: wrap; gap: .5rem;
+
+.q-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
 }
-.chip{
-  display: inline-flex; align-items: center; gap: .25rem;
-  background: white; border: 1px solid var(--stroke,#e6eefc);
-  padding: .35rem .6rem; border-radius: 999px; font-size: .9rem;
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  background: white;
+  border: 1px solid var(--stroke,#e6eefc);
+  padding: .35rem .6rem;
+  border-radius: 999px;
+  font-size: .9rem;
 }
 
-/* Badges de tipo */
-.bg-type-multi{
+/* Badges tipo */
+.bg-type-multi {
   background: #e7f7ef;
   color: #0f7a47;
   border: 1px solid #bce8d1;
 }
-.bg-type-open{
+.bg-type-open {
   background: #fff4e5;
   color: #8a4b00;
   border: 1px solid #ffe0b8;
 }
 
-/* Animaciones suaves */
-.rotate{ transform: rotate(180deg); transition: transform .2s ease; }
-.fade-enter-active, .fade-leave-active{ transition: opacity .18s ease; }
-.fade-enter-from, .fade-leave-to{ opacity: 0; }
+/* Animaciones */
+.rotate {
+  transform: rotate(180deg);
+  transition: transform .2s ease;
+}
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity .18s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
 
 /* Ajustes menores */
-.modal-fit .modal-content{ border-radius: 20px; }
-.btn-with-label i{ vertical-align: -1px; }
+.modal-fit .modal-content {
+  border-radius: 20px;
+}
+.btn-with-label i {
+  vertical-align: -1px;
+}
 </style>

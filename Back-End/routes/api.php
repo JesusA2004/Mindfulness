@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\Reportes\ActividadesAlumnoController;
 use App\Http\Controllers\Api\Reportes\CitasAlumnoController;
 use App\Http\Controllers\Api\Reportes\BitacorasAlumnoController;
 use App\Http\Controllers\Api\Reportes\EncuestasResultadosController;
+use App\Http\Controllers\Api\EncuestaRespuestaController;
 use App\Http\Controllers\Api\Reportes\RecompensasCanjeadasController;
 use App\Http\Controllers\Api\Reportes\ExportController;
 use App\Http\Controllers\Api\RestoreController;
@@ -84,6 +85,9 @@ Route::middleware(['auth:api'])->group(function () {
 
     // Respuestas de tests
     Route::get('/tests/{id}/respuestas', [TestRespuestaController::class, 'index']);
+
+    //Respuestas de encuestas
+    Route::get('encuestas/{id}/respuestas', [EncuestaRespuestaController::class, 'index']);
 
     // CRUD de los demás modelos
     Route::apiResource('users', UserController::class);

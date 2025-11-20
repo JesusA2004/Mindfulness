@@ -3,7 +3,7 @@ import { ref, reactive, computed, onMounted, nextTick } from 'vue';
 import Modal from 'bootstrap/js/dist/modal';
 import axios from 'axios';
 
-// ✅ Reutilizables centralizados
+// Reutilizables centralizados
 import {
   apiBase, authHeaders, getId,
   normalizeCuestionario, sequentialId, randomKey,
@@ -26,7 +26,7 @@ export function useEncuestasCrud() {
   const searchQuery = ref('');
   const debounce = makeDebouncer(120);
   const onInstantSearch = () => debounce(() => {});
-  const clearSearch = () => (searchQuery.value = '');
+  const clearSearch = () => { searchQuery.value = ''; };
 
   /** === Estado UI/Form === */
   const selected = ref(null);
@@ -38,6 +38,7 @@ export function useEncuestasCrud() {
     cuestionario: true,
     qOpen: {},
   });
+
   const viewToggle = reactive({
     meta: false,
     cuestionario: true,
@@ -54,23 +55,51 @@ export function useEncuestasCrud() {
     cuestionario: [],
   });
 
+  /** === Respuestas (encuestas) === */
+  const answers = ref([]);              // lista de respondentes con sus respuestas
+  const answersLoading = ref(false);
+  const answersQuery = ref('');
+  const filteredAnswers = computed(() => {
+    const q = (answersQuery.value || '').toLowerCase();
+    if (!q) return answers.value;
+    return answers.value.filter(r =>
+      (r.nombre || '').toLowerCase().includes(q) ||
+      (r.email  || '').toLowerCase().includes(q) ||
+      (r.usuario_id || '').toLowerCase().includes(q)
+    );
+  });
+
   /** === Refs de modales === */
   const viewModalRef = ref(null);
   const formModalRef = ref(null);
-  let viewModal, formModal;
+  const answersModalRef = ref(null);
+
+  let viewModal;
+  let formModal;
+  let answersModal;
 
   onMounted(async () => {
     await fetchItems();
     await nextTick();
-    if (viewModalRef.value) viewModal = new Modal(viewModalRef.value, { backdrop: 'static' });
-    if (formModalRef.value) formModal = new Modal(formModalRef.value, { backdrop: 'static' });
-    setupBsTooltips(); // activa tooltips para los íconos de info
+
+    if (viewModalRef.value) {
+      viewModal = new Modal(viewModalRef.value, { backdrop: 'static' });
+    }
+    if (formModalRef.value) {
+      formModal = new Modal(formModalRef.value, { backdrop: 'static' });
+    }
+    if (answersModalRef.value) {
+      answersModal = new Modal(answersModalRef.value, { backdrop: 'static' });
+    }
+
+    setupBsTooltips();
   });
 
   /** === Helpers de dominio === */
   function labelTipo(t) {
-    // Solo usamos selección múltiple en encuestas
+    // En encuestas por ahora seguimos usando selección múltiple
     if (t === 'seleccion_multiple') return 'Selección múltiple';
+    if (t === 'respuesta_abierta')  return 'Respuesta abierta';
     return t || '—';
   }
 
@@ -88,7 +117,9 @@ export function useEncuestasCrud() {
     try {
       isLoading.value = true;
       const { list, hasMore: hm } = await fetchPaginated(API_BASE, {
-        page: page.value, perPage, headers: authHeaders()
+        page: page.value,
+        perPage,
+        headers: authHeaders(),
       });
       hasMore.value = hm;
       const normalized = list.map(normalizeEncuesta);
@@ -103,10 +134,10 @@ export function useEncuestasCrud() {
 
   function normalizeEncuesta(raw) {
     const id = getId(raw);
-    // Normalizamos cuestionario y forzamos tipo = seleccion_multiple
     const base = normalizeCuestionario(raw?.cuestionario, { idPrefix: 'q' })
       .map(q => ({
         ...q,
+        // Para mantener compatibilidad: tipo forzado a selección múltiple
         tipo: 'seleccion_multiple',
         opciones: Array.isArray(q.opciones) ? q.opciones : [],
       }));
@@ -120,12 +151,15 @@ export function useEncuestasCrud() {
       fechaAsignacion: raw?.fechaAsignacion ?? '',
       fechaFinalizacion: raw?.fechaFinalizacion ?? '',
       duracion_estimada: raw?.duracion_estimada ?? null,
-      cuestionario: base
+      cuestionario: base,
     };
   }
 
   /** === Paginación === */
-  function loadMore() { page.value += 1; fetchItems({ append: true }); }
+  function loadMore() {
+    page.value += 1;
+    fetchItems({ append: true });
+  }
 
   /** === Filtro local (título o duración) === */
   const filteredItems = computed(() => {
@@ -146,7 +180,9 @@ export function useEncuestasCrud() {
     viewToggle.meta = false;
     viewToggle.cuestionario = true;
     viewToggle.qOpen = {};
-    (selected.value.cuestionario || []).forEach((_q, i) => { viewToggle.qOpen[i] = false; });
+    (selected.value.cuestionario || []).forEach((_q, i) => {
+      viewToggle.qOpen[i] = false;
+    });
     viewModal?.show();
   }
 
@@ -165,11 +201,52 @@ export function useEncuestasCrud() {
     ui.meta = false;
     ui.cuestionario = true;
     ui.qOpen = {};
-    form.cuestionario.forEach((_q, i) => { ui.qOpen[i] = false; });
+    form.cuestionario.forEach((_q, i) => {
+      ui.qOpen[i] = false;
+    });
     formModal?.show();
   }
 
-  function hideModal(kind) { if (kind === 'view') viewModal?.hide(); if (kind === 'form') formModal?.hide(); }
+  function hideModal(kind) {
+    if (kind === 'view') viewModal?.hide();
+    if (kind === 'form') formModal?.hide();
+  }
+
+  /** === Ver respuestas de la encuesta === */
+  async function viewAnswers(item) {
+    try {
+      selected.value = normalizeEncuesta({ ...item });
+      answersLoading.value = true;
+      answersQuery.value = '';
+      answers.value = [];
+
+      const id = getId(item);
+      const { data } = await axios.get(`${API_BASE}/${id}/respuestas`, {
+        headers: authHeaders(),
+      });
+
+      // Esperamos algo tipo: { encuesta: {...}, respondents: [...] }
+      if (data?.encuesta?.titulo) {
+        selected.value.titulo = data.encuesta.titulo;
+      }
+
+      const payload = Array.isArray(data?.respondents)
+        ? data.respondents
+        : (Array.isArray(data?.data) ? data.data : []);
+
+      answers.value = payload;
+      answersModal?.show();
+    } catch (e) {
+      console.error(e);
+      toast('No fue posible obtener las respuestas de la encuesta.', 'error');
+    } finally {
+      answersLoading.value = false;
+    }
+  }
+
+  function hideAnswers() {
+    answersModal?.hide();
+  }
 
   /** === Form: set/reset === */
   function resetForm() {
@@ -189,8 +266,13 @@ export function useEncuestasCrud() {
     form.fechaAsignacion = toDateInputValue(item.fechaAsignacion);
     form.fechaFinalizacion = toDateInputValue(item.fechaFinalizacion);
     form.duracion_estimada = item.duracion_estimada ?? null;
+
     form.cuestionario = normalizeCuestionario(item.cuestionario, { idPrefix: 'q' })
-      .map(q => ({ ...q, tipo: 'seleccion_multiple' }));
+      .map(q => ({
+        ...q,
+        tipo: 'seleccion_multiple',
+        opciones: Array.isArray(q.opciones) ? q.opciones : [],
+      }));
   }
 
   /** === Editor de preguntas === */
@@ -201,70 +283,117 @@ export function useEncuestasCrud() {
       _id: nextId,
       pregunta: '',
       tipo: 'seleccion_multiple',
-      opciones: ['', ''] // dos por defecto para guiar
+      opciones: ['', ''], // dos por defecto
     });
     const idx = form.cuestionario.length - 1;
     ui.qOpen[idx] = true;
   }
+
   function removePregunta(index) {
     form.cuestionario.splice(index, 1);
-    form.cuestionario.forEach((q, i) => { q._id = `q${i+1}`; });
+    form.cuestionario.forEach((q, i) => {
+      q._id = `q${i + 1}`;
+    });
     const newOpen = {};
-    form.cuestionario.forEach((_q, i) => { newOpen[i] = !!ui.qOpen[i]; });
+    form.cuestionario.forEach((_q, i) => {
+      newOpen[i] = !!ui.qOpen[i];
+    });
     ui.qOpen = newOpen;
   }
+
   function onChangeTipo(q) {
-    // Salvaguarda (select está deshabilitado)
+    // En encuestas por ahora seguimos usando selección múltiple
     q.tipo = 'seleccion_multiple';
-    if (!needsOptions(q)) q.opciones = [];
+    if (!needsOptions(q)) {
+      q.opciones = [];
+    }
     if (needsOptions(q) && (!q.opciones || q.opciones.length < 2)) {
-      q.opciones = q.opciones && q.opciones.length ? q.opciones : ['',''];
+      q.opciones = q.opciones && q.opciones.length ? q.opciones : ['', ''];
     }
   }
-  function needsOptions(_q) { return true; /* siempre requiere opciones */ }
-  function addOpcion(q) { if (!Array.isArray(q.opciones)) q.opciones = []; q.opciones.push(''); }
-  function removeOpcion(q, i) { q.opciones.splice(i, 1); }
+
+  function needsOptions(_q) {
+    // Mantén esto así: todas las preguntas requieren opciones (como antes)
+    return true;
+  }
+
+  function addOpcion(q) {
+    if (!Array.isArray(q.opciones)) q.opciones = [];
+    q.opciones.push('');
+  }
+
+  function removeOpcion(q, i) {
+    q.opciones.splice(i, 1);
+  }
 
   /** === Toggles de acordeones === */
-  function toggleQuestion(idx) { ui.qOpen[idx] = !ui.qOpen[idx]; }
-  function toggleViewQuestion(idx) { viewToggle.qOpen[idx] = !viewToggle.qOpen[idx]; }
+  function toggleQuestion(idx) {
+    ui.qOpen[idx] = !ui.qOpen[idx];
+  }
+
+  function toggleViewQuestion(idx) {
+    viewToggle.qOpen[idx] = !viewToggle.qOpen[idx];
+  }
 
   /** === Validaciones específicas === */
   function validDates() {
     const a = form.fechaAsignacion ? new Date(form.fechaAsignacion) : null;
     const b = form.fechaFinalizacion ? new Date(form.fechaFinalizacion) : null;
-    if (!a || !b) return true; // valida solo si ambas existen
+    if (!a || !b) return true;
     return b.getTime() >= a.getTime();
   }
 
   /** === Submit === */
   async function onSubmit() {
-    if (!isRequired(form.titulo)) { toast('El título es obligatorio.', 'error'); return; }
-    if (form.duracion_estimada != null && !isPositiveInt(form.duracion_estimada)) {
-      toast('La duración debe ser un entero positivo.', 'error'); return;
+    if (!isRequired(form.titulo)) {
+      toast('El título es obligatorio.', 'error');
+      return;
     }
-    if (!validDates()) { toast('La fecha de fin no puede ser anterior a la fecha de inicio.', 'error'); return; }
-    if (form.cuestionario.length === 0) { toast('Agrega al menos una pregunta.', 'error'); return; }
+    if (form.duracion_estimada != null && !isPositiveInt(form.duracion_estimada)) {
+      toast('La duración debe ser un entero positivo.', 'error');
+      return;
+    }
+    if (!validDates()) {
+      toast('La fecha de fin no puede ser anterior a la fecha de inicio.', 'error');
+      return;
+    }
+    if (form.cuestionario.length === 0) {
+      toast('Agrega al menos una pregunta.', 'error');
+      return;
+    }
 
     for (const q of form.cuestionario) {
-      if (!isRequired(q.pregunta)) { toast('Completa el texto de cada pregunta.', 'error'); return; }
-      if (!validateOptions(q.opciones, 2)) { toast('Cada pregunta debe tener al menos 2 opciones no vacías.', 'error'); return; }
+      if (!isRequired(q.pregunta)) {
+        toast('Completa el texto de cada pregunta.', 'error');
+        return;
+      }
+      if (!validateOptions(q.opciones, 2)) {
+        toast('Cada pregunta debe tener al menos 2 opciones no vacías.', 'error');
+        return;
+      }
     }
 
     saving.value = true;
     try {
       const body = payload();
+
       if (isEditing.value && form._id) {
-        const { data } = await axios.put(`${API_BASE}/${form._id}`, body, { headers: authHeaders() });
-        const saved = normalizeEncuesta(data?.data ?? data);
+        const { data } = await axios.put(`${API_BASE}/${form._id}`, body, {
+          headers: authHeaders(),
+        });
+        const saved = normalizeEncuesta(data?.encuesta ?? data?.data ?? data);
         upsertLocal(saved);
-        hideModal('form'); await refreshList();
+        hideModal('form');
+        await refreshList();
         toast('Encuesta actualizada.');
       } else {
-        const { data } = await axios.post(API_BASE, body, { headers: authHeaders() });
-        const saved = normalizeEncuesta(data?.data ?? data);
+        const { data } = await axios.post(API_BASE, body, {
+          headers: authHeaders(),
+        });
+        const saved = normalizeEncuesta(data?.encuesta ?? data?.data ?? data);
         prependLocal(saved);
-        hideModal('form'); await refreshList();
+        hideModal('form');
+        await refreshList();
         toast('Encuesta creada.');
       }
     } catch (e) {
@@ -280,30 +409,43 @@ export function useEncuestasCrud() {
       _id: q._id,
       pregunta: q.pregunta,
       tipo: 'seleccion_multiple',
-      opciones: (q.opciones || []).map(o => (o || '').trim()).filter(Boolean)
+      opciones: (q.opciones || [])
+        .map(o => (o || '').trim())
+        .filter(Boolean),
     }));
+
     return {
       titulo: form.titulo,
       descripcion: form.descripcion || null,
       fechaAsignacion: form.fechaAsignacion || null,
       fechaFinalizacion: form.fechaFinalizacion || null,
       duracion_estimada: form.duracion_estimada ?? null,
-      cuestionario
+      cuestionario,
     };
   }
 
   function upsertLocal(saved) {
-    const id = getId(saved); if (!id) return;
+    const id = getId(saved);
+    if (!id) return;
     const idx = items.value.findIndex(x => getId(x) === id);
-    if (idx >= 0) items.value.splice(idx, 1, { ...items.value[idx], ...saved });
-    else items.value.unshift(saved);
+    if (idx >= 0) {
+      items.value.splice(idx, 1, { ...items.value[idx], ...saved });
+    } else {
+      items.value.unshift(saved);
+    }
   }
-  function prependLocal(saved) { items.value.unshift(saved); }
-  async function refreshList() { page.value = 1; await fetchItems({ append: false }); }
+
+  function prependLocal(saved) {
+    items.value.unshift(saved);
+  }
+
+  async function refreshList() {
+    page.value = 1;
+    await fetchItems({ append: false });
+  }
 
   /** === Eliminar === */
   async function confirmDelete(item) {
-    // usamos import dinámico para no cargar Swal en frío si no se usa
     const Swal = (await import('sweetalert2')).default;
     await import('sweetalert2/dist/sweetalert2.min.css');
     const result = await Swal.fire({
@@ -318,6 +460,7 @@ export function useEncuestasCrud() {
       cancelButtonColor: '#6c757d',
     });
     if (!result.isConfirmed) return;
+
     try {
       const id = getId(item);
       await axios.delete(`${API_BASE}/${id}`, { headers: authHeaders() });
@@ -333,33 +476,82 @@ export function useEncuestasCrud() {
   async function modifyFromView() {
     if (!selected.value) return;
     const item = { ...selected.value };
-    hideModal('view'); await nextTick(); openEdit(item);
+    hideModal('view');
+    await nextTick();
+    openEdit(item);
   }
+
   async function deleteFromView() {
     if (!selected.value) return;
-    const item = { ...selected.value };
-    hideModal('view'); await nextTick(); await confirmDelete(item);
+      const item = { ...selected.value };
+      hideModal('view');
+      await nextTick();
+      await confirmDelete(item);
   }
 
   /** === API del composable === */
   return {
     // estado y listas
-    items, isLoading, hasMore, filteredItems, page,
+    items,
+    isLoading,
+    hasMore,
+    filteredItems,
+    page,
+
     // búsqueda
-    searchQuery, onInstantSearch, clearSearch,
+    searchQuery,
+    onInstantSearch,
+    clearSearch,
+
     // utilidades
-    getId, formatDateRange, labelTipo,
-    // refs
-    viewModalRef, formModalRef, hideModal,
+    getId,
+    formatDateRange,
+    labelTipo,
+
+    // refs de modales
+    viewModalRef,
+    formModalRef,
+    answersModalRef,
+    hideModal,
+
     // selección, formulario y UI
-    selected, ui, viewToggle, isEditing, saving, form,
+    selected,
+    ui,
+    viewToggle,
+    isEditing,
+    saving,
+    form,
+
     // grid/paginación
     loadMore,
+
     // abrir/ver/editar
-    openView, openCreate, openEdit,
+    openView,
+    openCreate,
+    openEdit,
+
     // cuestionario
-    addPregunta, removePregunta, toggleQuestion, needsOptions, addOpcion, removeOpcion, onChangeTipo, toggleViewQuestion,
+    addPregunta,
+    removePregunta,
+    toggleQuestion,
+    needsOptions,
+    addOpcion,
+    removeOpcion,
+    onChangeTipo,
+    toggleViewQuestion,
+
     // submit/eliminar
-    onSubmit, confirmDelete, modifyFromView, deleteFromView,
+    onSubmit,
+    confirmDelete,
+    modifyFromView,
+    deleteFromView,
+
+    // respuestas
+    viewAnswers,
+    hideAnswers,
+    answers,
+    answersLoading,
+    answersQuery,
+    filteredAnswers,
   };
 }
